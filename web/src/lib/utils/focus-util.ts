@@ -21,7 +21,7 @@ export const moveFocus = (
   if (focusableElements.length === 0) {
     return;
   }
-
+  debugger;
   const currentElement = document.activeElement as HTMLElement | null;
   const currentIndex = currentElement ? focusableElements.indexOf(currentElement) : -1;
 

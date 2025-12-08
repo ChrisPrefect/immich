@@ -8,6 +8,7 @@
   import AssetViewerEvents from '$lib/components/AssetViewerEvents.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { castManager } from '$lib/managers/cast-manager.svelte';
+  import { signalAssetViewerReady } from '$lib/managers/event-manager.svelte';
   import { isFaceEditMode } from '$lib/stores/face-edit.svelte';
   import { ocrManager } from '$lib/stores/ocr.svelte';
   import { boundingBoxesArray, type Faces } from '$lib/stores/people.store';
@@ -29,12 +30,21 @@
     cursor: AssetCursor;
     element?: HTMLDivElement;
     sharedLink?: SharedLinkResponseDto;
-    onReady?: () => void;
+    transitionName?: string;
+    letterboxTransitionName?: string;
     onError?: () => void;
     onSwipe?: (event: SwipeCustomEvent) => void;
   }
 
-  let { cursor, element = $bindable(), sharedLink, onReady, onError, onSwipe }: Props = $props();
+  let {
+    cursor,
+    element = $bindable(),
+    sharedLink,
+    transitionName,
+    letterboxTransitionName,
+    onError,
+    onSwipe,
+  }: Props = $props();
 
   const { slideshowState, slideshowLook } = slideshowStore;
   const asset = $derived(cursor.current);
@@ -197,14 +207,17 @@
     {onUrlChange}
     onImageReady={() => {
       visibleImageReady = true;
-      onReady?.();
+      signalAssetViewerReady();
     }}
     onError={() => {
       onError?.();
-      onReady?.();
+      signalAssetViewerReady();
     }}
     bind:imgRef={assetViewerManager.imgRef}
     bind:ref={adaptiveImage}
+    {transitionName}
+    {letterboxTransitionName}
+    showLetterboxes={!blurredSlideshow}
   >
     {#snippet backdrop()}
       {#if blurredSlideshow}

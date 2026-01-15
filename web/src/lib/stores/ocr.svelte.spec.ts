@@ -32,6 +32,7 @@ describe('OcrManager', () => {
   beforeEach(() => {
     // Reset the singleton state before each test
     ocrManager.clear();
+    ocrManager.showOverlay = false;
     assetCacheManager.clearOcrCache();
     vi.clearAllMocks();
   });
@@ -132,12 +133,12 @@ describe('OcrManager', () => {
       expect(ocrManager.hasOcrData).toBe(false);
     });
 
-    it('should reset showOverlay to false', () => {
+    it('should not reset showOverlay', () => {
       ocrManager.showOverlay = true;
 
       ocrManager.clear();
 
-      expect(ocrManager.showOverlay).toBe(false);
+      expect(ocrManager.showOverlay).toBe(true);
     });
 
     it('should mark as cleared for next load', async () => {

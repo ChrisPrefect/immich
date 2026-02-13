@@ -12,6 +12,7 @@ export const compareParameters = (): Comparer<DatabaseParameter> => ({
     {
       type: 'ParameterReset',
       databaseName: target.databaseName,
+      tableName: target.tableName,
       parameterName: target.name,
       reason: Reason.MissingInSource,
     },

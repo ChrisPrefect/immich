@@ -86,6 +86,7 @@ export type PostgresDB = {
     relhasindex: PostgresYesOrNo;
     relisshared: PostgresYesOrNo;
     relpersistence: string;
+    reloptions: string[] | null;
   };
 
   pg_constraint: {
@@ -306,6 +307,7 @@ export enum ActionType {
 export type ColumnStorage = 'default' | 'external' | 'extended' | 'main';
 
 export type ColumnType =
+  | '"char"'
   | 'bigint'
   | 'boolean'
   | 'bytea'
@@ -316,6 +318,7 @@ export type ColumnType =
   | 'integer'
   | 'jsonb'
   | 'polygon'
+  | 'smallint'
   | 'text'
   | 'time'
   | 'time with time zone'
@@ -344,12 +347,13 @@ export type DatabaseSchema = {
 export type DatabaseParameter = {
   name: string;
   databaseName: string;
+  tableName?: string;
   value: string | number | null | undefined;
   scope: ParameterScope;
   synchronize: boolean;
 };
 
-export type ParameterScope = 'database' | 'user';
+export type ParameterScope = 'database' | 'table' | 'user';
 
 export type DatabaseOverride = {
   name: string;
@@ -506,7 +510,7 @@ export type SchemaDiff = { reason: string } & (
   | { type: 'TriggerCreate'; trigger: DatabaseTrigger }
   | { type: 'TriggerDrop'; tableName: string; triggerName: string }
   | { type: 'ParameterSet'; parameter: DatabaseParameter }
-  | { type: 'ParameterReset'; databaseName: string; parameterName: string }
+  | { type: 'ParameterReset'; databaseName: string; tableName?: string; parameterName: string }
   | { type: 'EnumCreate'; enum: DatabaseEnum }
   | { type: 'EnumDrop'; enumName: string }
   | { type: 'OverrideCreate'; override: DatabaseOverride }

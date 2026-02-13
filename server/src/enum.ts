@@ -569,6 +569,13 @@ export enum QueueName {
   Editor = 'editor',
 }
 
+export const JobQueueStatus = {
+  Pending: 0,
+  Active: 1,
+  Failed: 2,
+} as const;
+export type JobQueueStatus = (typeof JobQueueStatus)[keyof typeof JobQueueStatus];
+
 export enum QueueJobStatus {
   Active = 'active',
   Failed = 'failed',
@@ -657,6 +664,12 @@ export enum JobName {
   // Workflow
   WorkflowRun = 'WorkflowRun',
 }
+
+type JobNameValue = (typeof JobName)[keyof typeof JobName];
+const names = Object.values(JobName);
+export const JobCode = Object.fromEntries(names.map((key, i) => [key, i])) as Record<JobNameValue, number>;
+export const JOB_CODE_TO_NAME = Object.fromEntries(names.map((key, i) => [i, key])) as Record<number, JobNameValue>;
+export type JobCode = (typeof JobCode)[keyof typeof JobCode];
 
 export enum QueueCommand {
   Start = 'start',

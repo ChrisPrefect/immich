@@ -1,21 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { ModuleRef, Reflector } from '@nestjs/core';
-import { Kysely, sql } from 'kysely';
 import { ClassConstructor } from 'class-transformer';
-import { setTimeout } from 'node:timers/promises';
+import { Kysely, sql } from 'kysely';
 import { InjectKysely } from 'nestjs-kysely';
+import { setTimeout } from 'node:timers/promises';
 import postgres from 'postgres';
 import { JobConfig } from 'src/decorators';
 import { QueueJobResponseDto, QueueJobSearchDto } from 'src/dtos/queue.dto';
-import { JobName, JobStatus, MetadataKey, QueueCleanType, QueueJobStatus, QueueName } from 'src/enum';
+import {
+  JOB_CODE_TO_NAME,
+  JobCode,
+  JobName,
+  JobQueueStatus,
+  JobStatus,
+  MetadataKey,
+  QueueCleanType,
+  QueueJobStatus,
+  QueueName,
+} from 'src/enum';
 import { ConfigRepository } from 'src/repositories/config.repository';
 import { EventRepository } from 'src/repositories/event.repository';
-import { QUEUE_TABLE, WriteBuffer } from 'src/repositories/job.write-buffer';
-import { charToJobName, jobNameToChar, QueueWorker } from 'src/repositories/job.worker';
 import { LoggingRepository } from 'src/repositories/logging.repository';
 import { DB } from 'src/schema';
 import { JobCounts, JobItem, JobOf } from 'src/types';
 import { asPostgresConnectionConfig } from 'src/utils/database';
+import { getTable, InsertRow, QueueWorker, WriteBuffer } from 'src/utils/job-queue.util';
 import { getKeyByValue, getMethodNames, ImmichStartupError } from 'src/utils/misc';
 
 type JobMapItem = {
@@ -25,42 +34,15 @@ type JobMapItem = {
   label: string;
 };
 
-// Status char codes
-const STATUS_PENDING = 'p';
-const STATUS_ACTIVE = 'a';
-const STATUS_FAILED = 'f';
-
-// Stall timeouts in milliseconds
-const STALL_LONG = 60 * 60 * 1000; // 1 hour
-const STALL_MEDIUM = 30 * 60 * 1000; // 30 min
-const STALL_DEFAULT = 5 * 60 * 1000; // 5 min
-
-const getStallTimeout = (queueName: QueueName): number => {
-  switch (queueName) {
-    case QueueName.VideoConversion:
-    case QueueName.BackupDatabase:
-    case QueueName.Editor: {
-      return STALL_LONG;
-    }
-    case QueueName.Library:
-    case QueueName.StorageTemplateMigration: {
-      return STALL_MEDIUM;
-    }
-    default: {
-      return STALL_DEFAULT;
-    }
-  }
-};
-
 const getClaimBatch = (queueName: QueueName): number => {
   switch (queueName) {
-    case QueueName.VideoConversion:
-    case QueueName.BackupDatabase:
-    case QueueName.StorageTemplateMigration:
-    case QueueName.Editor:
-    case QueueName.FacialRecognition:
-    case QueueName.DuplicateDetection: {
+    case QueueName.VideoConversion: {
       return 1;
+    }
+    case QueueName.FaceDetection:
+    case QueueName.SmartSearch:
+    case QueueName.Ocr: {
+      return 2;
     }
     default: {
       return 100; // will be clamped to slotsAvailable by the worker
@@ -68,14 +50,13 @@ const getClaimBatch = (queueName: QueueName): number => {
   }
 };
 
-// Map QueueJobStatus to our "char" status codes
-const STATUS_FILTER: Record<QueueJobStatus, string | null> = {
-  [QueueJobStatus.Active]: STATUS_ACTIVE,
-  [QueueJobStatus.Failed]: STATUS_FAILED,
-  [QueueJobStatus.Waiting]: STATUS_PENDING,
+const STATUS_FILTER = {
+  [QueueJobStatus.Active]: JobQueueStatus.Active,
+  [QueueJobStatus.Failed]: JobQueueStatus.Failed,
+  [QueueJobStatus.Waiting]: JobQueueStatus.Pending,
   [QueueJobStatus.Complete]: null, // completed jobs are deleted
-  [QueueJobStatus.Delayed]: STATUS_PENDING, // delayed = pending with future run_after
-  [QueueJobStatus.Paused]: STATUS_PENDING, // paused queue has pending jobs
+  [QueueJobStatus.Delayed]: JobQueueStatus.Pending, // delayed = pending with future run_after
+  [QueueJobStatus.Paused]: JobQueueStatus.Pending, // paused queue has pending jobs
 };
 
 @Injectable()
@@ -84,6 +65,7 @@ export class JobRepository {
   private handlers: Partial<Record<JobName, JobMapItem>> = {};
   private writeBuffer!: WriteBuffer;
   private listenConn: postgres.Sql | null = null;
+  private listenReady = false;
   private pauseState: Partial<Record<QueueName, boolean>> = {};
 
   constructor(
@@ -146,57 +128,38 @@ export class JobRepository {
     }
   }
 
-  startWorkers() {
+  async startWorkers() {
     this.writeBuffer = new WriteBuffer(this.db, (queue) => this.notify(queue));
 
     // Startup sweep: reset any active jobs from a previous crash
-    const startupPromises = Object.values(QueueName).map(async (queueName) => {
-      const tableName = QUEUE_TABLE[queueName];
-      await sql`
-        UPDATE ${sql.table(tableName)}
-        SET "status" = ${STATUS_PENDING}::"char", "started_at" = NULL, "expires_at" = NULL
-        WHERE "status" = ${STATUS_ACTIVE}::"char"
-      `.execute(this.db);
-    });
+    await Promise.all(
+      Object.values(QueueName).map((queueName) =>
+        this.db
+          .updateTable(getTable(this.db, queueName))
+          .set({ status: JobQueueStatus.Pending, startedAt: null, expiresAt: null })
+          .where('status', '=', JobQueueStatus.Active)
+          .where('expiresAt', '<', sql<Date>`now()`)
+          .execute(),
+      ),
+    );
 
-    // Load pause state and setup workers
-    void Promise.all(startupPromises).then(async () => {
-      // Load pause state from DB
-      const metaRows = await this.db.selectFrom('job_queue_meta').selectAll().execute();
-      for (const row of metaRows) {
-        this.pauseState[row.queue_name as QueueName] = row.is_paused;
-      }
+    // Create workers
+    for (const queueName of Object.values(QueueName)) {
+      this.workers[queueName] = new QueueWorker({
+        queueName,
+        stallTimeout: 5 * 60 * 1000, // 5 min
+        claimBatch: getClaimBatch(queueName),
+        concurrency: 1,
+        db: this.db,
+        onJob: (job) => this.eventRepository.emit('JobRun', queueName, job),
+      });
+    }
 
-      // Create workers
-      for (const queueName of Object.values(QueueName)) {
-        const worker = new QueueWorker({
-          queueName,
-          tableName: QUEUE_TABLE[queueName],
-          stallTimeout: getStallTimeout(queueName),
-          claimBatch: getClaimBatch(queueName),
-          concurrency: 1,
-          db: this.db,
-          onJob: (job) => this.eventRepository.emit('JobRun', queueName, job),
-        });
-
-        if (this.pauseState[queueName]) {
-          worker.pause();
-        }
-
-        this.workers[queueName] = worker;
-      }
-
-      // Setup LISTEN/NOTIFY
-      await this.setupListen();
-
-      // Trigger initial fetch for all workers
-      for (const worker of Object.values(this.workers)) {
-        worker.onNotification();
-      }
-    });
+    // Setup LISTEN/NOTIFY, sync pause state, and trigger initial fetch
+    await this.setupListen();
   }
 
-  async run({ name, data }: JobItem) {
+  run({ name, data }: JobItem) {
     const item = this.handlers[name as JobName];
     if (!item) {
       this.logger.warn(`Skipping unknown job: "${name}"`);
@@ -216,9 +179,14 @@ export class JobRepository {
     worker.setConcurrency(concurrency);
   }
 
-  isActive(name: QueueName): Promise<boolean> {
-    const worker = this.workers[name];
-    return Promise.resolve(worker ? worker.activeJobCount > 0 : false);
+  async isActive(name: QueueName): Promise<boolean> {
+    const result = await this.db
+      .selectFrom(getTable(this.db, name))
+      .select('id')
+      .where('status', '=', JobQueueStatus.Active)
+      .limit(1)
+      .executeTakeFirst();
+    return result !== undefined;
   }
 
   isPaused(name: QueueName): Promise<boolean> {
@@ -229,37 +197,38 @@ export class JobRepository {
     this.pauseState[name] = true;
     await this.db
       .insertInto('job_queue_meta')
-      .values({ queue_name: name, is_paused: true })
-      .onConflict((oc) => oc.column('queue_name').doUpdateSet({ is_paused: true }))
+      .values({ queueName: name, isPaused: true })
+      .onConflict((oc) => oc.column('queueName').doUpdateSet({ isPaused: true }))
       .execute();
     this.workers[name]?.pause();
+    await this.notify(name, 'pause');
   }
 
   async resume(name: QueueName) {
     this.pauseState[name] = false;
     await this.db
       .insertInto('job_queue_meta')
-      .values({ queue_name: name, is_paused: false })
-      .onConflict((oc) => oc.column('queue_name').doUpdateSet({ is_paused: false }))
+      .values({ queueName: name, isPaused: false })
+      .onConflict((oc) => oc.column('queueName').doUpdateSet({ isPaused: false }))
       .execute();
     this.workers[name]?.resume();
+    await this.notify(name, 'resume');
   }
 
-  async empty(name: QueueName) {
-    const tableName = QUEUE_TABLE[name];
-    await sql`DELETE FROM ${sql.table(tableName)} WHERE "status" = ${STATUS_PENDING}::"char"`.execute(this.db);
+  empty(name: QueueName) {
+    return this.db.deleteFrom(getTable(this.db, name)).where('status', '=', JobQueueStatus.Pending).execute();
   }
 
-  async clear(name: QueueName, _type: QueueCleanType) {
-    const tableName = QUEUE_TABLE[name];
-    await sql`DELETE FROM ${sql.table(tableName)} WHERE "status" = ${STATUS_FAILED}::"char"`.execute(this.db);
+  clear(name: QueueName, _type: QueueCleanType) {
+    return this.db.deleteFrom(getTable(this.db, name)).where('status', '=', JobQueueStatus.Failed).execute();
   }
 
   async getJobCounts(name: QueueName): Promise<JobCounts> {
-    const tableName = QUEUE_TABLE[name];
-    const result = await sql<{ status: string; count: string }>`
-      SELECT "status", count(*)::text as count FROM ${sql.table(tableName)} GROUP BY "status"
-    `.execute(this.db);
+    const result = await this.db
+      .selectFrom(getTable(this.db, name))
+      .select((eb) => ['status', eb.fn.countAll<number>().as('count')])
+      .groupBy('status')
+      .execute();
 
     const counts: JobCounts = {
       active: 0,
@@ -270,27 +239,21 @@ export class JobRepository {
       paused: 0,
     };
 
-    for (const row of result.rows) {
+    for (const row of result) {
       switch (row.status) {
-        case STATUS_PENDING: {
+        case JobQueueStatus.Pending: {
           counts.waiting = Number(row.count);
           break;
         }
-        case STATUS_ACTIVE: {
+        case JobQueueStatus.Active: {
           counts.active = Number(row.count);
           break;
         }
-        case STATUS_FAILED: {
+        case JobQueueStatus.Failed: {
           counts.failed = Number(row.count);
           break;
         }
       }
-    }
-
-    // In-memory active count may be more accurate than DB for in-flight jobs
-    const worker = this.workers[name];
-    if (worker) {
-      counts.active = worker.activeJobCount;
     }
 
     if (this.pauseState[name]) {
@@ -305,32 +268,31 @@ export class JobRepository {
     return (this.handlers[name] as JobMapItem).queueName;
   }
 
-  async queueAll(items: JobItem[]): Promise<void> {
+  queueAll(items: JobItem[]): Promise<void> {
     if (items.length === 0) {
-      return;
+      return Promise.resolve();
     }
 
-    const bufferItems: { queue: QueueName; row: { name: string; data: unknown; priority: number; dedup_key: string | null; run_after: Date } }[] = [];
-
+    const bufferItems: { queue: QueueName; row: InsertRow }[] = [];
     for (const item of items) {
       const queueName = this.getQueueName(item.name);
       const options = this.getJobOptions(item);
       bufferItems.push({
         queue: queueName,
         row: {
-          name: jobNameToChar(item.name),
-          data: item.data || {},
-          priority: options?.priority ?? 0,
-          dedup_key: options?.dedupKey ?? null,
-          run_after: options?.delay ? new Date(Date.now() + options.delay) : new Date(),
+          code: JobCode[item.name],
+          data: item.data ?? null,
+          priority: options?.priority ?? null,
+          dedupKey: options?.dedupKey ?? null,
+          runAfter: options?.delay ? new Date(Date.now() + options.delay) : null,
         },
       });
     }
 
-    await this.writeBuffer.add(bufferItems);
+    return this.writeBuffer.add(bufferItems);
   }
 
-  async queue(item: JobItem): Promise<void> {
+  queue(item: JobItem): Promise<void> {
     return this.queueAll([item]);
   }
 
@@ -350,31 +312,31 @@ export class JobRepository {
   }
 
   async searchJobs(name: QueueName, dto: QueueJobSearchDto): Promise<QueueJobResponseDto[]> {
-    const tableName = QUEUE_TABLE[name];
-    const statuses = dto.status ?? Object.values(QueueJobStatus);
-    const charStatuses = statuses
-      .map((s) => STATUS_FILTER[s])
-      .filter((s): s is string => s !== null);
+    const statuses: JobQueueStatus[] = [];
+    for (const status of dto.status ?? Object.values(QueueJobStatus)) {
+      const mapped = STATUS_FILTER[status];
+      if (mapped !== null && !statuses.includes(mapped)) {
+        statuses.push(mapped);
+      }
+    }
 
-    if (charStatuses.length === 0) {
+    if (statuses.length === 0) {
       return [];
     }
 
-    const uniqueStatuses = [...new Set(charStatuses)];
+    const rows = await this.db
+      .selectFrom(getTable(this.db, name))
+      .select(['id', 'code', 'data', 'runAfter'])
+      .where('status', 'in', statuses)
+      .orderBy('id', 'desc')
+      .limit(1000)
+      .execute();
 
-    const rows = await sql<{ id: number; name: string; data: unknown; run_after: Date }>`
-      SELECT "id", "name", "data", "run_after"
-      FROM ${sql.table(tableName)}
-      WHERE "status" = ANY(${sql.val(uniqueStatuses)}::"char"[])
-      ORDER BY "id" DESC
-      LIMIT 1000
-    `.execute(this.db);
-
-    return rows.rows.map((row) => ({
+    return rows.map((row) => ({
       id: String(row.id),
-      name: charToJobName(row.name) ?? (row.name as unknown as JobName),
+      name: JOB_CODE_TO_NAME[row.code],
       data: (row.data ?? {}) as object,
-      timestamp: new Date(row.run_after).getTime(),
+      timestamp: new Date(row.runAfter).getTime(),
     }));
   }
 
@@ -403,13 +365,20 @@ export class JobRepository {
 
   /** @deprecated */
   // todo: remove this when asset notifications no longer need it.
-  public async removeJob(name: JobName, jobID: string): Promise<void> {
-    const queueName = this.getQueueName(name);
-    const tableName = QUEUE_TABLE[queueName];
-    await sql`DELETE FROM ${sql.table(tableName)} WHERE "id" = ${Number(jobID)}`.execute(this.db);
+  removeJob(name: JobName, dedupKey: string) {
+    return this.db
+      .deleteFrom(getTable(this.db, this.getQueueName(name)))
+      .where('dedupKey', '=', dedupKey)
+      .where('status', '=', JobQueueStatus.Pending)
+      .execute();
   }
 
   private async setupListen(): Promise<void> {
+    if (this.listenConn) {
+      await this.listenConn.end();
+      this.listenConn = null;
+    }
+
     const { database } = this.configRepository.getEnv();
     const pgConfig = asPostgresConnectionConfig(database.config);
     this.listenConn = postgres({
@@ -423,14 +392,69 @@ export class JobRepository {
     });
 
     for (const queueName of Object.values(QueueName)) {
-      await this.listenConn.listen(`jobs:${queueName}`, () => {
-        this.workers[queueName]?.onNotification();
-      });
+      await this.listenConn.listen(
+        `jobs:${queueName}`,
+        (payload) => this.onNotify(queueName, payload),
+        () => this.onReconnect(),
+      );
+    }
+
+    this.listenReady = true;
+    await this.syncPauseState();
+    for (const worker of Object.values(this.workers)) {
+      worker.onNotification();
     }
   }
 
-  private async notify(queue: QueueName): Promise<void> {
-    await sql`SELECT pg_notify(${`jobs:${queue}`}, '')`.execute(this.db);
+  private onNotify(queueName: QueueName, payload: string) {
+    switch (payload) {
+      case 'pause': {
+        this.pauseState[queueName] = true;
+        this.workers[queueName]?.pause();
+        break;
+      }
+      case 'resume': {
+        this.pauseState[queueName] = false;
+        this.workers[queueName]?.resume();
+        break;
+      }
+      default: {
+        this.workers[queueName]?.onNotification();
+        break;
+      }
+    }
+  }
+
+  private onReconnect() {
+    if (!this.listenReady) {
+      return;
+    }
+    this.listenReady = false;
+    this.logger.log('LISTEN connection re-established, syncing state');
+    void this.syncPauseState().then(() => {
+      for (const worker of Object.values(this.workers)) {
+        worker.onNotification();
+      }
+      this.listenReady = true;
+    });
+  }
+
+  private async syncPauseState(): Promise<void> {
+    const metaRows = await this.db.selectFrom('job_queue_meta').selectAll().execute();
+    for (const row of metaRows) {
+      const queueName = row.queueName as QueueName;
+      const wasPaused = this.pauseState[queueName] ?? false;
+      this.pauseState[queueName] = row.isPaused;
+      if (wasPaused && !row.isPaused) {
+        this.workers[queueName]?.resume();
+      } else if (!wasPaused && row.isPaused) {
+        this.workers[queueName]?.pause();
+      }
+    }
+  }
+
+  private notify(queue: QueueName, payload = '') {
+    return sql`SELECT pg_notify(${`jobs:${queue}`}, ${payload})`.execute(this.db);
   }
 
   async onShutdown(): Promise<void> {

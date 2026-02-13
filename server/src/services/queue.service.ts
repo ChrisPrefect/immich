@@ -80,7 +80,7 @@ export class QueueService extends BaseService {
   onBootstrap() {
     this.jobRepository.setup(this.services);
     if (this.worker === ImmichWorker.Microservices) {
-      this.jobRepository.startWorkers();
+      void this.jobRepository.startWorkers();
     }
   }
 

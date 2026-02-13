@@ -21,6 +21,7 @@ import {
   LogFormat,
   LogLevel,
   QueueName,
+  SocketIoAdapter,
 } from 'src/enum';
 import { VectorExtension } from 'src/types';
 import { setDifference } from 'src/utils/set';
@@ -115,6 +116,10 @@ export interface EnvData {
       allow: boolean;
       installFolder?: string;
     };
+  };
+
+  socketIo: {
+    adapter: SocketIoAdapter;
   };
 
   noColor: boolean;
@@ -345,6 +350,10 @@ const getEnv = (): EnvData => {
         allow: dto.IMMICH_ALLOW_EXTERNAL_PLUGINS ?? false,
         installFolder: dto.IMMICH_PLUGINS_INSTALL_FOLDER,
       },
+    },
+
+    socketIo: {
+      adapter: dto.IMMICH_SOCKETIO_ADAPTER ?? SocketIoAdapter.Postgres,
     },
 
     noColor: !!dto.NO_COLOR,

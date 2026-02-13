@@ -41,6 +41,27 @@ import { AssetTable } from 'src/schema/tables/asset.table';
 import { AuditTable } from 'src/schema/tables/audit.table';
 import { FaceSearchTable } from 'src/schema/tables/face-search.table';
 import { GeodataPlacesTable } from 'src/schema/tables/geodata-places.table';
+import {
+  JobQueueMetaTable,
+  JobsBackgroundTaskTable,
+  JobsBackupDatabaseTable,
+  JobsDuplicateDetectionTable,
+  JobsEditorTable,
+  JobsFaceDetectionTable,
+  JobsFacialRecognitionTable,
+  JobsLibraryTable,
+  JobsMetadataExtractionTable,
+  JobsMigrationTable,
+  JobsNotificationTable,
+  JobsOcrTable,
+  JobsSearchTable,
+  JobsSidecarTable,
+  JobsSmartSearchTable,
+  JobsStorageTemplateMigrationTable,
+  JobsThumbnailGenerationTable,
+  JobsVideoConversionTable,
+  JobsWorkflowTable,
+} from 'src/schema/tables/job.table';
 import { LibraryTable } from 'src/schema/tables/library.table';
 import { MemoryAssetAuditTable } from 'src/schema/tables/memory-asset-audit.table';
 import { MemoryAssetTable } from 'src/schema/tables/memory-asset.table';
@@ -135,6 +156,25 @@ export class ImmichDatabase {
     WorkflowTable,
     WorkflowFilterTable,
     WorkflowActionTable,
+    JobsThumbnailGenerationTable,
+    JobsMetadataExtractionTable,
+    JobsVideoConversionTable,
+    JobsFaceDetectionTable,
+    JobsFacialRecognitionTable,
+    JobsSmartSearchTable,
+    JobsDuplicateDetectionTable,
+    JobsBackgroundTaskTable,
+    JobsStorageTemplateMigrationTable,
+    JobsMigrationTable,
+    JobsSearchTable,
+    JobsSidecarTable,
+    JobsLibraryTable,
+    JobsNotificationTable,
+    JobsBackupDatabaseTable,
+    JobsOcrTable,
+    JobsWorkflowTable,
+    JobsEditorTable,
+    JobQueueMetaTable,
   ];
 
   functions = [
@@ -252,4 +292,24 @@ export interface DB {
   workflow: WorkflowTable;
   workflow_filter: WorkflowFilterTable;
   workflow_action: WorkflowActionTable;
+
+  jobs_thumbnail_generation: JobsThumbnailGenerationTable;
+  jobs_metadata_extraction: JobsMetadataExtractionTable;
+  jobs_video_conversion: JobsVideoConversionTable;
+  jobs_face_detection: JobsFaceDetectionTable;
+  jobs_facial_recognition: JobsFacialRecognitionTable;
+  jobs_smart_search: JobsSmartSearchTable;
+  jobs_duplicate_detection: JobsDuplicateDetectionTable;
+  jobs_background_task: JobsBackgroundTaskTable;
+  jobs_storage_template_migration: JobsStorageTemplateMigrationTable;
+  jobs_migration: JobsMigrationTable;
+  jobs_search: JobsSearchTable;
+  jobs_sidecar: JobsSidecarTable;
+  jobs_library: JobsLibraryTable;
+  jobs_notification: JobsNotificationTable;
+  jobs_backup_database: JobsBackupDatabaseTable;
+  jobs_ocr: JobsOcrTable;
+  jobs_workflow: JobsWorkflowTable;
+  jobs_editor: JobsEditorTable;
+  job_queue_meta: JobQueueMetaTable;
 }

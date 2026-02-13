@@ -20,5 +20,6 @@ export const newJobRepositoryMock = (): Mocked<RepositoryInterface<JobRepository
     clear: vitest.fn(),
     waitForQueueCompletion: vitest.fn(),
     removeJob: vitest.fn(),
+    onShutdown: vitest.fn(),
   };
 };

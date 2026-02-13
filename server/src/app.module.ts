@@ -1,4 +1,3 @@
-import { BullModule } from '@nestjs/bullmq';
 import { Inject, Module, OnModuleDestroy, OnModuleInit, ValidationPipe } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ScheduleModule, SchedulerRegistry } from '@nestjs/schedule';
@@ -22,6 +21,7 @@ import { LoggingInterceptor } from 'src/middleware/logging.interceptor';
 import { repositories } from 'src/repositories';
 import { AppRepository } from 'src/repositories/app.repository';
 import { ConfigRepository } from 'src/repositories/config.repository';
+import { JobRepository } from 'src/repositories/job.repository';
 import { DatabaseRepository } from 'src/repositories/database.repository';
 import { EventRepository } from 'src/repositories/event.repository';
 import { LoggingRepository } from 'src/repositories/logging.repository';
@@ -49,7 +49,7 @@ const commonMiddleware = [
 const apiMiddleware = [FileUploadInterceptor, ...commonMiddleware, { provide: APP_GUARD, useClass: AuthGuard }];
 
 const configRepository = new ConfigRepository();
-const { bull, cls, database, otel } = configRepository.getEnv();
+const { cls, database, otel } = configRepository.getEnv();
 
 const commonImports = [
   ClsModule.forRoot(cls.config),
@@ -57,7 +57,6 @@ const commonImports = [
   OpenTelemetryModule.forRoot(otel),
 ];
 
-const bullImports = [BullModule.forRoot(bull.config), BullModule.registerQueue(...bull.queues)];
 
 export class BaseModule implements OnModuleInit, OnModuleDestroy {
   constructor(
@@ -65,6 +64,7 @@ export class BaseModule implements OnModuleInit, OnModuleDestroy {
     logger: LoggingRepository,
     private authService: AuthService,
     private eventRepository: EventRepository,
+    private jobRepository: JobRepository,
     private queueService: QueueService,
     private telemetryRepository: TelemetryRepository,
     private websocketRepository: WebsocketRepository,
@@ -91,12 +91,13 @@ export class BaseModule implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     await this.eventRepository.emit('AppShutdown');
+    await this.jobRepository.onShutdown();
     await teardownTelemetry();
   }
 }
 
 @Module({
-  imports: [...bullImports, ...commonImports, ScheduleModule.forRoot()],
+  imports: [...commonImports, ScheduleModule.forRoot()],
   controllers: [...controllers],
   providers: [...common, ...apiMiddleware, { provide: IWorker, useValue: ImmichWorker.Api }],
 })
@@ -137,13 +138,13 @@ export class MaintenanceModule {
 }
 
 @Module({
-  imports: [...bullImports, ...commonImports],
+  imports: [...commonImports],
   providers: [...common, { provide: IWorker, useValue: ImmichWorker.Microservices }, SchedulerRegistry],
 })
 export class MicroservicesModule extends BaseModule {}
 
 @Module({
-  imports: [...bullImports, ...commonImports],
+  imports: [...commonImports],
   providers: [...common, ...commandsAndQuestions, SchedulerRegistry],
 })
 export class ImmichAdminModule implements OnModuleDestroy {

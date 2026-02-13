@@ -35,7 +35,6 @@
   },
   "dependencies": {
     "@extism/extism": "2.0.0-rc13",
-    "@nestjs/bullmq": "^11.0.1",
     "@nestjs/common": "^11.0.4",
     "@nestjs/core": "^11.0.4",
     "@nestjs/platform-express": "^11.0.4",
@@ -62,7 +61,6 @@
     "async-lock": "^1.4.0",
     "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",
-    "bullmq": "^5.51.0",
     "chokidar": "^4.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",

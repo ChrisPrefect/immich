@@ -9,13 +9,6 @@ const envData: EnvData = {
   logFormat: LogFormat.Console,
 
   buildMetadata: {},
-  bull: {
-    config: {
-      connection: {},
-      prefix: 'immich_bull',
-    },
-    queues: [{ name: 'queue-1' }],
-  },
 
   cls: {
     config: {},

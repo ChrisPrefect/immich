@@ -1,6 +1,4 @@
-import { RegisterQueueOptions } from '@nestjs/bullmq';
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { QueueOptions } from 'bullmq';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { Request, Response } from 'express';
@@ -19,7 +17,6 @@ import {
   ImmichWorker,
   LogFormat,
   LogLevel,
-  QueueName,
 } from 'src/enum';
 import { DatabaseConnectionParams, VectorExtension } from 'src/types';
 import { setDifference } from 'src/utils/set';
@@ -46,11 +43,6 @@ export interface EnvData {
     thirdPartyBugFeatureUrl?: string;
     thirdPartyDocumentationUrl?: string;
     thirdPartySupportUrl?: string;
-  };
-
-  bull: {
-    config: QueueOptions;
-    queues: RegisterQueueOptions[];
   };
 
   cls: {
@@ -251,19 +243,6 @@ const getEnv = (): EnvData => {
       thirdPartyBugFeatureUrl: dto.IMMICH_THIRD_PARTY_BUG_FEATURE_URL,
       thirdPartyDocumentationUrl: dto.IMMICH_THIRD_PARTY_DOCUMENTATION_URL,
       thirdPartySupportUrl: dto.IMMICH_THIRD_PARTY_SUPPORT_URL,
-    },
-
-    bull: {
-      config: {
-        prefix: 'immich_bull',
-        connection: { ...redisConfig },
-        defaultJobOptions: {
-          attempts: 1,
-          removeOnComplete: true,
-          removeOnFail: false,
-        },
-      },
-      queues: Object.values(QueueName).map((name) => ({ name })),
     },
 
     cls: {

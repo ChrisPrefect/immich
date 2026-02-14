@@ -134,8 +134,8 @@ export class StorageTemplateService extends BaseService {
   }
 
   @OnEvent({ name: 'AssetMetadataExtracted' })
-  async onAssetMetadataExtracted({ source, assetId }: ArgOf<'AssetMetadataExtracted'>) {
-    await this.jobRepository.queue({ name: JobName.StorageTemplateMigrationSingle, data: { source, id: assetId } });
+  onAssetMetadataExtracted({ source, assetId }: ArgOf<'AssetMetadataExtracted'>) {
+    void this.jobRepository.queue({ name: JobName.StorageTemplateMigrationSingle, data: { source, id: assetId } });
   }
 
   @OnJob({ name: JobName.StorageTemplateMigrationSingle, queue: QueueName.StorageTemplateMigration })

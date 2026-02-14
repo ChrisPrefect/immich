@@ -141,7 +141,7 @@ export class JobRepository {
       }
     }
 
-    this.pool = this.createPgConnection({ max: 10, connection: { synchronous_commit: 'off' } });
+    this.pool = this.createPgConnection({ max: 20, connection: { synchronous_commit: 'off' } });
     this.db = new Kysely<DB>({ dialect: new PostgresJSDialect({ postgres: this.pool }) });
     this.writeBuffer = new WriteBuffer(this.pool, (queue) => this.notify(queue));
   }

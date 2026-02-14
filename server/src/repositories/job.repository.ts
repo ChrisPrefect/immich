@@ -394,16 +394,6 @@ export class JobRepository {
     }
   }
 
-  /** @deprecated */
-  // todo: remove this when asset notifications no longer need it.
-  removeJob(name: JobName, dedupKey: string) {
-    return this.db
-      .deleteFrom(getTable(this.db, this.getQueueName(name)))
-      .where('dedupKey', '=', dedupKey)
-      .where('status', '=', JobQueueStatus.Pending)
-      .execute();
-  }
-
   private createPgConnection(options?: { max?: number; connection?: Record<string, string> }) {
     const { database } = this.configRepository.getEnv();
     const pgConfig = asPostgresConnectionConfig(database.config);

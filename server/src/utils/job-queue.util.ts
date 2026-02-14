@@ -435,7 +435,8 @@ export class WriteBuffer {
         ${runAfter}::timestamptz[]
       )
       ON CONFLICT ("dedupKey") WHERE "dedupKey" IS NOT NULL
-      DO NOTHING
+      DO UPDATE SET "runAfter" = EXCLUDED."runAfter", data = EXCLUDED.data
+      WHERE ${this.pgPool(tableName)}.status = ${JobQueueStatus.Pending}
     `;
   }
 }

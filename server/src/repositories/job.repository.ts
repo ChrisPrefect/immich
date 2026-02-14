@@ -22,7 +22,7 @@ import { ConfigRepository } from 'src/repositories/config.repository';
 import { EventRepository } from 'src/repositories/event.repository';
 import { LoggingRepository } from 'src/repositories/logging.repository';
 import { DB } from 'src/schema';
-import { JobCounts, JobItem, JobOf } from 'src/types';
+import { ConcurrentQueueName, JobCounts, JobItem, JobOf } from 'src/types';
 import { asPostgresConnectionConfig } from 'src/utils/database';
 import { getTable, InsertRow, QueueWorker, WriteBuffer } from 'src/utils/job-queue.util';
 import { getKeyByValue, getMethodNames, ImmichStartupError } from 'src/utils/misc';
@@ -34,7 +34,20 @@ type JobMapItem = {
   label: string;
 };
 
+const SERIAL_QUEUES = [
+  QueueName.FacialRecognition,
+  QueueName.StorageTemplateMigration,
+  QueueName.DuplicateDetection,
+  QueueName.BackupDatabase,
+];
+
+export const isConcurrentQueue = (name: QueueName): name is ConcurrentQueueName => !SERIAL_QUEUES.includes(name);
+
 const getClaimBatch = (queueName: QueueName): number => {
+  if (SERIAL_QUEUES.includes(queueName)) {
+    return 1;
+  }
+
   switch (queueName) {
     case QueueName.VideoConversion: {
       return 1;

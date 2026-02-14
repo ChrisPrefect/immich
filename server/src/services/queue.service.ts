@@ -28,8 +28,9 @@ import {
   QueueName,
 } from 'src/enum';
 import { ArgOf } from 'src/repositories/event.repository';
+import { isConcurrentQueue } from 'src/repositories/job.repository';
 import { BaseService } from 'src/services/base.service';
-import { ConcurrentQueueName, JobItem } from 'src/types';
+import { JobItem } from 'src/types';
 import { handlePromiseError } from 'src/utils/misc';
 
 const asNightlyTasksCron = (config: SystemConfig) => {
@@ -88,7 +89,7 @@ export class QueueService extends BaseService {
     this.logger.debug(`Updating queue concurrency settings`);
     for (const queueName of Object.values(QueueName)) {
       let concurrency = 1;
-      if (this.isConcurrentQueue(queueName)) {
+      if (isConcurrentQueue(queueName)) {
         concurrency = config.job[queueName].concurrency;
       }
       this.logger.debug(`Setting ${queueName} concurrency to ${concurrency}`);
@@ -248,15 +249,6 @@ export class QueueService extends BaseService {
         throw new BadRequestException(`Invalid job name: ${name}`);
       }
     }
-  }
-
-  private isConcurrentQueue(name: QueueName): name is ConcurrentQueueName {
-    return ![
-      QueueName.FacialRecognition,
-      QueueName.StorageTemplateMigration,
-      QueueName.DuplicateDetection,
-      QueueName.BackupDatabase,
-    ].includes(name);
   }
 
   async handleNightlyJobs() {

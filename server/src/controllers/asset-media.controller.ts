@@ -42,7 +42,7 @@ import { FileUploadInterceptor, getFiles } from 'src/middleware/file-upload.inte
 import { LoggingRepository } from 'src/repositories/logging.repository';
 import { AssetMediaService } from 'src/services/asset-media.service';
 import { UploadFiles } from 'src/types';
-import { ImmichFileResponse, sendFile } from 'src/utils/file';
+import { ImmichFileResponse, sendFile, sendFileThrottled } from 'src/utils/file';
 import { FileNotEmptyValidator, UUIDParamDto } from 'src/validation';
 
 @ApiTags(ApiTag.Assets)
@@ -109,7 +109,7 @@ export class AssetMediaController {
     @Res() res: Response,
     @Next() next: NextFunction,
   ) {
-    await sendFile(res, next, () => this.service.downloadOriginal(auth, id, dto), this.logger);
+    await sendFileThrottled(res, next, () => this.service.downloadOriginal(auth, id, dto), this.logger, 10);
   }
 
   @Put(':id/original')
@@ -162,7 +162,14 @@ export class AssetMediaController {
     const viewThumbnailRes = await this.service.viewThumbnail(auth, id, dto);
 
     if (viewThumbnailRes instanceof ImmichFileResponse) {
-      await sendFile(res, next, () => Promise.resolve(viewThumbnailRes), this.logger);
+      const size = dto.size ?? AssetMediaSize.THUMBNAIL;
+      let durationSeconds = 1;
+      if (size === AssetMediaSize.PREVIEW) {
+        durationSeconds = 4;
+      } else if (size === AssetMediaSize.FULLSIZE) {
+        durationSeconds = 4;
+      }
+      await sendFileThrottled(res, next, () => Promise.resolve(viewThumbnailRes), this.logger, durationSeconds);
     } else {
       // viewThumbnailRes is a AssetMediaRedirectResponse
       // which redirects to the original asset or a specific size to make better use of caching

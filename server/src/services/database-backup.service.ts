@@ -29,7 +29,6 @@ import {
   UnsupportedPostgresError,
 } from 'src/utils/database-backups';
 import { ImmichFileResponse } from 'src/utils/file';
-import { handlePromiseError } from 'src/utils/misc';
 
 @Injectable()
 export class DatabaseBackupService {
@@ -68,7 +67,7 @@ export class DatabaseBackupService {
       this.cronRepository.create({
         name: 'backupDatabase',
         expression: database.cronExpression,
-        onTick: () => handlePromiseError(this.jobRepository.queue({ name: JobName.DatabaseBackup }), this.logger),
+        onTick: () => this.jobRepository.queue({ name: JobName.DatabaseBackup }),
         start: database.enabled,
       });
     }

@@ -143,7 +143,11 @@ export class JobRepository {
 
     this.pool = this.createPgConnection({ max: 20, connection: { synchronous_commit: 'off' } });
     this.db = new Kysely<DB>({ dialect: new PostgresJSDialect({ postgres: this.pool }) });
-    this.writeBuffer = new WriteBuffer(this.pool, (queue) => this.notify(queue));
+    this.writeBuffer = new WriteBuffer(
+      this.pool,
+      (queue) => this.notify(queue),
+      (error) => this.logger.error(`Failed to flush job write buffer: ${error}`),
+    );
   }
 
   async startWorkers() {
@@ -287,9 +291,9 @@ export class JobRepository {
     return (this.handlers[name] as JobMapItem).queueName;
   }
 
-  queueAll(items: JobItem[]): Promise<void> {
+  queueAll(items: JobItem[]): void {
     if (items.length === 0) {
-      return Promise.resolve();
+      return;
     }
 
     const bufferItems: { queue: QueueName; row: InsertRow }[] = [];
@@ -308,11 +312,11 @@ export class JobRepository {
       });
     }
 
-    return this.writeBuffer.add(bufferItems);
+    this.writeBuffer.add(bufferItems);
   }
 
-  queue(item: JobItem): Promise<void> {
-    return this.queueAll([item]);
+  queue(item: JobItem): void {
+    this.queueAll([item]);
   }
 
   async waitForQueueCompletion(...queues: QueueName[]): Promise<void> {

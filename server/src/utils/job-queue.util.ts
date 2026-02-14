@@ -325,15 +325,15 @@ export class QueueWorker {
 
 export class WriteBuffer {
   private buffers = Object.fromEntries(Object.values(QueueName).map((name) => [name as QueueName, [] as InsertRow[]]));
-  private pending: Deferred | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private pgPool: postgres.Sql,
     private notify: (queue: QueueName) => Promise<unknown>,
+    private onFlushError?: (error: unknown) => void,
   ) {}
 
-  async add(items: { queue: QueueName; row: InsertRow }[]): Promise<void> {
+  add(items: { queue: QueueName; row: InsertRow }[]): void {
     if (items.length === 0) {
       return;
     }
@@ -342,10 +342,8 @@ export class WriteBuffer {
       this.buffers[queue].push(row);
     }
     if (!this.timer) {
-      this.pending = createDeferred();
-      this.timer = setTimeout(() => void this.flush(), 10);
+      this.timer = setTimeout(() => void this.flush().catch((error) => this.onFlushError?.(error)), 10);
     }
-    return this.pending!.promise;
   }
 
   async flush(): Promise<void> {
@@ -353,8 +351,6 @@ export class WriteBuffer {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    const deferred = this.pending;
-    this.pending = null;
 
     const promises: Promise<unknown>[] = [];
 
@@ -385,12 +381,7 @@ export class WriteBuffer {
       }
     }
 
-    try {
-      await Promise.all(promises);
-      deferred?.resolve();
-    } catch (error) {
-      deferred?.reject(error);
-    }
+    await Promise.all(promises);
   }
 
   private async copyInsert(tableName: string, rows: InsertRow[]) {
@@ -466,13 +457,6 @@ const QUEUE_TABLE = {
   [QueueName.Editor]: 'jobs_editor',
 } as const;
 
-const createDeferred = (): Deferred => {
-  let resolve!: () => void;
-  let reject!: (error: unknown) => void;
-  const promise = new Promise<void>((_resolve, _reject) => ((resolve = _resolve), (reject = _reject)));
-  return { promise, resolve, reject };
-};
-
 interface QueueWorkerOptions {
   queueName: QueueName;
   stallTimeout: number;
@@ -484,4 +468,3 @@ interface QueueWorkerOptions {
   onJob: (job: JobItem) => Promise<unknown>;
 }
 
-type Deferred = { promise: Promise<void>; resolve: () => void; reject: (error: unknown) => void };

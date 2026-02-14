@@ -47,7 +47,7 @@ export class LibraryService extends BaseService {
       this.cronRepository.create({
         name: CronJob.LibraryScan,
         expression: scan.cronExpression,
-        onTick: () => handlePromiseError(this.jobRepository.queue({ name: JobName.LibraryScanQueueAll }), this.logger),
+        onTick: () => this.jobRepository.queue({ name: JobName.LibraryScanQueueAll }),
         start: scan.enabled,
       });
     }

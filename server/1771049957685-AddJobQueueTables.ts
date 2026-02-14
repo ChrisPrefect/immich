@@ -15,7 +15,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_thumbnail_generation_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_thumbnail_generation_dedup" ON "jobs_thumbnail_generation" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_thumbnail_generation_pending" ON "jobs_thumbnail_generation" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_thumbnail_generation_pending" ON "jobs_thumbnail_generation" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_metadata_extraction" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -30,7 +30,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_metadata_extraction_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_metadata_extraction_dedup" ON "jobs_metadata_extraction" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_metadata_extraction_pending" ON "jobs_metadata_extraction" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_metadata_extraction_pending" ON "jobs_metadata_extraction" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_video_conversion" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -45,7 +45,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_video_conversion_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_video_conversion_dedup" ON "jobs_video_conversion" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_video_conversion_pending" ON "jobs_video_conversion" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_video_conversion_pending" ON "jobs_video_conversion" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_face_detection" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -60,7 +60,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_face_detection_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_face_detection_dedup" ON "jobs_face_detection" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_face_detection_pending" ON "jobs_face_detection" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_face_detection_pending" ON "jobs_face_detection" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_facial_recognition" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -75,7 +75,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_facial_recognition_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_facial_recognition_dedup" ON "jobs_facial_recognition" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_facial_recognition_pending" ON "jobs_facial_recognition" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_facial_recognition_pending" ON "jobs_facial_recognition" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_smart_search" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -90,7 +90,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_smart_search_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_smart_search_dedup" ON "jobs_smart_search" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_smart_search_pending" ON "jobs_smart_search" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_smart_search_pending" ON "jobs_smart_search" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_duplicate_detection" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -105,7 +105,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_duplicate_detection_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_duplicate_detection_dedup" ON "jobs_duplicate_detection" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_duplicate_detection_pending" ON "jobs_duplicate_detection" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_duplicate_detection_pending" ON "jobs_duplicate_detection" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_background_task" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -120,7 +120,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_background_task_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_background_task_dedup" ON "jobs_background_task" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_background_task_pending" ON "jobs_background_task" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_background_task_pending" ON "jobs_background_task" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_storage_template_migration" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -135,7 +135,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_storage_template_migration_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_storage_template_migration_dedup" ON "jobs_storage_template_migration" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_storage_template_migration_pending" ON "jobs_storage_template_migration" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_storage_template_migration_pending" ON "jobs_storage_template_migration" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_migration" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -150,7 +150,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_migration_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_migration_dedup" ON "jobs_migration" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_migration_pending" ON "jobs_migration" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_migration_pending" ON "jobs_migration" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_search" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -165,7 +165,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_search_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_search_dedup" ON "jobs_search" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_search_pending" ON "jobs_search" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_search_pending" ON "jobs_search" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_sidecar" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -180,7 +180,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_sidecar_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_sidecar_dedup" ON "jobs_sidecar" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_sidecar_pending" ON "jobs_sidecar" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_sidecar_pending" ON "jobs_sidecar" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_library" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -195,7 +195,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_library_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_library_dedup" ON "jobs_library" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_library_pending" ON "jobs_library" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_library_pending" ON "jobs_library" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_notification" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -210,7 +210,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_notification_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_notification_dedup" ON "jobs_notification" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_notification_pending" ON "jobs_notification" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_notification_pending" ON "jobs_notification" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_backup_database" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -225,7 +225,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_backup_database_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_backup_database_dedup" ON "jobs_backup_database" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_backup_database_pending" ON "jobs_backup_database" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_backup_database_pending" ON "jobs_backup_database" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_ocr" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -240,7 +240,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_ocr_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_ocr_dedup" ON "jobs_ocr" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_ocr_pending" ON "jobs_ocr" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_ocr_pending" ON "jobs_ocr" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_workflow" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -255,7 +255,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_workflow_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_workflow_dedup" ON "jobs_workflow" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_workflow_pending" ON "jobs_workflow" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_workflow_pending" ON "jobs_workflow" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_editor" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
@@ -270,7 +270,7 @@ export async function up(db: Kysely<any>): Promise<void> {
   CONSTRAINT "jobs_editor_pkey" PRIMARY KEY ("id")
 );`.execute(db);
   await sql`CREATE UNIQUE INDEX "IDX_jobs_editor_dedup" ON "jobs_editor" ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = 0;`.execute(db);
-  await sql`CREATE INDEX "IDX_jobs_editor_pending" ON "jobs_editor" ("priority", "id") WHERE status = 0;`.execute(db);
+  await sql`CREATE INDEX "IDX_jobs_editor_pending" ON "jobs_editor" (priority DESC, id ASC) WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "job_queue_meta" (
   "queueName" text NOT NULL,
   "isPaused" boolean NOT NULL DEFAULT false,
@@ -331,41 +331,41 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`ALTER TABLE "jobs_editor" SET (autovacuum_vacuum_scale_factor = 0.01)`.execute(db);
   await sql`ALTER TABLE "jobs_editor" SET (autovacuum_vacuum_threshold = 100)`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_thumbnail_generation_dedup', '{"type":"index","name":"IDX_jobs_thumbnail_generation_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_thumbnail_generation_dedup\\" ON \\"jobs_thumbnail_generation\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_thumbnail_generation_pending', '{"type":"index","name":"IDX_jobs_thumbnail_generation_pending","sql":"CREATE INDEX \\"IDX_jobs_thumbnail_generation_pending\\" ON \\"jobs_thumbnail_generation\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_thumbnail_generation_pending', '{"type":"index","name":"IDX_jobs_thumbnail_generation_pending","sql":"CREATE INDEX \\"IDX_jobs_thumbnail_generation_pending\\" ON \\"jobs_thumbnail_generation\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_metadata_extraction_dedup', '{"type":"index","name":"IDX_jobs_metadata_extraction_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_metadata_extraction_dedup\\" ON \\"jobs_metadata_extraction\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_metadata_extraction_pending', '{"type":"index","name":"IDX_jobs_metadata_extraction_pending","sql":"CREATE INDEX \\"IDX_jobs_metadata_extraction_pending\\" ON \\"jobs_metadata_extraction\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_metadata_extraction_pending', '{"type":"index","name":"IDX_jobs_metadata_extraction_pending","sql":"CREATE INDEX \\"IDX_jobs_metadata_extraction_pending\\" ON \\"jobs_metadata_extraction\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_video_conversion_dedup', '{"type":"index","name":"IDX_jobs_video_conversion_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_video_conversion_dedup\\" ON \\"jobs_video_conversion\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_video_conversion_pending', '{"type":"index","name":"IDX_jobs_video_conversion_pending","sql":"CREATE INDEX \\"IDX_jobs_video_conversion_pending\\" ON \\"jobs_video_conversion\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_video_conversion_pending', '{"type":"index","name":"IDX_jobs_video_conversion_pending","sql":"CREATE INDEX \\"IDX_jobs_video_conversion_pending\\" ON \\"jobs_video_conversion\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_face_detection_dedup', '{"type":"index","name":"IDX_jobs_face_detection_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_face_detection_dedup\\" ON \\"jobs_face_detection\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_face_detection_pending', '{"type":"index","name":"IDX_jobs_face_detection_pending","sql":"CREATE INDEX \\"IDX_jobs_face_detection_pending\\" ON \\"jobs_face_detection\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_face_detection_pending', '{"type":"index","name":"IDX_jobs_face_detection_pending","sql":"CREATE INDEX \\"IDX_jobs_face_detection_pending\\" ON \\"jobs_face_detection\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_facial_recognition_dedup', '{"type":"index","name":"IDX_jobs_facial_recognition_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_facial_recognition_dedup\\" ON \\"jobs_facial_recognition\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_facial_recognition_pending', '{"type":"index","name":"IDX_jobs_facial_recognition_pending","sql":"CREATE INDEX \\"IDX_jobs_facial_recognition_pending\\" ON \\"jobs_facial_recognition\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_facial_recognition_pending', '{"type":"index","name":"IDX_jobs_facial_recognition_pending","sql":"CREATE INDEX \\"IDX_jobs_facial_recognition_pending\\" ON \\"jobs_facial_recognition\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_smart_search_dedup', '{"type":"index","name":"IDX_jobs_smart_search_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_smart_search_dedup\\" ON \\"jobs_smart_search\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_smart_search_pending', '{"type":"index","name":"IDX_jobs_smart_search_pending","sql":"CREATE INDEX \\"IDX_jobs_smart_search_pending\\" ON \\"jobs_smart_search\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_smart_search_pending', '{"type":"index","name":"IDX_jobs_smart_search_pending","sql":"CREATE INDEX \\"IDX_jobs_smart_search_pending\\" ON \\"jobs_smart_search\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_duplicate_detection_dedup', '{"type":"index","name":"IDX_jobs_duplicate_detection_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_duplicate_detection_dedup\\" ON \\"jobs_duplicate_detection\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_duplicate_detection_pending', '{"type":"index","name":"IDX_jobs_duplicate_detection_pending","sql":"CREATE INDEX \\"IDX_jobs_duplicate_detection_pending\\" ON \\"jobs_duplicate_detection\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_duplicate_detection_pending', '{"type":"index","name":"IDX_jobs_duplicate_detection_pending","sql":"CREATE INDEX \\"IDX_jobs_duplicate_detection_pending\\" ON \\"jobs_duplicate_detection\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_background_task_dedup', '{"type":"index","name":"IDX_jobs_background_task_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_background_task_dedup\\" ON \\"jobs_background_task\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_background_task_pending', '{"type":"index","name":"IDX_jobs_background_task_pending","sql":"CREATE INDEX \\"IDX_jobs_background_task_pending\\" ON \\"jobs_background_task\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_background_task_pending', '{"type":"index","name":"IDX_jobs_background_task_pending","sql":"CREATE INDEX \\"IDX_jobs_background_task_pending\\" ON \\"jobs_background_task\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_storage_template_migration_dedup', '{"type":"index","name":"IDX_jobs_storage_template_migration_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_storage_template_migration_dedup\\" ON \\"jobs_storage_template_migration\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_storage_template_migration_pending', '{"type":"index","name":"IDX_jobs_storage_template_migration_pending","sql":"CREATE INDEX \\"IDX_jobs_storage_template_migration_pending\\" ON \\"jobs_storage_template_migration\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_storage_template_migration_pending', '{"type":"index","name":"IDX_jobs_storage_template_migration_pending","sql":"CREATE INDEX \\"IDX_jobs_storage_template_migration_pending\\" ON \\"jobs_storage_template_migration\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_migration_dedup', '{"type":"index","name":"IDX_jobs_migration_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_migration_dedup\\" ON \\"jobs_migration\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_migration_pending', '{"type":"index","name":"IDX_jobs_migration_pending","sql":"CREATE INDEX \\"IDX_jobs_migration_pending\\" ON \\"jobs_migration\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_migration_pending', '{"type":"index","name":"IDX_jobs_migration_pending","sql":"CREATE INDEX \\"IDX_jobs_migration_pending\\" ON \\"jobs_migration\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_search_dedup', '{"type":"index","name":"IDX_jobs_search_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_search_dedup\\" ON \\"jobs_search\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_search_pending', '{"type":"index","name":"IDX_jobs_search_pending","sql":"CREATE INDEX \\"IDX_jobs_search_pending\\" ON \\"jobs_search\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_search_pending', '{"type":"index","name":"IDX_jobs_search_pending","sql":"CREATE INDEX \\"IDX_jobs_search_pending\\" ON \\"jobs_search\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_sidecar_dedup', '{"type":"index","name":"IDX_jobs_sidecar_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_sidecar_dedup\\" ON \\"jobs_sidecar\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_sidecar_pending', '{"type":"index","name":"IDX_jobs_sidecar_pending","sql":"CREATE INDEX \\"IDX_jobs_sidecar_pending\\" ON \\"jobs_sidecar\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_sidecar_pending', '{"type":"index","name":"IDX_jobs_sidecar_pending","sql":"CREATE INDEX \\"IDX_jobs_sidecar_pending\\" ON \\"jobs_sidecar\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_library_dedup', '{"type":"index","name":"IDX_jobs_library_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_library_dedup\\" ON \\"jobs_library\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_library_pending', '{"type":"index","name":"IDX_jobs_library_pending","sql":"CREATE INDEX \\"IDX_jobs_library_pending\\" ON \\"jobs_library\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_library_pending', '{"type":"index","name":"IDX_jobs_library_pending","sql":"CREATE INDEX \\"IDX_jobs_library_pending\\" ON \\"jobs_library\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_notification_dedup', '{"type":"index","name":"IDX_jobs_notification_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_notification_dedup\\" ON \\"jobs_notification\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_notification_pending', '{"type":"index","name":"IDX_jobs_notification_pending","sql":"CREATE INDEX \\"IDX_jobs_notification_pending\\" ON \\"jobs_notification\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_notification_pending', '{"type":"index","name":"IDX_jobs_notification_pending","sql":"CREATE INDEX \\"IDX_jobs_notification_pending\\" ON \\"jobs_notification\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_backup_database_dedup', '{"type":"index","name":"IDX_jobs_backup_database_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_backup_database_dedup\\" ON \\"jobs_backup_database\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_backup_database_pending', '{"type":"index","name":"IDX_jobs_backup_database_pending","sql":"CREATE INDEX \\"IDX_jobs_backup_database_pending\\" ON \\"jobs_backup_database\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_backup_database_pending', '{"type":"index","name":"IDX_jobs_backup_database_pending","sql":"CREATE INDEX \\"IDX_jobs_backup_database_pending\\" ON \\"jobs_backup_database\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_ocr_dedup', '{"type":"index","name":"IDX_jobs_ocr_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_ocr_dedup\\" ON \\"jobs_ocr\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_ocr_pending', '{"type":"index","name":"IDX_jobs_ocr_pending","sql":"CREATE INDEX \\"IDX_jobs_ocr_pending\\" ON \\"jobs_ocr\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_ocr_pending', '{"type":"index","name":"IDX_jobs_ocr_pending","sql":"CREATE INDEX \\"IDX_jobs_ocr_pending\\" ON \\"jobs_ocr\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_workflow_dedup', '{"type":"index","name":"IDX_jobs_workflow_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_workflow_dedup\\" ON \\"jobs_workflow\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_workflow_pending', '{"type":"index","name":"IDX_jobs_workflow_pending","sql":"CREATE INDEX \\"IDX_jobs_workflow_pending\\" ON \\"jobs_workflow\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_workflow_pending', '{"type":"index","name":"IDX_jobs_workflow_pending","sql":"CREATE INDEX \\"IDX_jobs_workflow_pending\\" ON \\"jobs_workflow\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
   await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_editor_dedup', '{"type":"index","name":"IDX_jobs_editor_dedup","sql":"CREATE UNIQUE INDEX \\"IDX_jobs_editor_dedup\\" ON \\"jobs_editor\\" (\\"dedupKey\\") WHERE \\"dedupKey\\" IS NOT NULL AND status = 0;"}'::jsonb);`.execute(db);
-  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_editor_pending', '{"type":"index","name":"IDX_jobs_editor_pending","sql":"CREATE INDEX \\"IDX_jobs_editor_pending\\" ON \\"jobs_editor\\" (\\"priority\\", \\"id\\") WHERE status = 0;"}'::jsonb);`.execute(db);
+  await sql`INSERT INTO "migration_overrides" ("name", "value") VALUES ('index_IDX_jobs_editor_pending', '{"type":"index","name":"IDX_jobs_editor_pending","sql":"CREATE INDEX \\"IDX_jobs_editor_pending\\" ON \\"jobs_editor\\" (priority DESC, id ASC) WHERE status = 0;"}'::jsonb);`.execute(db);
 }
 
 export async function down(db: Kysely<any>): Promise<void> {

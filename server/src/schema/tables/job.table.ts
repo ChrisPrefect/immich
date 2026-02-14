@@ -57,7 +57,7 @@ function defineJobTable(name: string) {
       unique: true,
       where: `"dedupKey" IS NOT NULL AND status = 0`,
     }),
-    Index({ name: `IDX_${name}_pending`, columns: ['priority', 'id'], where: 'status = 0' }),
+    Index({ name: `IDX_${name}_pending`, expression: 'priority DESC, id ASC', where: 'status = 0' }),
     Table(name),
   ].reduce((cls, dec) => dec(cls) || cls, JobTable);
   Object.defineProperty(decorated, 'name', { value: name });

@@ -284,7 +284,7 @@ export class QueueWorker {
         expiresAt: null,
       })
       .where('status', '=', JobQueueStatus.Active)
-      .where('expiresAt', '<', sql<Date>`now()`)
+      .where('expiresAt', '<', sql<Date>`now()`) // needed for multi-instance safety
       .executeTakeFirst();
   }
 

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ModuleRef, Reflector } from '@nestjs/core';
 import { ClassConstructor } from 'class-transformer';
 import { Kysely, sql } from 'kysely';
-import { InjectKysely } from 'nestjs-kysely';
+import { PostgresJSDialect } from 'kysely-postgres-js';
 import { setTimeout } from 'node:timers/promises';
 import postgres from 'postgres';
 import { JobConfig } from 'src/decorators';
@@ -64,7 +64,8 @@ export class JobRepository {
   private workers: Partial<Record<QueueName, QueueWorker>> = {};
   private handlers: Partial<Record<JobName, JobMapItem>> = {};
   private writeBuffer!: WriteBuffer;
-  private writePool: postgres.Sql | null = null;
+  private pool: postgres.Sql | null = null;
+  private db!: Kysely<DB>;
   private listenConn: postgres.Sql | null = null;
   private listenReady = false;
   private pauseState: Partial<Record<QueueName, boolean>> = {};
@@ -74,7 +75,6 @@ export class JobRepository {
     private configRepository: ConfigRepository,
     private eventRepository: EventRepository,
     private logger: LoggingRepository,
-    @InjectKysely() private db: Kysely<DB>,
   ) {
     this.logger.setContext(JobRepository.name);
   }
@@ -128,8 +128,9 @@ export class JobRepository {
       }
     }
 
-    this.writePool = this.createPgConnection({ max: 4, connection: { synchronous_commit: 'off' } });
-    this.writeBuffer = new WriteBuffer(this.writePool, (queue) => this.notify(queue));
+    this.pool = this.createPgConnection({ max: 10, connection: { synchronous_commit: 'off' } });
+    this.db = new Kysely<DB>({ dialect: new PostgresJSDialect({ postgres: this.pool }) });
+    this.writeBuffer = new WriteBuffer(this.pool, (queue) => this.notify(queue));
   }
 
   async startWorkers() {
@@ -140,7 +141,7 @@ export class JobRepository {
           .updateTable(getTable(this.db, queueName))
           .set({ status: JobQueueStatus.Pending, startedAt: null, expiresAt: null })
           .where('status', '=', JobQueueStatus.Active)
-          .where('expiresAt', '<', sql<Date>`now()`)
+          .where('expiresAt', '<', sql<Date>`now()`) // needed for multi-instance safety
           .execute(),
       ),
     );
@@ -491,9 +492,9 @@ export class JobRepository {
       await this.writeBuffer.flush();
     }
 
-    if (this.writePool) {
-      await this.writePool.end();
-      this.writePool = null;
+    if (this.pool) {
+      await this.pool.end();
+      this.pool = null;
     }
     if (this.listenConn) {
       await this.listenConn.end();

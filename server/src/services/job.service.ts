@@ -53,7 +53,7 @@ export class JobService extends BaseService {
       const response = await this.jobRepository.run(job);
       await this.eventRepository.emit('JobSuccess', { job, response });
       if (response && typeof response === 'string' && [JobStatus.Success, JobStatus.Skipped].includes(response)) {
-        await this.onDone(job);
+        void this.onDone(job).catch((error) => this.logger.error(`Failed to queue follow-up for ${job.name}: ${error}`));
       }
     } catch (error: Error | any) {
       await this.eventRepository.emit('JobError', { job, error });

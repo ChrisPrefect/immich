@@ -28,15 +28,21 @@ export class QueueWorker {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private sweepTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private readonly queueName: QueueName;
   private readonly table: ReturnType<typeof getTable>;
   private readonly stallTimeout: number;
   private readonly claimBatch: number;
+  private readonly maxRetries: number;
+  private readonly backoffBaseMs: number;
   private readonly db: Kysely<DB>;
   private readonly onJobFn: (job: JobItem) => Promise<unknown>;
 
   constructor(options: QueueWorkerOptions) {
+    this.queueName = options.queueName;
     this.stallTimeout = options.stallTimeout;
     this.claimBatch = options.claimBatch;
+    this.maxRetries = options.maxRetries;
+    this.backoffBaseMs = options.backoffBaseMs;
     this.concurrency = options.concurrency;
     this.db = options.db;
     this.table = getTable(this.db, options.queueName);
@@ -133,7 +139,7 @@ export class QueueWorker {
       }
       await this.onJobFn({ name: jobName, data: row.data } as JobItem);
       // Success: delete completed job and try to fetch next
-      const next = this.stopped ? undefined : await this.completeAndFetch(row.id, true).catch(() => undefined);
+      const next = this.stopped ? undefined : await this.completeAndFetch(row.id).catch(() => undefined);
       this.activeJobs.delete(row.id);
       if (next) {
         void this.processJob(next);
@@ -142,9 +148,11 @@ export class QueueWorker {
         this.hasPending = false;
       }
     } catch (error: unknown) {
-      // Failure: mark as failed and try to fetch next
       const errorMsg = error instanceof Error ? error.message : String(error);
-      const next = await this.completeAndFetch(row.id, false, errorMsg).catch(() => undefined);
+      const next =
+        row.retries < this.maxRetries
+          ? await this.retryAndFetch(row.id, row.retries).catch(() => undefined)
+          : await this.deadLetterAndFetch(row, errorMsg).catch(() => undefined);
       this.activeJobs.delete(row.id);
       if (next) {
         void this.processJob(next);
@@ -192,19 +200,55 @@ export class QueueWorker {
   }
 
   /**
-   * Atomically complete a job (delete on success, mark failed on failure) and claim the next one.
-   * Uses a CTE to combine operations in a single round-trip.
+   * Atomically delete a completed job and claim the next one.
    */
-  private completeAndFetch(jobId: number, success: boolean, errorMsg?: string) {
-    const query = this.db.with('mark', (qb) =>
-      success
-        ? qb.deleteFrom(this.table).where('id', '=', jobId)
-        : qb
-            .updateTable(this.table)
-            .set({ status: JobQueueStatus.Failed, error: errorMsg ?? null })
-            .where('id', '=', jobId),
+  private completeAndFetch(jobId: number) {
+    const prefix = this.db.with('mark', (qb: any) => qb.deleteFrom(this.table).where('id', '=', jobId));
+    return this.claimNext(prefix as any);
+  }
+
+  /**
+   * Atomically retry a failed job (reset to pending with backoff) and claim the next ready one.
+   */
+  private retryAndFetch(jobId: number, retries: number) {
+    const backoffMs = this.backoffBaseMs * 5 ** retries;
+    const prefix = this.db.with('mark', (qb) =>
+      qb
+        .updateTable(this.table)
+        .set({
+          status: JobQueueStatus.Pending,
+          retries: retries + 1,
+          runAfter: sql<Date>`now() + ${sql.lit(`'${backoffMs} milliseconds'`)}::interval`,
+          startedAt: null,
+          expiresAt: null,
+        })
+        .where('id', '=', jobId),
     );
-    return query
+    return this.claimNext(prefix as any);
+  }
+
+  /**
+   * Atomically delete a permanently failed job, log it to the dead-letter table, and claim the next one.
+   */
+  private deadLetterAndFetch(row: Selectable<JobTable>, errorMsg: string) {
+    const prefix = this.db
+      .with('mark', (qb) => qb.deleteFrom(this.table).where('id', '=', row.id))
+      .with('logged', (qb) =>
+        qb.insertInto('job_failures').values({
+          queueName: this.queueName,
+          code: row.code,
+          data: row.data,
+          error: errorMsg,
+        }),
+      );
+    return this.claimNext(prefix as any);
+  }
+
+  /**
+   * Shared suffix: claim the next pending job. Appended after prefix CTEs (mark, logged, etc.).
+   */
+  private claimNext(prefix: Kysely<DB>) {
+    return prefix
       .with('next', (qb) =>
         qb
           .selectFrom(this.table)
@@ -390,7 +434,7 @@ export class WriteBuffer {
         ${dedupKey}::text[],
         ${runAfter}::timestamptz[]
       )
-      ON CONFLICT ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = ${JobQueueStatus.Pending}
+      ON CONFLICT ("dedupKey") WHERE "dedupKey" IS NOT NULL
       DO NOTHING
     `;
   }
@@ -428,6 +472,8 @@ interface QueueWorkerOptions {
   queueName: QueueName;
   stallTimeout: number;
   claimBatch: number;
+  maxRetries: number;
+  backoffBaseMs: number;
   concurrency: number;
   db: Kysely<DB>;
   onJob: (job: JobItem) => Promise<unknown>;

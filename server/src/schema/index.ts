@@ -42,6 +42,7 @@ import { AuditTable } from 'src/schema/tables/audit.table';
 import { FaceSearchTable } from 'src/schema/tables/face-search.table';
 import { GeodataPlacesTable } from 'src/schema/tables/geodata-places.table';
 import {
+  JobFailuresTable,
   JobQueueMetaTable,
   JobsBackgroundTaskTable,
   JobsBackupDatabaseTable,
@@ -175,6 +176,7 @@ export class ImmichDatabase {
     JobsWorkflowTable,
     JobsEditorTable,
     JobQueueMetaTable,
+    JobFailuresTable,
   ];
 
   functions = [
@@ -312,4 +314,5 @@ export interface DB {
   jobs_workflow: JobsWorkflowTable;
   jobs_editor: JobsEditorTable;
   job_queue_meta: JobQueueMetaTable;
+  job_failures: JobFailuresTable;
 }

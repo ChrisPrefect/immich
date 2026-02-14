@@ -1,4 +1,4 @@
-import { JobCode, JobQueueStatus } from 'src/enum';
+import { JobCode, JobQueueStatus, QueueName } from 'src/enum';
 import { Column, ConfigurationParameter, Generated, Index, PrimaryColumn, Table } from 'src/sql-tools';
 
 export type JobTable = {
@@ -9,8 +9,17 @@ export type JobTable = {
   code: JobCode;
   priority: Generated<number>;
   status: Generated<JobQueueStatus>;
+  retries: Generated<number>;
   data: unknown;
   dedupKey: string | null;
+};
+
+export type JobFailureTable = {
+  id: Generated<number>;
+  failedAt: Generated<Date>;
+  queueName: string;
+  code: JobCode;
+  data: unknown;
   error: string | null;
 };
 
@@ -37,14 +46,14 @@ function defineJobTable(name: string) {
     @Column({ type: 'smallint', default: 0 })
     status!: Generated<JobQueueStatus>;
 
+    @Column({ type: 'smallint', default: 0 })
+    retries!: Generated<number>;
+
     @Column({ type: 'jsonb', nullable: true })
     data!: unknown;
 
     @Column({ type: 'text', nullable: true })
     dedupKey!: string | null;
-
-    @Column({ type: 'text', nullable: true })
-    error!: string | null;
   }
 
   const decorated = [
@@ -55,9 +64,9 @@ function defineJobTable(name: string) {
       name: `IDX_${name}_dedup`,
       columns: ['dedupKey'],
       unique: true,
-      where: `"dedupKey" IS NOT NULL AND status = 0`,
+      where: `"dedupKey" IS NOT NULL`,
     }),
-    Index({ name: `IDX_${name}_pending`, expression: 'priority DESC, id ASC', where: 'status = 0' }),
+    Index({ name: `IDX_${name}_pending`, expression: 'priority DESC, id ASC' }),
     Table(name),
   ].reduce((cls, dec) => dec(cls) || cls, JobTable);
   Object.defineProperty(decorated, 'name', { value: name });
@@ -110,4 +119,27 @@ export class JobQueueMetaTable {
 
   @Column({ type: 'boolean', default: false })
   isPaused!: Generated<boolean>;
+}
+
+// Dead-letter table for permanently failed jobs
+@Table('job_failures')
+@Index({ name: 'IDX_job_failures_queue', columns: ['queueName'] })
+export class JobFailuresTable {
+  @PrimaryColumn({ type: 'bigint', identity: true })
+  id!: Generated<number>;
+
+  @Column({ type: 'timestamp with time zone', default: () => 'now()' })
+  failedAt!: Generated<Date>;
+
+  @Column({ type: 'text' })
+  queueName!: QueueName;
+
+  @Column({ type: 'smallint' })
+  code!: JobCode;
+
+  @Column({ type: 'jsonb', nullable: true })
+  data!: unknown;
+
+  @Column({ type: 'text', nullable: true })
+  error!: string | null;
 }

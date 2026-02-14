@@ -52,9 +52,9 @@ const getClaimBatch = (queueName: QueueName): number => {
 
 const STATUS_FILTER = {
   [QueueJobStatus.Active]: JobQueueStatus.Active,
-  [QueueJobStatus.Failed]: JobQueueStatus.Failed,
+  [QueueJobStatus.Failed]: null as null, // failures are in a separate table
   [QueueJobStatus.Waiting]: JobQueueStatus.Pending,
-  [QueueJobStatus.Complete]: null, // completed jobs are deleted
+  [QueueJobStatus.Complete]: null as null, // completed jobs are deleted
   [QueueJobStatus.Delayed]: JobQueueStatus.Pending, // delayed = pending with future run_after
   [QueueJobStatus.Paused]: JobQueueStatus.Pending, // paused queue has pending jobs
 };
@@ -150,6 +150,8 @@ export class JobRepository {
         queueName,
         stallTimeout: 5 * 60 * 1000, // 5 min
         claimBatch: getClaimBatch(queueName),
+        maxRetries: 5,
+        backoffBaseMs: 30_000,
         concurrency: 1,
         db: this.db,
         onJob: (job) => this.eventRepository.emit('JobRun', queueName, job),
@@ -220,26 +222,33 @@ export class JobRepository {
   }
 
   clear(name: QueueName, _type: QueueCleanType) {
-    return this.db.deleteFrom(getTable(this.db, name)).where('status', '=', JobQueueStatus.Failed).execute();
+    return this.db.deleteFrom('job_failures').where('queueName', '=', name).execute();
   }
 
   async getJobCounts(name: QueueName): Promise<JobCounts> {
-    const result = await this.db
-      .selectFrom(getTable(this.db, name))
-      .select((eb) => ['status', eb.fn.countAll<number>().as('count')])
-      .groupBy('status')
-      .execute();
+    const [statusResult, failedResult] = await Promise.all([
+      this.db
+        .selectFrom(getTable(this.db, name))
+        .select((eb) => ['status', eb.fn.countAll<number>().as('count')])
+        .groupBy('status')
+        .execute(),
+      this.db
+        .selectFrom('job_failures')
+        .select((eb) => eb.fn.countAll<number>().as('count'))
+        .where('queueName', '=', name)
+        .executeTakeFirst(),
+    ]);
 
     const counts: JobCounts = {
       active: 0,
       completed: 0,
-      failed: 0,
+      failed: Number(failedResult?.count ?? 0),
       delayed: 0,
       waiting: 0,
       paused: 0,
     };
 
-    for (const row of result) {
+    for (const row of statusResult) {
       switch (row.status) {
         case JobQueueStatus.Pending: {
           counts.waiting = Number(row.count);
@@ -247,10 +256,6 @@ export class JobRepository {
         }
         case JobQueueStatus.Active: {
           counts.active = Number(row.count);
-          break;
-        }
-        case JobQueueStatus.Failed: {
-          counts.failed = Number(row.count);
           break;
         }
       }
@@ -312,32 +317,58 @@ export class JobRepository {
   }
 
   async searchJobs(name: QueueName, dto: QueueJobSearchDto): Promise<QueueJobResponseDto[]> {
+    const requestedStatuses = dto.status ?? Object.values(QueueJobStatus);
+    const includeFailed = requestedStatuses.includes(QueueJobStatus.Failed);
+
     const statuses: JobQueueStatus[] = [];
-    for (const status of dto.status ?? Object.values(QueueJobStatus)) {
+    for (const status of requestedStatuses) {
       const mapped = STATUS_FILTER[status];
       if (mapped !== null && !statuses.includes(mapped)) {
         statuses.push(mapped);
       }
     }
 
-    if (statuses.length === 0) {
-      return [];
+    const results: QueueJobResponseDto[] = [];
+
+    if (statuses.length > 0) {
+      const rows = await this.db
+        .selectFrom(getTable(this.db, name))
+        .select(['id', 'code', 'data', 'runAfter'])
+        .where('status', 'in', statuses)
+        .orderBy('id', 'desc')
+        .limit(1000)
+        .execute();
+
+      for (const row of rows) {
+        results.push({
+          id: String(row.id),
+          name: JOB_CODE_TO_NAME[row.code],
+          data: (row.data ?? {}) as object,
+          timestamp: new Date(row.runAfter).getTime(),
+        });
+      }
     }
 
-    const rows = await this.db
-      .selectFrom(getTable(this.db, name))
-      .select(['id', 'code', 'data', 'runAfter'])
-      .where('status', 'in', statuses)
-      .orderBy('id', 'desc')
-      .limit(1000)
-      .execute();
+    if (includeFailed) {
+      const failedRows = await this.db
+        .selectFrom('job_failures')
+        .select(['id', 'code', 'data', 'failedAt'])
+        .where('queueName', '=', name)
+        .orderBy('id', 'desc')
+        .limit(1000)
+        .execute();
 
-    return rows.map((row) => ({
-      id: String(row.id),
-      name: JOB_CODE_TO_NAME[row.code],
-      data: (row.data ?? {}) as object,
-      timestamp: new Date(row.runAfter).getTime(),
-    }));
+      for (const row of failedRows) {
+        results.push({
+          id: `f-${row.id}`,
+          name: JOB_CODE_TO_NAME[row.code],
+          data: (row.data ?? {}) as object,
+          timestamp: new Date(row.failedAt).getTime(),
+        });
+      }
+    }
+
+    return results;
   }
 
   private getJobOptions(item: JobItem): { dedupKey?: string; priority?: number; delay?: number } | null {

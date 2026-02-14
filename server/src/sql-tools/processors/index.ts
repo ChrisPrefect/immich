@@ -17,11 +17,11 @@ import { Processor } from 'src/sql-tools/types';
 
 export const processors: Processor[] = [
   processDatabases,
-  processConfigurationParameters,
   processEnums,
   processExtensions,
   processFunctions,
   processTables,
+  processConfigurationParameters,
   processColumns,
   processForeignKeyColumns,
   processForeignKeyConstraints,

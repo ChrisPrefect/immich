@@ -1,40 +1,51 @@
 import { JobCode, JobQueueStatus } from 'src/enum';
 import { Column, ConfigurationParameter, Generated, Index, PrimaryColumn, Table } from 'src/sql-tools';
 
-export class JobTable {
-  @PrimaryColumn({ type: 'bigint', identity: true })
-  id!: Generated<number>;
-
-  @Column({ type: 'smallint' })
-  code!: JobCode;
-
-  @Column({ type: 'jsonb', nullable: true })
-  data!: unknown;
-
-  @Column({ type: 'smallint', default: 0 })
-  priority!: Generated<number>;
-
-  @Column({ type: 'smallint', default: 0 })
-  status!: Generated<JobQueueStatus>;
-
-  @Column({ type: 'text', nullable: true })
-  dedupKey!: string | null;
-
-  @Column({ type: 'timestamp with time zone', default: () => 'now()' })
-  runAfter!: Generated<Date>;
-
-  @Column({ type: 'timestamp with time zone', nullable: true })
-  startedAt!: Date | null;
-
-  @Column({ type: 'timestamp with time zone', nullable: true })
-  expiresAt!: Date | null;
-
-  @Column({ type: 'text', nullable: true })
-  error!: string | null;
-}
+export type JobTable = {
+  id: Generated<number>;
+  code: JobCode;
+  data: unknown;
+  priority: Generated<number>;
+  status: Generated<JobQueueStatus>;
+  dedupKey: string | null;
+  runAfter: Generated<Date>;
+  startedAt: Date | null;
+  expiresAt: Date | null;
+  error: string | null;
+};
 
 function defineJobTable(name: string) {
-  class NewJobTable extends JobTable {}
+  class JobTable {
+    @PrimaryColumn({ type: 'bigint', identity: true })
+    id!: Generated<number>;
+
+    @Column({ type: 'smallint' })
+    code!: JobCode;
+
+    @Column({ type: 'jsonb', nullable: true })
+    data!: unknown;
+
+    @Column({ type: 'smallint', default: 0 })
+    priority!: Generated<number>;
+
+    @Column({ type: 'smallint', default: 0 })
+    status!: Generated<JobQueueStatus>;
+
+    @Column({ type: 'text', nullable: true })
+    dedupKey!: string | null;
+
+    @Column({ type: 'timestamp with time zone', default: () => 'now()' })
+    runAfter!: Generated<Date>;
+
+    @Column({ type: 'timestamp with time zone', nullable: true })
+    startedAt!: Date | null;
+
+    @Column({ type: 'timestamp with time zone', nullable: true })
+    expiresAt!: Date | null;
+
+    @Column({ type: 'text', nullable: true })
+    error!: string | null;
+  }
 
   const decorated = [
     ConfigurationParameter({ name: 'autovacuum_vacuum_cost_delay', value: 0, scope: 'table' }),
@@ -48,7 +59,7 @@ function defineJobTable(name: string) {
     }),
     Index({ name: `IDX_${name}_pending`, columns: ['priority', 'id'], where: 'status = 0' }),
     Table(name),
-  ].reduce((cls, dec) => dec(cls) || cls, NewJobTable);
+  ].reduce((cls, dec) => dec(cls) || cls, JobTable);
   Object.defineProperty(decorated, 'name', { value: name });
   return decorated;
 }

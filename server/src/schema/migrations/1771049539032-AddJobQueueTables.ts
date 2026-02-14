@@ -3,14 +3,14 @@ import { Kysely, sql } from 'kysely';
 export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE TABLE "jobs_thumbnail_generation" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_thumbnail_generation_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -18,14 +18,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_thumbnail_generation_pending" ON "jobs_thumbnail_generation" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_metadata_extraction" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_metadata_extraction_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -33,14 +33,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_metadata_extraction_pending" ON "jobs_metadata_extraction" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_video_conversion" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_video_conversion_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -48,14 +48,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_video_conversion_pending" ON "jobs_video_conversion" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_face_detection" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_face_detection_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -63,14 +63,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_face_detection_pending" ON "jobs_face_detection" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_facial_recognition" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_facial_recognition_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -78,14 +78,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_facial_recognition_pending" ON "jobs_facial_recognition" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_smart_search" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_smart_search_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -93,14 +93,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_smart_search_pending" ON "jobs_smart_search" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_duplicate_detection" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_duplicate_detection_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -108,14 +108,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_duplicate_detection_pending" ON "jobs_duplicate_detection" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_background_task" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_background_task_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -123,14 +123,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_background_task_pending" ON "jobs_background_task" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_storage_template_migration" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_storage_template_migration_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -138,14 +138,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_storage_template_migration_pending" ON "jobs_storage_template_migration" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_migration" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_migration_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -153,14 +153,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_migration_pending" ON "jobs_migration" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_search" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_search_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -168,14 +168,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_search_pending" ON "jobs_search" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_sidecar" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_sidecar_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -183,14 +183,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_sidecar_pending" ON "jobs_sidecar" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_library" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_library_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -198,14 +198,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_library_pending" ON "jobs_library" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_notification" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_notification_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -213,14 +213,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_notification_pending" ON "jobs_notification" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_backup_database" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_backup_database_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -228,14 +228,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_backup_database_pending" ON "jobs_backup_database" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_ocr" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_ocr_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -243,14 +243,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_ocr_pending" ON "jobs_ocr" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_workflow" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_workflow_pkey" PRIMARY KEY ("id")
 );`.execute(db);
@@ -258,14 +258,14 @@ export async function up(db: Kysely<any>): Promise<void> {
   await sql`CREATE INDEX "IDX_jobs_workflow_pending" ON "jobs_workflow" ("priority", "id") WHERE status = 0;`.execute(db);
   await sql`CREATE TABLE "jobs_editor" (
   "id" bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
-  "code" smallint NOT NULL,
-  "data" jsonb,
-  "priority" smallint NOT NULL DEFAULT 0,
-  "status" smallint NOT NULL DEFAULT 0,
-  "dedupKey" text,
   "runAfter" timestamp with time zone NOT NULL DEFAULT now(),
   "startedAt" timestamp with time zone,
   "expiresAt" timestamp with time zone,
+  "code" smallint NOT NULL,
+  "priority" smallint NOT NULL DEFAULT 0,
+  "status" smallint NOT NULL DEFAULT 0,
+  "data" jsonb,
+  "dedupKey" text,
   "error" text,
   CONSTRAINT "jobs_editor_pkey" PRIMARY KEY ("id")
 );`.execute(db);

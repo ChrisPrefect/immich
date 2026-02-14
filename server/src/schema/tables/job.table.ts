@@ -3,14 +3,14 @@ import { Column, ConfigurationParameter, Generated, Index, PrimaryColumn, Table 
 
 export type JobTable = {
   id: Generated<number>;
-  code: JobCode;
-  data: unknown;
-  priority: Generated<number>;
-  status: Generated<JobQueueStatus>;
-  dedupKey: string | null;
   runAfter: Generated<Date>;
   startedAt: Date | null;
   expiresAt: Date | null;
+  code: JobCode;
+  priority: Generated<number>;
+  status: Generated<JobQueueStatus>;
+  data: unknown;
+  dedupKey: string | null;
   error: string | null;
 };
 
@@ -18,21 +18,6 @@ function defineJobTable(name: string) {
   class JobTable {
     @PrimaryColumn({ type: 'bigint', identity: true })
     id!: Generated<number>;
-
-    @Column({ type: 'smallint' })
-    code!: JobCode;
-
-    @Column({ type: 'jsonb', nullable: true })
-    data!: unknown;
-
-    @Column({ type: 'smallint', default: 0 })
-    priority!: Generated<number>;
-
-    @Column({ type: 'smallint', default: 0 })
-    status!: Generated<JobQueueStatus>;
-
-    @Column({ type: 'text', nullable: true })
-    dedupKey!: string | null;
 
     @Column({ type: 'timestamp with time zone', default: () => 'now()' })
     runAfter!: Generated<Date>;
@@ -42,6 +27,21 @@ function defineJobTable(name: string) {
 
     @Column({ type: 'timestamp with time zone', nullable: true })
     expiresAt!: Date | null;
+
+    @Column({ type: 'smallint' })
+    code!: JobCode;
+
+    @Column({ type: 'smallint', default: 0 })
+    priority!: Generated<number>;
+
+    @Column({ type: 'smallint', default: 0 })
+    status!: Generated<JobQueueStatus>;
+
+    @Column({ type: 'jsonb', nullable: true })
+    data!: unknown;
+
+    @Column({ type: 'text', nullable: true })
+    dedupKey!: string | null;
 
     @Column({ type: 'text', nullable: true })
     error!: string | null;

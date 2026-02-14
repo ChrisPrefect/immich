@@ -1,8 +1,11 @@
 import { Kysely, Selectable, sql } from 'kysely';
+import postgres from 'postgres';
 import { JOB_CODE_TO_NAME, JobCode, JobQueueStatus, QueueName } from 'src/enum';
 import { DB } from 'src/schema';
 import { JobTable } from 'src/schema/tables/job.table';
 import { JobItem } from 'src/types';
+
+const csvEscape = (s: string) => '"' + s.replace(/"/g, '""') + '"';
 
 export type InsertRow = {
   code: JobCode;
@@ -281,7 +284,7 @@ export class WriteBuffer {
   private timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    private db: Kysely<DB>,
+    private pgPool: postgres.Sql,
     private notify: (queue: QueueName) => Promise<unknown>,
   ) {}
 
@@ -308,16 +311,36 @@ export class WriteBuffer {
     const deferred = this.pending;
     this.pending = null;
 
-    const promises = [];
-    try {
-      for (const [queue, rows] of Object.entries(this.buffers)) {
-        if (rows.length === 0) {
-          continue;
-        }
-        const tableName = QUEUE_TABLE[queue as QueueName];
-        promises.push(this.insertChunk(tableName, rows).then(() => this.notify(queue as QueueName)));
-        rows.length = 0;
+    const promises: Promise<unknown>[] = [];
+
+    for (const [queue, rows] of Object.entries(this.buffers)) {
+      if (rows.length === 0) {
+        continue;
       }
+
+      const queueName = queue as QueueName;
+      const tableName = QUEUE_TABLE[queueName];
+
+      const copyRows: InsertRow[] = [];
+      const insertRows: InsertRow[] = [];
+      for (const row of rows) {
+        if (row.dedupKey) {
+          insertRows.push(row);
+        } else {
+          copyRows.push(row);
+        }
+      }
+      rows.length = 0;
+
+      if (copyRows.length > 0) {
+        promises.push(this.copyInsert(tableName, copyRows).then(() => this.notify(queueName)));
+      }
+      if (insertRows.length > 0) {
+        promises.push(this.insertChunk(tableName, insertRows).then(() => this.notify(queueName)));
+      }
+    }
+
+    try {
       await Promise.all(promises);
       deferred?.resolve();
     } catch (error) {
@@ -325,37 +348,37 @@ export class WriteBuffer {
     }
   }
 
-  private insertChunk(tableName: keyof JobTables, rows: InsertRow[]) {
-    return this.db
-      .insertInto(tableName)
-      .columns(['code', 'data', 'priority', 'dedupKey', 'runAfter'])
-      .expression((eb) =>
-        eb
-          .selectFrom(
-            eb
-              .fn('unnest', [
-                sql`${`{${rows.map((r) => r.code)}}`}::"smallint"[]`,
-                sql`${`{${rows.map((r) => {
-                  if (!r.data) return null;
-                  const json = JSON.stringify(r.data);
-                  return '"' + json.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
-                })}}`}::jsonb[]`,
-                sql`${`{${rows.map((r) => r.priority)}}`}::smallint[]`,
-                sql`${`{${rows.map((r) => r.dedupKey)}}`}::text[]`,
-                sql`${`{${rows.map((r) => r.runAfter)}}`}::timestamptz[]`,
-              ])
-              .as('v'),
-          )
-          .selectAll(),
+  private async copyInsert(tableName: string, rows: InsertRow[]) {
+    const writable = await this
+      .pgPool`COPY ${this.pgPool(tableName)} (code, data, priority, "runAfter") FROM STDIN WITH (FORMAT csv)`.writable();
+    const now = new Date().toISOString();
+    for (const row of rows) {
+      const data = row.data != null ? csvEscape(JSON.stringify(row.data)) : '';
+      const priority = row.priority ?? 0;
+      const runAfter = row.runAfter ? row.runAfter.toISOString() : now;
+      writable.write(`${row.code},${data},${priority},${runAfter}\n`);
+    }
+    writable.end();
+    await new Promise<void>((resolve, reject) => {
+      writable.on('finish', resolve);
+      writable.on('error', reject);
+    });
+  }
+
+  private insertChunk(tableName: string, rows: InsertRow[]) {
+    const now = new Date().toISOString();
+    return this.pgPool`
+      INSERT INTO ${this.pgPool(tableName)} (code, data, priority, "dedupKey", "runAfter")
+      SELECT * FROM unnest(
+        ${rows.map((r) => r.code)}::smallint[],
+        ${rows.map((r) => (r.data != null ? JSON.stringify(r.data) : null))}::jsonb[],
+        ${rows.map((r) => r.priority ?? 0)}::smallint[],
+        ${rows.map((r) => r.dedupKey)}::text[],
+        ${rows.map((r) => r.runAfter?.toISOString() ?? now)}::timestamptz[]
       )
-      .onConflict((oc) =>
-        oc
-          .column('dedupKey')
-          .where('dedupKey', 'is not', null)
-          .where('status', '=', JobQueueStatus.Pending)
-          .doNothing(),
-      )
-      .execute();
+      ON CONFLICT ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = ${JobQueueStatus.Pending}
+      DO NOTHING
+    `;
   }
 }
 
@@ -395,11 +418,5 @@ interface QueueWorkerOptions {
   db: Kysely<DB>;
   onJob: (job: JobItem) => Promise<unknown>;
 }
-
-type PickByValue<T, V> = {
-  [K in keyof T as T[K] extends V ? K : never]: T[K];
-};
-
-type JobTables = PickByValue<DB, JobTable>;
 
 type Deferred = { promise: Promise<void>; resolve: () => void; reject: (error: unknown) => void };

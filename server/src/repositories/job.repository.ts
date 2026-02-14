@@ -64,6 +64,7 @@ export class JobRepository {
   private workers: Partial<Record<QueueName, QueueWorker>> = {};
   private handlers: Partial<Record<JobName, JobMapItem>> = {};
   private writeBuffer!: WriteBuffer;
+  private writePool: postgres.Sql | null = null;
   private listenConn: postgres.Sql | null = null;
   private listenReady = false;
   private pauseState: Partial<Record<QueueName, boolean>> = {};
@@ -129,7 +130,8 @@ export class JobRepository {
   }
 
   async startWorkers() {
-    this.writeBuffer = new WriteBuffer(this.db, (queue) => this.notify(queue));
+    this.writePool = this.createPgConnection({ max: 4, connection: { synchronous_commit: 'off' } });
+    this.writeBuffer = new WriteBuffer(this.writePool, (queue) => this.notify(queue));
 
     // Startup sweep: reset any active jobs from a previous crash
     await Promise.all(
@@ -373,23 +375,28 @@ export class JobRepository {
       .execute();
   }
 
-  private async setupListen(): Promise<void> {
-    if (this.listenConn) {
-      await this.listenConn.end();
-      this.listenConn = null;
-    }
-
+  private createPgConnection(options?: { max?: number; connection?: Record<string, string> }) {
     const { database } = this.configRepository.getEnv();
     const pgConfig = asPostgresConnectionConfig(database.config);
-    this.listenConn = postgres({
+    return postgres({
       host: pgConfig.host,
       port: pgConfig.port,
       username: pgConfig.username,
       password: pgConfig.password as string | undefined,
       database: pgConfig.database,
       ssl: pgConfig.ssl as boolean | undefined,
-      max: 1,
+      max: options?.max ?? 1,
+      connection: options?.connection,
     });
+  }
+
+  private async setupListen(): Promise<void> {
+    if (this.listenConn) {
+      await this.listenConn.end();
+      this.listenConn = null;
+    }
+
+    this.listenConn = this.createPgConnection();
 
     for (const queueName of Object.values(QueueName)) {
       await this.listenConn.listen(
@@ -467,7 +474,11 @@ export class JobRepository {
       await this.writeBuffer.flush();
     }
 
-    // Close LISTEN connection
+    // Close dedicated connections
+    if (this.writePool) {
+      await this.writePool.end();
+      this.writePool = null;
+    }
     if (this.listenConn) {
       await this.listenConn.end();
       this.listenConn = null;

@@ -208,6 +208,7 @@ export class QueueWorker {
       .with('next', (qb) =>
         qb
           .selectFrom(this.table)
+          .select('id')
           .where('status', '=', JobQueueStatus.Pending)
           .where('runAfter', '<=', sql<Date>`now()`)
           .orderBy('priority', 'desc')
@@ -367,14 +368,27 @@ export class WriteBuffer {
 
   private insertChunk(tableName: string, rows: InsertRow[]) {
     const now = new Date().toISOString();
+    const code = [];
+    const data = [];
+    const priority = [];
+    const dedupKey = [];
+    const runAfter = [];
+    for (const row of rows) {
+      code.push(row.code);
+      data.push(row.data ?? null);
+      priority.push(row.priority ?? 0);
+      dedupKey.push(row.dedupKey);
+      runAfter.push(row.runAfter?.toISOString() ?? now);
+    }
+    
     return this.pgPool`
       INSERT INTO ${this.pgPool(tableName)} (code, data, priority, "dedupKey", "runAfter")
       SELECT * FROM unnest(
-        ${rows.map((r) => r.code)}::smallint[],
-        ${rows.map((r) => (r.data != null ? JSON.stringify(r.data) : null))}::jsonb[],
-        ${rows.map((r) => r.priority ?? 0)}::smallint[],
-        ${rows.map((r) => r.dedupKey)}::text[],
-        ${rows.map((r) => r.runAfter?.toISOString() ?? now)}::timestamptz[]
+        ${code}::smallint[],
+        ${data as any}::jsonb[],
+        ${priority}::smallint[],
+        ${dedupKey}::text[],
+        ${runAfter}::timestamptz[]
       )
       ON CONFLICT ("dedupKey") WHERE "dedupKey" IS NOT NULL AND status = ${JobQueueStatus.Pending}
       DO NOTHING

@@ -127,12 +127,12 @@ export class JobRepository {
         throw new ImmichStartupError(errorMessage);
       }
     }
+
+    this.writePool = this.createPgConnection({ max: 4, connection: { synchronous_commit: 'off' } });
+    this.writeBuffer = new WriteBuffer(this.writePool, (queue) => this.notify(queue));
   }
 
   async startWorkers() {
-    this.writePool = this.createPgConnection({ max: 4, connection: { synchronous_commit: 'off' } });
-    this.writeBuffer = new WriteBuffer(this.writePool, (queue) => this.notify(queue));
-
     // Startup sweep: reset any active jobs from a previous crash
     await Promise.all(
       Object.values(QueueName).map((queueName) =>
@@ -145,7 +145,6 @@ export class JobRepository {
       ),
     );
 
-    // Create workers
     for (const queueName of Object.values(QueueName)) {
       this.workers[queueName] = new QueueWorker({
         queueName,
@@ -157,7 +156,6 @@ export class JobRepository {
       });
     }
 
-    // Setup LISTEN/NOTIFY, sync pause state, and trigger initial fetch
     await this.setupListen();
   }
 
@@ -465,16 +463,13 @@ export class JobRepository {
   }
 
   async onShutdown(): Promise<void> {
-    // Stop workers
     const shutdownPromises = Object.values(this.workers).map((worker) => worker.shutdown());
     await Promise.all(shutdownPromises);
 
-    // Flush write buffer
     if (this.writeBuffer) {
       await this.writeBuffer.flush();
     }
 
-    // Close dedicated connections
     if (this.writePool) {
       await this.writePool.end();
       this.writePool = null;

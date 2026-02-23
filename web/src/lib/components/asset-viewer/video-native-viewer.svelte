@@ -279,14 +279,12 @@
     --bottom-seek-buttons-display: none;
     --center-buttons-display: inline-flex;
     --media-playback-rate-button-display: none;
-    --media-time-range-display: none;
   }
 
   /* Larger screens */
   *[breakpointsm] {
     --bottom-play-button-display: flex;
     --center-buttons-display: none;
-    --media-time-range-display: flex;
   }
 
   *[breakpointmd] {

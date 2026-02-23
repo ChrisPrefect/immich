@@ -76,7 +76,6 @@
   let showVideo = $state(false);
 
   onMount(() => {
-    // Show video after mount to ensure fading in.
     showVideo = true;
   });
 
@@ -312,9 +311,8 @@
     color: white;
   }
 
-  /* should be media-volume-range[mediavolumeunavailable] */
   *[mediavolumeunavailable] {
-    display: none;
+    --media-volume-range-display: none;
   }
 
   .media-volume-wrapper {

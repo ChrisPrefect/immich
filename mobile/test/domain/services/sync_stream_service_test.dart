@@ -79,7 +79,7 @@ void main() {
     );
 
     db = Drift(drift.DatabaseConnection(NativeDatabase.memory(), closeStreamsSynchronously: true));
-    await StoreService.init(storeRepository: DriftStoreRepository(db));
+    await StoreService.init(storeRepository: DriftStoreRepository(db), listenUpdates: false);
   });
 
   tearDownAll(() async {

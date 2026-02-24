@@ -19,7 +19,7 @@
     type JobCreateDto,
     type QueuesResponseLegacyDto,
   } from '@immich/sdk';
-  import { Button, HStack } from '@immich/ui';
+  import { Button, HStack, Text } from '@immich/ui';
   import { mdiRefresh } from '@mdi/js';
   import { onDestroy, onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -94,7 +94,7 @@
   <section id="setting-content" class="flex place-content-center sm:mx-4">
     <section class="w-full pb-4 sm:w-5/6 md:w-[850px]">
       <HStack>
-        <p class="text-sm dark:text-immich-dark-fg uppercase">{$t('admin.maintenance_integrity_report')}</p>
+        <Text size="small">{$t('admin.maintenance_integrity_report')}</Text>
         <Button
           size="tiny"
           variant="ghost"
@@ -165,7 +165,7 @@
 
   <section id="setting-content" class="flex place-content-center sm:mx-4">
     <section class="w-full pb-4 sm:w-5/6 md:w-212.5">
-      <p class="text-sm dark:text-immich-dark-fg uppercase">{$t('admin.maintenance_settings')}</p>
+      <Text size="small">{$t('admin.maintenance_settings')}</Text>
 
       <SettingAccordionState queryParam={QueryParameter.IS_OPEN}>
         <SettingAccordion

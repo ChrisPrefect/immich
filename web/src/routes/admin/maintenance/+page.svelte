@@ -35,19 +35,19 @@
   // svelte-ignore state_referenced_locally
   let integrityReport: IntegrityReportSummaryResponseDto = $state(data.integrityReport);
 
-  const TYPES: IntegrityReportType[] = [
+  const reportTypes: IntegrityReportType[] = [
     IntegrityReportType.UntrackedFile,
     IntegrityReportType.MissingFile,
     IntegrityReportType.ChecksumMismatch,
   ];
 
-  const INTEGRITY_JOB_NAMES: Record<IntegrityReportType, ManualJobName> = {
+  const jobNames: Record<IntegrityReportType, ManualJobName> = {
     [IntegrityReportType.UntrackedFile]: ManualJobName.IntegrityUntrackedFiles,
     [IntegrityReportType.MissingFile]: ManualJobName.IntegrityMissingFiles,
     [IntegrityReportType.ChecksumMismatch]: ManualJobName.IntegrityChecksumMismatch,
   };
 
-  const INTEGRITY_REFRESH_JOB_NAMES: Record<IntegrityReportType, ManualJobName> = {
+  const refreshJobNames: Record<IntegrityReportType, ManualJobName> = {
     [IntegrityReportType.UntrackedFile]: ManualJobName.IntegrityUntrackedFilesRefresh,
     [IntegrityReportType.MissingFile]: ManualJobName.IntegrityMissingFilesRefresh,
     [IntegrityReportType.ChecksumMismatch]: ManualJobName.IntegrityChecksumMismatchRefresh,
@@ -77,11 +77,7 @@
   });
 
   const onJobCreate = ({ dto }: { dto: JobCreateDto }) => {
-    if (
-      (Object.values(INTEGRITY_JOB_NAMES).includes(dto.name) ||
-        Object.values(INTEGRITY_REFRESH_JOB_NAMES).includes(dto.name)) &&
-      jobs
-    ) {
+    if ((Object.values(jobNames).includes(dto.name) || Object.values(refreshJobNames).includes(dto.name)) && jobs) {
       expectingUpdate = true;
       jobs.integrityCheck.queueStatus.isActive = true;
     }
@@ -99,7 +95,7 @@
           size="tiny"
           variant="ghost"
           onclick={() => {
-            for (const name of Object.values(INTEGRITY_JOB_NAMES)) {
+            for (const name of Object.values(jobNames)) {
               void handleCreateJob({ name });
             }
           }}
@@ -110,7 +106,7 @@
           size="tiny"
           variant="ghost"
           onclick={() => {
-            for (const name of Object.values(INTEGRITY_REFRESH_JOB_NAMES)) {
+            for (const name of Object.values(refreshJobNames)) {
               void handleCreateJob({ name });
             }
           }}
@@ -120,7 +116,7 @@
       >
 
       <div class="mt-5 flex justify-between max-lg:flex-wrap gap-4">
-        {#each TYPES as reportType (reportType)}
+        {#each reportTypes as reportType (reportType)}
           <ServerStatisticsCard
             title={$t(`admin.maintenance_integrity_${reportType}`)}
             value={integrityReport[reportType]}
@@ -130,7 +126,7 @@
                 <Button
                   onclick={() =>
                     handleCreateJob({
-                      name: INTEGRITY_JOB_NAMES[reportType],
+                      name: jobNames[reportType],
                     })}
                   size="tiny"
                   variant="ghost"
@@ -141,7 +137,7 @@
                 <Button
                   onclick={() =>
                     handleCreateJob({
-                      name: INTEGRITY_REFRESH_JOB_NAMES[reportType],
+                      name: refreshJobNames[reportType],
                     })}
                   size="tiny"
                   variant="ghost"

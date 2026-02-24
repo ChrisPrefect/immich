@@ -14,19 +14,11 @@
     getLibraryExclusionPatternActions,
     getLibraryFolderActions,
   } from '$lib/services/library.service';
-  import type { ByteUnit } from '$lib/utils/byte-units';
   import { getBytesWithUnit } from '$lib/utils/byte-units';
 
-  import type { LibraryResponseDto, LibraryStatsResponseDto } from '@immich/sdk';
+  import type { LibraryResponseDto } from '@immich/sdk';
   import { Code, CommandPaletteDefaultProvider, Container, Heading, modalManager } from '@immich/ui';
-  import {
-    mdiCameraIris,
-    mdiChartPie,
-    mdiFileDocumentRemoveOutline,
-    mdiFilterMinusOutline,
-    mdiFolderOutline,
-    mdiPlayCircle,
-  } from '@mdi/js';
+  import { mdiCameraIris, mdiChartPie, mdiFilterMinusOutline, mdiFolderOutline, mdiPlayCircle } from '@mdi/js';
   import type { Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
   import type { LayoutData } from './$types';
@@ -36,46 +28,32 @@
     data: LayoutData;
   };
 
-  const { children, data }: Props = $props();
+  let { children, data }: Props = $props();
+  const statisticsPromise = $derived.by(() => data.statisticsPromise);
 
-  let statistics = $state<LibraryStatsResponseDto | undefined>(undefined);
-  let storageUsage = $state<number | undefined>(undefined);
-  let unit = $state<ByteUnit | undefined>(undefined);
+  const photosPromise = $derived.by(() => statisticsPromise.then((stats) => ({ value: stats.photos })));
 
-  $effect(() => {
-    if (statistics) {
-      const [usage, u] = getBytesWithUnit(statistics.usage);
-      storageUsage = usage;
-      unit = u;
-    } else {
-      storageUsage = undefined;
-      unit = undefined;
-    }
-  });
+  const videosPromise = $derived.by(() => statisticsPromise.then((stats) => ({ value: stats.videos })));
 
-  const loadStatistics = async () => {
-    try {
-      statistics = await data.statisticsPromise;
-    } catch (error) {
-      console.error('Failed to load statistics:', error);
-    }
-  };
+  const usagePromise = $derived.by(() =>
+    statisticsPromise.then((stats) => {
+      const [value, unit] = getBytesWithUnit(stats.usage);
+      return { value, unit };
+    }),
+  );
 
-  $effect(() => {
-    void loadStatistics();
-  });
-
-  let library = $state(data.library);
+  let updatedLibrary = $state<LibraryResponseDto | undefined>(undefined);
+  const library = $derived.by(() => (updatedLibrary?.id === data.library.id ? updatedLibrary : data.library));
 
   const onLibraryUpdate = (newLibrary: LibraryResponseDto) => {
     if (newLibrary.id === library.id) {
-      library = newLibrary;
+      updatedLibrary = newLibrary;
     }
   };
 
-  const onLibraryDelete = async ({ id }: { id: string }) => {
+  const onLibraryDelete = ({ id }: { id: string }) => {
     if (id === library.id) {
-      await goto(Route.libraries());
+      void goto(Route.libraries());
     }
   };
 
@@ -94,9 +72,9 @@
     <div class="grid gap-4 grid-cols-1 lg:grid-cols-2 w-full">
       <Heading tag="h1" size="large" class="col-span-full my-4">{library.name}</Heading>
       <div class="flex flex-col lg:flex-row gap-4 col-span-full">
-        <ServerStatisticsCard icon={mdiCameraIris} title={$t('photos')} value={statistics?.photos} />
-        <ServerStatisticsCard icon={mdiPlayCircle} title={$t('videos')} value={statistics?.videos} />
-        <ServerStatisticsCard icon={mdiChartPie} title={$t('usage')} value={storageUsage} {unit} />
+        <ServerStatisticsCard icon={mdiCameraIris} title={$t('photos')} valuePromise={photosPromise} />
+        <ServerStatisticsCard icon={mdiPlayCircle} title={$t('videos')} valuePromise={videosPromise} />
+        <ServerStatisticsCard icon={mdiChartPie} title={$t('usage')} valuePromise={usagePromise} />
       </div>
 
       <AdminCard icon={mdiFolderOutline} title={$t('folders')} headerAction={AddFolder}>
@@ -145,10 +123,6 @@
           </tbody>
         </table>
       </AdminCard>
-
-      <div class="flex flex-col lg:flex-row gap-4">
-        <ServerStatisticsCard icon={mdiFileDocumentRemoveOutline} title={$t('offline')} value={statistics?.offline} />
-      </div>
     </div>
     {@render children?.()}
   </Container>

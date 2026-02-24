@@ -7,13 +7,18 @@
   import { getLibrariesActions, getLibraryActions } from '$lib/services/library.service';
   import { locale } from '$lib/stores/preferences.store';
   import { getBytesWithUnit } from '$lib/utils/byte-units';
-  import { getLibrary, getLibraryStatistics, type LibraryResponseDto, type LibraryStatsResponseDto } from '@immich/sdk';
+  import {
+    getLibrary,
+    getLibraryStatistics,
+    type LibraryResponseDto,
+    type LibraryStatsResponseDto,
+    type UserAdminResponseDto,
+  } from '@immich/sdk';
   import {
     CommandPaletteDefaultProvider,
     Container,
     ContextMenuButton,
     Link,
-    LoadingSpinner,
     MenuItemType,
     Table,
     TableBody,
@@ -32,37 +37,36 @@
     data: LayoutData;
   };
 
-  let { children, data }: Props = $props();
+  const props: Props = $props();
 
-  let libraries = $state(data.libraries);
+  let libraries = $state<LibraryResponseDto[]>([]);
   let statistics = $state<Record<string, LibraryStatsResponseDto>>({});
-  let owners = $state(data.owners);
-
-  const loadStatistics = async () => {
-    try {
-      statistics = await data.statisticsPromise;
-    } catch (error) {
-      console.error('Failed to load library statistics:', error);
-    }
-  };
+  let owners = $state<Record<string, UserAdminResponseDto>>({});
 
   $effect(() => {
-    void loadStatistics();
+    libraries = [...props.data.libraries];
+    owners = { ...props.data.owners };
   });
 
-  const onLibraryCreate = async (library: LibraryResponseDto) => {
-    await goto(Route.viewLibrary(library));
+  const onLibraryCreate = (library: LibraryResponseDto) => {
+    void goto(Route.viewLibrary(library));
   };
 
-  const onLibraryUpdate = async (library: LibraryResponseDto) => {
+  const onLibraryUpdate = (library: LibraryResponseDto) => {
     const index = libraries.findIndex(({ id }) => id === library.id);
 
     if (index === -1) {
       return;
     }
 
-    libraries[index] = await getLibrary({ id: library.id });
-    statistics[library.id] = await getLibraryStatistics({ id: library.id });
+    void Promise.all([getLibrary({ id: library.id }), getLibraryStatistics({ id: library.id })])
+      .then(([updatedLibrary, updatedStats]) => {
+        libraries[index] = updatedLibrary;
+        statistics[library.id] = updatedStats;
+      })
+      .catch((error) => {
+        console.error(`Failed to refresh library after update: ${error}`);
+      });
   };
 
   const onLibraryDelete = ({ id }: { id: string }) => {
@@ -92,7 +96,7 @@
 
 <CommandPaletteDefaultProvider name={$t('library')} actions={[Create, ScanAll]} />
 
-<AdminPageLayout breadcrumbs={[{ title: data.meta.title }]} actions={[ScanAll, Create]}>
+<AdminPageLayout breadcrumbs={[{ title: props.data.meta.title }]} actions={[ScanAll, Create]}>
   <Container size="large" center class="my-4">
     <div class="flex flex-col items-center gap-2" in:fade={{ duration: 500 }}>
       {#if libraries.length > 0}
@@ -107,7 +111,6 @@
           </TableHeader>
           <TableBody>
             {#each libraries as library (library.id + library.name)}
-              {@const stats = statistics[library.id]}
               {@const owner = owners[library.id]}
               <TableRow>
                 <TableCell class={classes.column1}>
@@ -116,29 +119,40 @@
                 <TableCell class={classes.column2}>
                   <Link href={Route.viewUser(owner)}>{owner.name}</Link>
                 </TableCell>
-                <TableCell class={classes.column3}>
-                  {#if stats}
+                {#await props.data.statisticsPromise}
+                  <TableCell class={classes.column3}>
+                    <span class="skeleton-loader inline-block h-4 w-14"></span>
+                  </TableCell>
+                  <TableCell class={classes.column4}>
+                    <span class="skeleton-loader inline-block h-4 w-14"></span>
+                  </TableCell>
+                  <TableCell class={classes.column5}>
+                    <span class="skeleton-loader inline-block h-4 w-20"></span>
+                  </TableCell>
+                {:then loadedStats}
+                  {@const stats = statistics[library.id] || loadedStats[library.id]}
+                  <TableCell class={classes.column3}>
                     {stats.photos.toLocaleString($locale)}
-                  {:else}
-                    <LoadingSpinner />
-                  {/if}
-                </TableCell>
-                <TableCell class={classes.column4}>
-                  {#if stats}
+                  </TableCell>
+                  <TableCell class={classes.column4}>
                     {stats.videos.toLocaleString($locale)}
-                  {:else}
-                    <LoadingSpinner />
-                  {/if}
-                </TableCell>
-                <TableCell class={classes.column5}>
-                  {#if stats}
+                  </TableCell>
+                  <TableCell class={classes.column5}>
                     {@const [diskUsage, diskUsageUnit] = getBytesWithUnit(stats.usage, 0)}
                     {diskUsage}
                     {diskUsageUnit}
-                  {:else}
-                    <LoadingSpinner />
-                  {/if}
-                </TableCell>
+                  </TableCell>
+                {:catch}
+                  <TableCell class={classes.column3}>
+                    <span class="skeleton-loader inline-block h-4 w-14"></span>
+                  </TableCell>
+                  <TableCell class={classes.column4}>
+                    <span class="skeleton-loader inline-block h-4 w-14"></span>
+                  </TableCell>
+                  <TableCell class={classes.column5}>
+                    <span class="skeleton-loader inline-block h-4 w-20"></span>
+                  </TableCell>
+                {/await}
                 <TableCell class={classes.column6}>
                   <ContextMenuButton color="primary" aria-label={$t('open')} items={getActionsForLibrary(library)} />
                 </TableCell>
@@ -155,7 +169,41 @@
         />
       {/if}
 
-      {@render children?.()}
+      {@render props.children?.()}
     </div>
   </Container>
 </AdminPageLayout>
+
+<style>
+  .skeleton-loader {
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: rgba(156, 163, 175, 0.35);
+  }
+
+  .skeleton-loader::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 255, 0)
+    );
+    background-size: 200% 100%;
+    background-position: 200% 0;
+    animation: skeleton-animation 2000ms infinite;
+  }
+
+  @keyframes skeleton-animation {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+</style>

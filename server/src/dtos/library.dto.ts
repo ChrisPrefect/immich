@@ -136,9 +136,6 @@ export class LibraryStatsResponseDto {
   @ApiProperty({ type: 'integer', description: 'Total number of assets' })
   total = 0;
 
-  @ApiProperty({ type: 'integer', description: 'Number of offline assets' })
-  offline = 0;
-
   @ApiProperty({ type: 'integer', format: 'int64', description: 'Storage usage in bytes' })
   usage = 0;
 }

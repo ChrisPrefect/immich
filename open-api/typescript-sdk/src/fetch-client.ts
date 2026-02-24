@@ -1321,8 +1321,6 @@ export type UpdateLibraryDto = {
     name?: string;
 };
 export type LibraryStatsResponseDto = {
-    /** Number of offline assets */
-    offline: number;
     /** Number of photos */
     photos: number;
     /** Total number of assets */

@@ -13,7 +13,6 @@
     Container,
     ContextMenuButton,
     Link,
-    LoadingSpinner,
     MenuItemType,
     Table,
     TableBody,
@@ -116,29 +115,29 @@
                 <TableCell class={classes.column2}>
                   <Link href={Route.viewUser(owner)}>{owner.name}</Link>
                 </TableCell>
-                <TableCell class={classes.column3}>
-                  {#if stats}
+                {#if stats}
+                  <TableCell class={classes.column3}>
                     {stats.photos.toLocaleString($locale)}
-                  {:else}
-                    <LoadingSpinner />
-                  {/if}
-                </TableCell>
-                <TableCell class={classes.column4}>
-                  {#if stats}
+                  </TableCell>
+                  <TableCell class={classes.column4}>
                     {stats.videos.toLocaleString($locale)}
-                  {:else}
-                    <LoadingSpinner />
-                  {/if}
-                </TableCell>
-                <TableCell class={classes.column5}>
-                  {#if stats}
+                  </TableCell>
+                  <TableCell class={classes.column5}>
                     {@const [diskUsage, diskUsageUnit] = getBytesWithUnit(stats.usage, 0)}
                     {diskUsage}
                     {diskUsageUnit}
-                  {:else}
-                    <LoadingSpinner />
-                  {/if}
-                </TableCell>
+                  </TableCell>
+                {:else}
+                  <TableCell class={classes.column3}>
+                    <span class="skeleton-loader inline-block h-4 w-14"></span>
+                  </TableCell>
+                  <TableCell class={classes.column4}>
+                    <span class="skeleton-loader inline-block h-4 w-14"></span>
+                  </TableCell>
+                  <TableCell class={classes.column5}>
+                    <span class="skeleton-loader inline-block h-4 w-20"></span>
+                  </TableCell>
+                {/if}
                 <TableCell class={classes.column6}>
                   <ContextMenuButton color="primary" aria-label={$t('open')} items={getActionsForLibrary(library)} />
                 </TableCell>
@@ -159,3 +158,37 @@
     </div>
   </Container>
 </AdminPageLayout>
+
+<style>
+  .skeleton-loader {
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: rgba(156, 163, 175, 0.35);
+  }
+
+  .skeleton-loader::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 255, 0)
+    );
+    background-size: 200% 100%;
+    background-position: 200% 0;
+    animation: skeleton-animation 2000ms infinite;
+  }
+
+  @keyframes skeleton-animation {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+</style>

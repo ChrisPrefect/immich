@@ -40,12 +40,12 @@ class ActionButtonContext {
   final bool isStacked;
   final RemoteAlbum? currentAlbum;
   final bool advancedTroubleshooting;
-  final bool isWaitingForTrashApproval;
   final ActionSource source;
   final bool isCasting;
   final TimelineOrigin timelineOrigin;
   final ThemeData? originalTheme;
   final int selectedCount;
+  final bool isWaitingForTrashApproval;
 
   const ActionButtonContext({
     required this.asset,
@@ -56,12 +56,12 @@ class ActionButtonContext {
     required this.isInLockedView,
     required this.currentAlbum,
     required this.advancedTroubleshooting,
-    required this.isWaitingForTrashApproval,
     required this.source,
     this.isCasting = false,
     this.timelineOrigin = TimelineOrigin.main,
     this.originalTheme,
     this.selectedCount = 1,
+    this.isWaitingForTrashApproval = false,
   });
 }
 

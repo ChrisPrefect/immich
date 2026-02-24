@@ -8396,7 +8396,6 @@ final class Schema20 extends i0.VersionedSchema {
     assetFaceEntity,
     storeEntity,
     trashedLocalAssetEntity,
-    trashSyncEntity,
     idxPartnerSharedWithId,
     idxLatLng,
     idxRemoteAlbumAssetAlbumAsset,
@@ -8406,8 +8405,6 @@ final class Schema20 extends i0.VersionedSchema {
     idxAssetFaceAssetId,
     idxTrashedLocalAssetChecksum,
     idxTrashedLocalAssetAlbum,
-    idxTrashSyncIsSyncApproved,
-    idxTrashSyncChecksumStatus,
   ];
   late final Shape20 userEntity = Shape20(
     source: i0.VersionedTable(
@@ -8770,7 +8767,7 @@ final class Schema20 extends i0.VersionedSchema {
     ),
     alias: null,
   );
-  late final Shape15 assetFaceEntity = Shape15(
+  late final Shape29 assetFaceEntity = Shape29(
     source: i0.VersionedTable(
       entityName: 'asset_face_entity',
       withoutRowId: true,
@@ -8787,6 +8784,8 @@ final class Schema20 extends i0.VersionedSchema {
         _column_81,
         _column_82,
         _column_83,
+        _column_102,
+        _column_18,
       ],
       attachedDatabase: database,
     ),
@@ -8828,17 +8827,6 @@ final class Schema20 extends i0.VersionedSchema {
     ),
     alias: null,
   );
-  late final Shape29 trashSyncEntity = Shape29(
-    source: i0.VersionedTable(
-      entityName: 'trash_sync_entity',
-      withoutRowId: true,
-      isStrict: true,
-      tableConstraints: ['PRIMARY KEY(checksum)'],
-      columns: [_column_13, _column_102, _column_103],
-      attachedDatabase: database,
-    ),
-    alias: null,
-  );
   final i1.Index idxPartnerSharedWithId = i1.Index(
     'idx_partner_shared_with_id',
     'CREATE INDEX IF NOT EXISTS idx_partner_shared_with_id ON partner_entity (shared_with_id)',
@@ -8875,42 +8863,46 @@ final class Schema20 extends i0.VersionedSchema {
     'idx_trashed_local_asset_album',
     'CREATE INDEX IF NOT EXISTS idx_trashed_local_asset_album ON trashed_local_asset_entity (album_id)',
   );
-  final i1.Index idxTrashSyncIsSyncApproved = i1.Index(
-    'idx_trash_sync_is_sync_approved',
-    'CREATE INDEX IF NOT EXISTS idx_trash_sync_is_sync_approved ON trash_sync_entity (is_sync_approved)',
-  );
-  final i1.Index idxTrashSyncChecksumStatus = i1.Index(
-    'idx_trash_sync_checksum_status',
-    'CREATE INDEX IF NOT EXISTS idx_trash_sync_checksum_status ON trash_sync_entity (checksum, is_sync_approved)',
-  );
 }
 
 class Shape29 extends i0.VersionedTable {
   Shape29({required super.source, required super.alias}) : super.aliased();
-  i1.GeneratedColumn<String> get checksum =>
-      columnsByName['checksum']! as i1.GeneratedColumn<String>;
-  i1.GeneratedColumn<bool> get isSyncApproved =>
-      columnsByName['is_sync_approved']! as i1.GeneratedColumn<bool>;
-  i1.GeneratedColumn<DateTime> get remoteDeletedAt =>
-      columnsByName['remote_deleted_at']! as i1.GeneratedColumn<DateTime>;
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get assetId =>
+      columnsByName['asset_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get personId =>
+      columnsByName['person_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get imageWidth =>
+      columnsByName['image_width']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get imageHeight =>
+      columnsByName['image_height']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get boundingBoxX1 =>
+      columnsByName['bounding_box_x1']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get boundingBoxY1 =>
+      columnsByName['bounding_box_y1']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get boundingBoxX2 =>
+      columnsByName['bounding_box_x2']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get boundingBoxY2 =>
+      columnsByName['bounding_box_y2']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get sourceType =>
+      columnsByName['source_type']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<bool> get isVisible =>
+      columnsByName['is_visible']! as i1.GeneratedColumn<bool>;
+  i1.GeneratedColumn<DateTime> get deletedAt =>
+      columnsByName['deleted_at']! as i1.GeneratedColumn<DateTime>;
 }
 
 i1.GeneratedColumn<bool> _column_102(String aliasedName) =>
     i1.GeneratedColumn<bool>(
-      'is_sync_approved',
-      aliasedName,
-      true,
-      type: i1.DriftSqlType.bool,
-      defaultConstraints: i1.GeneratedColumn.constraintIsAlways(
-        'CHECK ("is_sync_approved" IN (0, 1))',
-      ),
-    );
-i1.GeneratedColumn<DateTime> _column_103(String aliasedName) =>
-    i1.GeneratedColumn<DateTime>(
-      'remote_deleted_at',
+      'is_visible',
       aliasedName,
       false,
-      type: i1.DriftSqlType.dateTime,
+      type: i1.DriftSqlType.bool,
+      defaultConstraints: i1.GeneratedColumn.constraintIsAlways(
+        'CHECK ("is_visible" IN (0, 1))',
+      ),
+      defaultValue: const CustomExpression('1'),
     );
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,

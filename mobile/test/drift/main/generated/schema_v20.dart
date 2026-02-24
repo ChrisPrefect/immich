@@ -7032,6 +7032,24 @@ class AssetFaceEntity extends Table
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  late final GeneratedColumn<bool> isVisible = GeneratedColumn<bool>(
+    'is_visible',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_visible" IN (0, 1))',
+    ),
+    defaultValue: const CustomExpression('1'),
+  );
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -7044,6 +7062,8 @@ class AssetFaceEntity extends Table
     boundingBoxX2,
     boundingBoxY2,
     sourceType,
+    isVisible,
+    deletedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -7096,6 +7116,14 @@ class AssetFaceEntity extends Table
         DriftSqlType.string,
         data['${effectivePrefix}source_type'],
       )!,
+      isVisible: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_visible'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
     );
   }
 
@@ -7122,6 +7150,8 @@ class AssetFaceEntityData extends DataClass
   final int boundingBoxX2;
   final int boundingBoxY2;
   final String sourceType;
+  final bool isVisible;
+  final DateTime? deletedAt;
   const AssetFaceEntityData({
     required this.id,
     required this.assetId,
@@ -7133,6 +7163,8 @@ class AssetFaceEntityData extends DataClass
     required this.boundingBoxX2,
     required this.boundingBoxY2,
     required this.sourceType,
+    required this.isVisible,
+    this.deletedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7149,6 +7181,10 @@ class AssetFaceEntityData extends DataClass
     map['bounding_box_x2'] = Variable<int>(boundingBoxX2);
     map['bounding_box_y2'] = Variable<int>(boundingBoxY2);
     map['source_type'] = Variable<String>(sourceType);
+    map['is_visible'] = Variable<bool>(isVisible);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
     return map;
   }
 
@@ -7168,6 +7204,8 @@ class AssetFaceEntityData extends DataClass
       boundingBoxX2: serializer.fromJson<int>(json['boundingBoxX2']),
       boundingBoxY2: serializer.fromJson<int>(json['boundingBoxY2']),
       sourceType: serializer.fromJson<String>(json['sourceType']),
+      isVisible: serializer.fromJson<bool>(json['isVisible']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
     );
   }
   @override
@@ -7184,6 +7222,8 @@ class AssetFaceEntityData extends DataClass
       'boundingBoxX2': serializer.toJson<int>(boundingBoxX2),
       'boundingBoxY2': serializer.toJson<int>(boundingBoxY2),
       'sourceType': serializer.toJson<String>(sourceType),
+      'isVisible': serializer.toJson<bool>(isVisible),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
     };
   }
 
@@ -7198,6 +7238,8 @@ class AssetFaceEntityData extends DataClass
     int? boundingBoxX2,
     int? boundingBoxY2,
     String? sourceType,
+    bool? isVisible,
+    Value<DateTime?> deletedAt = const Value.absent(),
   }) => AssetFaceEntityData(
     id: id ?? this.id,
     assetId: assetId ?? this.assetId,
@@ -7209,6 +7251,8 @@ class AssetFaceEntityData extends DataClass
     boundingBoxX2: boundingBoxX2 ?? this.boundingBoxX2,
     boundingBoxY2: boundingBoxY2 ?? this.boundingBoxY2,
     sourceType: sourceType ?? this.sourceType,
+    isVisible: isVisible ?? this.isVisible,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
   );
   AssetFaceEntityData copyWithCompanion(AssetFaceEntityCompanion data) {
     return AssetFaceEntityData(
@@ -7236,6 +7280,8 @@ class AssetFaceEntityData extends DataClass
       sourceType: data.sourceType.present
           ? data.sourceType.value
           : this.sourceType,
+      isVisible: data.isVisible.present ? data.isVisible.value : this.isVisible,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
     );
   }
 
@@ -7251,7 +7297,9 @@ class AssetFaceEntityData extends DataClass
           ..write('boundingBoxY1: $boundingBoxY1, ')
           ..write('boundingBoxX2: $boundingBoxX2, ')
           ..write('boundingBoxY2: $boundingBoxY2, ')
-          ..write('sourceType: $sourceType')
+          ..write('sourceType: $sourceType, ')
+          ..write('isVisible: $isVisible, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -7268,6 +7316,8 @@ class AssetFaceEntityData extends DataClass
     boundingBoxX2,
     boundingBoxY2,
     sourceType,
+    isVisible,
+    deletedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -7282,7 +7332,9 @@ class AssetFaceEntityData extends DataClass
           other.boundingBoxY1 == this.boundingBoxY1 &&
           other.boundingBoxX2 == this.boundingBoxX2 &&
           other.boundingBoxY2 == this.boundingBoxY2 &&
-          other.sourceType == this.sourceType);
+          other.sourceType == this.sourceType &&
+          other.isVisible == this.isVisible &&
+          other.deletedAt == this.deletedAt);
 }
 
 class AssetFaceEntityCompanion extends UpdateCompanion<AssetFaceEntityData> {
@@ -7296,6 +7348,8 @@ class AssetFaceEntityCompanion extends UpdateCompanion<AssetFaceEntityData> {
   final Value<int> boundingBoxX2;
   final Value<int> boundingBoxY2;
   final Value<String> sourceType;
+  final Value<bool> isVisible;
+  final Value<DateTime?> deletedAt;
   const AssetFaceEntityCompanion({
     this.id = const Value.absent(),
     this.assetId = const Value.absent(),
@@ -7307,6 +7361,8 @@ class AssetFaceEntityCompanion extends UpdateCompanion<AssetFaceEntityData> {
     this.boundingBoxX2 = const Value.absent(),
     this.boundingBoxY2 = const Value.absent(),
     this.sourceType = const Value.absent(),
+    this.isVisible = const Value.absent(),
+    this.deletedAt = const Value.absent(),
   });
   AssetFaceEntityCompanion.insert({
     required String id,
@@ -7319,6 +7375,8 @@ class AssetFaceEntityCompanion extends UpdateCompanion<AssetFaceEntityData> {
     required int boundingBoxX2,
     required int boundingBoxY2,
     required String sourceType,
+    this.isVisible = const Value.absent(),
+    this.deletedAt = const Value.absent(),
   }) : id = Value(id),
        assetId = Value(assetId),
        imageWidth = Value(imageWidth),
@@ -7339,6 +7397,8 @@ class AssetFaceEntityCompanion extends UpdateCompanion<AssetFaceEntityData> {
     Expression<int>? boundingBoxX2,
     Expression<int>? boundingBoxY2,
     Expression<String>? sourceType,
+    Expression<bool>? isVisible,
+    Expression<DateTime>? deletedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -7351,6 +7411,8 @@ class AssetFaceEntityCompanion extends UpdateCompanion<AssetFaceEntityData> {
       if (boundingBoxX2 != null) 'bounding_box_x2': boundingBoxX2,
       if (boundingBoxY2 != null) 'bounding_box_y2': boundingBoxY2,
       if (sourceType != null) 'source_type': sourceType,
+      if (isVisible != null) 'is_visible': isVisible,
+      if (deletedAt != null) 'deleted_at': deletedAt,
     });
   }
 
@@ -7365,6 +7427,8 @@ class AssetFaceEntityCompanion extends UpdateCompanion<AssetFaceEntityData> {
     Value<int>? boundingBoxX2,
     Value<int>? boundingBoxY2,
     Value<String>? sourceType,
+    Value<bool>? isVisible,
+    Value<DateTime?>? deletedAt,
   }) {
     return AssetFaceEntityCompanion(
       id: id ?? this.id,
@@ -7377,6 +7441,8 @@ class AssetFaceEntityCompanion extends UpdateCompanion<AssetFaceEntityData> {
       boundingBoxX2: boundingBoxX2 ?? this.boundingBoxX2,
       boundingBoxY2: boundingBoxY2 ?? this.boundingBoxY2,
       sourceType: sourceType ?? this.sourceType,
+      isVisible: isVisible ?? this.isVisible,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -7413,6 +7479,12 @@ class AssetFaceEntityCompanion extends UpdateCompanion<AssetFaceEntityData> {
     if (sourceType.present) {
       map['source_type'] = Variable<String>(sourceType.value);
     }
+    if (isVisible.present) {
+      map['is_visible'] = Variable<bool>(isVisible.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
     return map;
   }
 
@@ -7428,7 +7500,9 @@ class AssetFaceEntityCompanion extends UpdateCompanion<AssetFaceEntityData> {
           ..write('boundingBoxY1: $boundingBoxY1, ')
           ..write('boundingBoxX2: $boundingBoxX2, ')
           ..write('boundingBoxY2: $boundingBoxY2, ')
-          ..write('sourceType: $sourceType')
+          ..write('sourceType: $sourceType, ')
+          ..write('isVisible: $isVisible, ')
+          ..write('deletedAt: $deletedAt')
           ..write(')'))
         .toString();
   }
@@ -8231,231 +8305,6 @@ class TrashedLocalAssetEntityCompanion
   }
 }
 
-class TrashSyncEntity extends Table
-    with TableInfo<TrashSyncEntity, TrashSyncEntityData> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  TrashSyncEntity(this.attachedDatabase, [this._alias]);
-  late final GeneratedColumn<String> checksum = GeneratedColumn<String>(
-    'checksum',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<bool> isSyncApproved = GeneratedColumn<bool>(
-    'is_sync_approved',
-    aliasedName,
-    true,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_sync_approved" IN (0, 1))',
-    ),
-  );
-  late final GeneratedColumn<DateTime> remoteDeletedAt =
-      GeneratedColumn<DateTime>(
-        'remote_deleted_at',
-        aliasedName,
-        false,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: true,
-      );
-  @override
-  List<GeneratedColumn> get $columns => [
-    checksum,
-    isSyncApproved,
-    remoteDeletedAt,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'trash_sync_entity';
-  @override
-  Set<GeneratedColumn> get $primaryKey => {checksum};
-  @override
-  TrashSyncEntityData map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return TrashSyncEntityData(
-      checksum: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}checksum'],
-      )!,
-      isSyncApproved: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_sync_approved'],
-      ),
-      remoteDeletedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}remote_deleted_at'],
-      )!,
-    );
-  }
-
-  @override
-  TrashSyncEntity createAlias(String alias) {
-    return TrashSyncEntity(attachedDatabase, alias);
-  }
-
-  @override
-  bool get withoutRowId => true;
-  @override
-  bool get isStrict => true;
-}
-
-class TrashSyncEntityData extends DataClass
-    implements Insertable<TrashSyncEntityData> {
-  final String checksum;
-  final bool? isSyncApproved;
-  final DateTime remoteDeletedAt;
-  const TrashSyncEntityData({
-    required this.checksum,
-    this.isSyncApproved,
-    required this.remoteDeletedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['checksum'] = Variable<String>(checksum);
-    if (!nullToAbsent || isSyncApproved != null) {
-      map['is_sync_approved'] = Variable<bool>(isSyncApproved);
-    }
-    map['remote_deleted_at'] = Variable<DateTime>(remoteDeletedAt);
-    return map;
-  }
-
-  factory TrashSyncEntityData.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return TrashSyncEntityData(
-      checksum: serializer.fromJson<String>(json['checksum']),
-      isSyncApproved: serializer.fromJson<bool?>(json['isSyncApproved']),
-      remoteDeletedAt: serializer.fromJson<DateTime>(json['remoteDeletedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'checksum': serializer.toJson<String>(checksum),
-      'isSyncApproved': serializer.toJson<bool?>(isSyncApproved),
-      'remoteDeletedAt': serializer.toJson<DateTime>(remoteDeletedAt),
-    };
-  }
-
-  TrashSyncEntityData copyWith({
-    String? checksum,
-    Value<bool?> isSyncApproved = const Value.absent(),
-    DateTime? remoteDeletedAt,
-  }) => TrashSyncEntityData(
-    checksum: checksum ?? this.checksum,
-    isSyncApproved: isSyncApproved.present
-        ? isSyncApproved.value
-        : this.isSyncApproved,
-    remoteDeletedAt: remoteDeletedAt ?? this.remoteDeletedAt,
-  );
-  TrashSyncEntityData copyWithCompanion(TrashSyncEntityCompanion data) {
-    return TrashSyncEntityData(
-      checksum: data.checksum.present ? data.checksum.value : this.checksum,
-      isSyncApproved: data.isSyncApproved.present
-          ? data.isSyncApproved.value
-          : this.isSyncApproved,
-      remoteDeletedAt: data.remoteDeletedAt.present
-          ? data.remoteDeletedAt.value
-          : this.remoteDeletedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('TrashSyncEntityData(')
-          ..write('checksum: $checksum, ')
-          ..write('isSyncApproved: $isSyncApproved, ')
-          ..write('remoteDeletedAt: $remoteDeletedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(checksum, isSyncApproved, remoteDeletedAt);
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is TrashSyncEntityData &&
-          other.checksum == this.checksum &&
-          other.isSyncApproved == this.isSyncApproved &&
-          other.remoteDeletedAt == this.remoteDeletedAt);
-}
-
-class TrashSyncEntityCompanion extends UpdateCompanion<TrashSyncEntityData> {
-  final Value<String> checksum;
-  final Value<bool?> isSyncApproved;
-  final Value<DateTime> remoteDeletedAt;
-  const TrashSyncEntityCompanion({
-    this.checksum = const Value.absent(),
-    this.isSyncApproved = const Value.absent(),
-    this.remoteDeletedAt = const Value.absent(),
-  });
-  TrashSyncEntityCompanion.insert({
-    required String checksum,
-    this.isSyncApproved = const Value.absent(),
-    required DateTime remoteDeletedAt,
-  }) : checksum = Value(checksum),
-       remoteDeletedAt = Value(remoteDeletedAt);
-  static Insertable<TrashSyncEntityData> custom({
-    Expression<String>? checksum,
-    Expression<bool>? isSyncApproved,
-    Expression<DateTime>? remoteDeletedAt,
-  }) {
-    return RawValuesInsertable({
-      if (checksum != null) 'checksum': checksum,
-      if (isSyncApproved != null) 'is_sync_approved': isSyncApproved,
-      if (remoteDeletedAt != null) 'remote_deleted_at': remoteDeletedAt,
-    });
-  }
-
-  TrashSyncEntityCompanion copyWith({
-    Value<String>? checksum,
-    Value<bool?>? isSyncApproved,
-    Value<DateTime>? remoteDeletedAt,
-  }) {
-    return TrashSyncEntityCompanion(
-      checksum: checksum ?? this.checksum,
-      isSyncApproved: isSyncApproved ?? this.isSyncApproved,
-      remoteDeletedAt: remoteDeletedAt ?? this.remoteDeletedAt,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (checksum.present) {
-      map['checksum'] = Variable<String>(checksum.value);
-    }
-    if (isSyncApproved.present) {
-      map['is_sync_approved'] = Variable<bool>(isSyncApproved.value);
-    }
-    if (remoteDeletedAt.present) {
-      map['remote_deleted_at'] = Variable<DateTime>(remoteDeletedAt.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('TrashSyncEntityCompanion(')
-          ..write('checksum: $checksum, ')
-          ..write('isSyncApproved: $isSyncApproved, ')
-          ..write('remoteDeletedAt: $remoteDeletedAt')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class DatabaseAtV20 extends GeneratedDatabase {
   DatabaseAtV20(QueryExecutor e) : super(e);
   late final UserEntity userEntity = UserEntity(this);
@@ -8531,7 +8380,6 @@ class DatabaseAtV20 extends GeneratedDatabase {
   late final StoreEntity storeEntity = StoreEntity(this);
   late final TrashedLocalAssetEntity trashedLocalAssetEntity =
       TrashedLocalAssetEntity(this);
-  late final TrashSyncEntity trashSyncEntity = TrashSyncEntity(this);
   late final Index idxPartnerSharedWithId = Index(
     'idx_partner_shared_with_id',
     'CREATE INDEX IF NOT EXISTS idx_partner_shared_with_id ON partner_entity (shared_with_id)',
@@ -8567,14 +8415,6 @@ class DatabaseAtV20 extends GeneratedDatabase {
   late final Index idxTrashedLocalAssetAlbum = Index(
     'idx_trashed_local_asset_album',
     'CREATE INDEX IF NOT EXISTS idx_trashed_local_asset_album ON trashed_local_asset_entity (album_id)',
-  );
-  late final Index idxTrashSyncIsSyncApproved = Index(
-    'idx_trash_sync_is_sync_approved',
-    'CREATE INDEX IF NOT EXISTS idx_trash_sync_is_sync_approved ON trash_sync_entity (is_sync_approved)',
-  );
-  late final Index idxTrashSyncChecksumStatus = Index(
-    'idx_trash_sync_checksum_status',
-    'CREATE INDEX IF NOT EXISTS idx_trash_sync_checksum_status ON trash_sync_entity (checksum, is_sync_approved)',
   );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -8613,7 +8453,6 @@ class DatabaseAtV20 extends GeneratedDatabase {
     assetFaceEntity,
     storeEntity,
     trashedLocalAssetEntity,
-    trashSyncEntity,
     idxPartnerSharedWithId,
     idxLatLng,
     idxRemoteAlbumAssetAlbumAsset,
@@ -8623,8 +8462,6 @@ class DatabaseAtV20 extends GeneratedDatabase {
     idxAssetFaceAssetId,
     idxTrashedLocalAssetChecksum,
     idxTrashedLocalAssetAlbum,
-    idxTrashSyncIsSyncApproved,
-    idxTrashSyncChecksumStatus,
   ];
   @override
   int get schemaVersion => 20;

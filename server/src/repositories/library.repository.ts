@@ -79,11 +79,7 @@ export class LibraryRepository {
         eb.fn
           .countAll<number>()
           .filterWhere((eb) =>
-            eb.and([
-              eb('asset.type', '=', AssetType.Image),
-              eb('asset.visibility', '!=', AssetVisibility.Hidden),
-              eb('asset.isOffline', '=', false),
-            ]),
+            eb.and([eb('asset.type', '=', AssetType.Image), eb('asset.visibility', '!=', AssetVisibility.Hidden)]),
           )
           .as('photos'),
       )
@@ -91,21 +87,9 @@ export class LibraryRepository {
         eb.fn
           .countAll<number>()
           .filterWhere((eb) =>
-            eb.and([
-              eb('asset.type', '=', AssetType.Video),
-              eb('asset.visibility', '!=', AssetVisibility.Hidden),
-              eb('asset.isOffline', '=', false),
-            ]),
+            eb.and([eb('asset.type', '=', AssetType.Video), eb('asset.visibility', '!=', AssetVisibility.Hidden)]),
           )
           .as('videos'),
-      )
-      .select((eb) =>
-        eb.fn
-          .countAll<number>()
-          .filterWhere((eb) =>
-            eb.and([eb('asset.isOffline', '=', true), eb('asset.visibility', '!=', AssetVisibility.Hidden)]),
-          )
-          .as('offline'),
       )
       .select((eb) => eb.fn.coalesce((eb) => eb.fn.sum('asset_exif.fileSizeInByte'), eb.val(0)).as('usage'))
       .groupBy('library.id')
@@ -119,7 +103,6 @@ export class LibraryRepository {
         .selectFrom('library')
         .select(zero.as('photos'))
         .select(zero.as('videos'))
-        .select(zero.as('offline'))
         .select(zero.as('usage'))
         .select(zero.as('total'))
         .where('library.id', '=', id)
@@ -129,7 +112,6 @@ export class LibraryRepository {
     return {
       photos: stats.photos,
       videos: stats.videos,
-      offline: stats.offline,
       usage: stats.usage,
       total: stats.photos + stats.videos,
     };

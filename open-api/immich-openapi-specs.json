@@ -18264,11 +18264,6 @@
       },
       "LibraryStatsResponseDto": {
         "properties": {
-          "offline": {
-            "default": 0,
-            "description": "Number of offline assets",
-            "type": "integer"
-          },
           "photos": {
             "default": 0,
             "description": "Number of photos",
@@ -18292,7 +18287,6 @@
           }
         },
         "required": [
-          "offline",
           "photos",
           "total",
           "usage",

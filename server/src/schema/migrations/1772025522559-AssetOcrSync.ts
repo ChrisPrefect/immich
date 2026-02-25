@@ -25,6 +25,14 @@ export async function up(db: Kysely<any>): Promise<void> {
       RETURN NULL;
     END
   $$;`.execute(db);
+  await sql`CREATE TABLE "asset_ocr_audit" (
+  "id" uuid NOT NULL DEFAULT immich_uuid_v7(),
+  "assetId" uuid NOT NULL,
+  "deletedAt" timestamp with time zone NOT NULL DEFAULT clock_timestamp(),
+  CONSTRAINT "asset_ocr_audit_pkey" PRIMARY KEY ("id")
+);`.execute(db);
+  await sql`CREATE INDEX "asset_ocr_audit_assetId_idx" ON "asset_ocr_audit" ("assetId");`.execute(db);
+  await sql`CREATE INDEX "asset_ocr_audit_deletedAt_idx" ON "asset_ocr_audit" ("deletedAt");`.execute(db);
   await sql`ALTER TABLE "asset_ocr" ADD "updateId" uuid NOT NULL DEFAULT immich_uuid_v7();`.execute(db);
   await sql`CREATE INDEX "asset_ocr_updateId_idx" ON "asset_ocr" ("updateId");`.execute(db);
   await sql`CREATE OR REPLACE TRIGGER "asset_ocr_delete_audit"
@@ -56,6 +64,7 @@ AS $function$
   await sql`DROP TRIGGER "asset_ocr_delete_audit" ON "asset_ocr";`.execute(db);
   await sql`DROP INDEX "asset_ocr_updateId_idx";`.execute(db);
   await sql`ALTER TABLE "asset_ocr" DROP COLUMN "updateId";`.execute(db);
+  await sql`DROP TABLE "asset_ocr_audit";`.execute(db);
   await sql`DROP FUNCTION asset_ocr_delete_audit;`.execute(db);
   await sql`UPDATE "migration_overrides" SET "value" = '{"sql":"CREATE OR REPLACE FUNCTION asset_edit_delete()\\n  RETURNS TRIGGER\\n  LANGUAGE PLPGSQL\\n  AS $$\\n    BEGIN\\n      UPDATE asset\\n      SET \\"isEdited\\" = false\\n      FROM deleted_edit\\n      WHERE asset.id = deleted_edit.\\"assetId\\" AND asset.\\"isEdited\\" \\n        AND NOT EXISTS (SELECT FROM asset_edit edit WHERE edit.\\"assetId\\" = asset.id);\\n      RETURN NULL;\\n    END\\n  $$;","name":"asset_edit_delete","type":"function"}'::jsonb WHERE "name" = 'function_asset_edit_delete';`.execute(db);
   await sql`DELETE FROM "migration_overrides" WHERE "name" = 'function_asset_ocr_delete_audit';`.execute(db);

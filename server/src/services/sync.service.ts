@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import { Insertable } from 'kysely';
 import { DateTime, Duration } from 'luxon';
 import { Writable } from 'node:stream';
+import { ConnectableObservable } from 'rxjs';
 import { AUDIT_LOG_MAX_DURATION } from 'src/constants';
 import { OnJob } from 'src/decorators';
 import { AssetResponseDto, mapAsset } from 'src/dtos/asset-response.dto';
@@ -81,6 +82,7 @@ export const SYNC_TYPES_ORDER = [
   SyncRequestType.AlbumToAssetsV1,
   SyncRequestType.AssetExifsV1,
   SyncRequestType.AlbumAssetExifsV1,
+  SyncRequestType.AssetOcrV1,
   SyncRequestType.PartnerAssetExifsV1,
   SyncRequestType.MemoriesV1,
   SyncRequestType.MemoryToAssetsV1,

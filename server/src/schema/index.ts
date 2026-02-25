@@ -96,6 +96,7 @@ export class ImmichDatabase {
     AssetMetadataAuditTable,
     AssetJobStatusTable,
     AssetOcrTable,
+    AssetOcrAuditTable,
     AssetTable,
     AssetFileTable,
     AuditTable,

@@ -16,7 +16,6 @@ import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider
 import 'package:immich_mobile/providers/cast.provider.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
-import 'package:immich_mobile/services/asset.service.dart';
 import 'package:immich_mobile/utils/debounce.dart';
 import 'package:immich_mobile/utils/hooks/interval_hook.dart';
 import 'package:immich_mobile/widgets/asset_viewer/custom_video_player_controls.dart';
@@ -103,19 +102,7 @@ class NativeVideoViewerPage extends HookConsumerWidget {
       }
     }
 
-    final videoSource = useMemoized<Future<VideoSource?>>(() => createSource());
-    final aspectRatio = useState<double?>(asset.aspectRatio);
-    useMemoized(() async {
-      if (!context.mounted || aspectRatio.value != null) {
-        return null;
-      }
-
-      try {
-        aspectRatio.value = await ref.read(assetServiceProvider).getAspectRatio(asset);
-      } catch (error) {
-        log.severe('Error getting aspect ratio for asset ${asset.fileName}: $error');
-      }
-    });
+    final videoSource = useMemoized<Future<VideoSource?>>(createSource);
 
     void checkIfBuffering() {
       if (!context.mounted) {
@@ -361,18 +348,10 @@ class NativeVideoViewerPage extends HookConsumerWidget {
         // This remains under the video to avoid flickering
         // For motion videos, this is the image portion of the asset
         if (!isVideoReady.value || asset.isMotionPhoto) Center(key: ValueKey(asset.id), child: image),
-        if (aspectRatio.value != null && !isCasting)
+        if (!isCasting)
           Visibility.maintain(
-            key: ValueKey(asset),
             visible: isVisible.value,
-            child: Center(
-              key: ValueKey(asset),
-              child: AspectRatio(
-                key: ValueKey(asset),
-                aspectRatio: aspectRatio.value!,
-                child: isCurrent ? NativeVideoPlayerView(key: ValueKey(asset), onViewReady: initController) : null,
-              ),
-            ),
+            child: Center(child: isCurrent ? NativeVideoPlayerView(onViewReady: initController) : null),
           ),
         if (showControls) const Center(child: CustomVideoPlayerControls()),
       ],

@@ -146,7 +146,12 @@ export class IntegrityRepository {
           ),
       )
       .select(['allPaths.path as path', 'allPaths.assetId', 'allPaths.fileAssetId', 'integrity_report.id as reportId'])
-      .stream();
+      .stream() as AsyncIterableIterator<
+      { path: string; reportId: string | null } & (
+        | { assetId: string; fileAssetId: null }
+        | { assetId: null; fileAssetId: string }
+      )
+    >;
   }
 
   @GenerateSql({ params: [DummyValue.DATE, DummyValue.DATE], stream: true })

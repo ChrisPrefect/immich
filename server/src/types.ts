@@ -301,12 +301,10 @@ export interface IIntegrityUntrackedFilesJob {
 }
 
 export interface IIntegrityMissingFilesJob {
-  items: {
-    path: string;
-    reportId: string | null;
-    assetId: string | null;
-    fileAssetId: string | null;
-  }[];
+  items: ({ path: string; reportId: string | null } & (
+    | { assetId: string; fileAssetId: null }
+    | { assetId: null; fileAssetId: string }
+  ))[];
 }
 
 export interface IIntegrityPathWithReportJob {

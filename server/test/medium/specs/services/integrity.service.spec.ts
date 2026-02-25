@@ -468,9 +468,18 @@ describe(IntegrityService.name, () => {
       const integrity = ctx.get(IntegrityRepository);
       const storage = ctx.getMock(StorageRepository);
 
+      const {
+        result: { id: ownerId },
+      } = await ctx.newUser();
+
+      const {
+        result: { id: assetId },
+      } = await ctx.newAsset({ ownerId, originalPath: '/path/to/file1' });
+
       const { id: restoredId } = await integrity.create({
         type: IntegrityReportType.MissingFile,
         path: '/path/to/restored',
+        assetId,
       });
 
       storage.stat
@@ -480,9 +489,9 @@ describe(IntegrityService.name, () => {
 
       await sut.handleMissingFiles({
         items: [
-          { path: '/path/to/existing', assetId: null, fileAssetId: null, reportId: null },
-          { path: '/path/to/missing', assetId: null, fileAssetId: null, reportId: null },
-          { path: '/path/to/restored', assetId: null, fileAssetId: null, reportId: restoredId },
+          { path: '/path/to/existing', assetId, fileAssetId: null, reportId: null },
+          { path: '/path/to/missing', assetId, fileAssetId: null, reportId: null },
+          { path: '/path/to/restored', assetId, fileAssetId: null, reportId: restoredId },
         ],
       });
 

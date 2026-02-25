@@ -26,7 +26,7 @@ export class IntegrityRepository {
         }),
       )
       .returningAll()
-      .executeTakeFirst();
+      .executeTakeFirstOrThrow();
   }
 
   @GenerateSql({ params: [DummyValue.STRING] })
@@ -52,7 +52,7 @@ export class IntegrityRepository {
   }
 
   @GenerateSql({ params: [{ cursor: DummyValue.NUMBER, limit: 100 }, DummyValue.STRING] })
-  async getIntegrityReports(pagination: ReportPaginationOptions, type: IntegrityReportType) {
+  async getIntegrityReport(pagination: ReportPaginationOptions, type: IntegrityReportType) {
     const items = await this.db
       .selectFrom('integrity_report')
       .select(['id', 'type', 'path', 'assetId', 'fileAssetId', 'createdAt'])

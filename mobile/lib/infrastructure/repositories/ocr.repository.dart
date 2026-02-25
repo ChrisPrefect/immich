@@ -6,11 +6,11 @@ class DriftOcrRepository extends DriftDatabaseRepository {
   final Drift _db;
   const DriftOcrRepository(this._db) : super(_db);
 
-  Future<DriftOcr?> get(String assetId) async {
+  Future<List<DriftOcr>?> get(String assetId) async {
     final query = _db.select(_db.assetOcrEntity)..where((row) => row.assetId.equals(assetId));
 
-    final result = await query.getSingleOrNull();
-    return result?.toDto();
+    final result = await query.get();
+    return result.map((e) => e.toDto()).toList();
   }
 }
 

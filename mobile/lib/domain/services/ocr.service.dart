@@ -6,7 +6,7 @@ class DriftOcrService {
 
   const DriftOcrService(this._repository);
 
-  Future<DriftOcr?> get(String assetId) {
+  Future<List<DriftOcr>?> get(String assetId) {
     return _repository.get(assetId);
   }
 }

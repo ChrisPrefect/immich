@@ -1,4 +1,5 @@
 import { Column, ForeignKeyColumn, Generated, PrimaryGeneratedColumn, Table } from '@immich/sql-tools';
+import { UpdateIdColumn } from 'src/decorators';
 import { AssetTable } from 'src/schema/tables/asset.table';
 
 @Table('asset_ocr')
@@ -45,4 +46,7 @@ export class AssetOcrTable {
 
   @Column({ type: 'boolean', default: true })
   isVisible!: Generated<boolean>;
+
+  @UpdateIdColumn({ index: true })
+  updateId!: Generated<string>;
 }

@@ -3073,6 +3073,36 @@ export type SyncAssetMetadataV1 = {
     /** Value */
     value: object;
 };
+export type SyncAssetOcrV1 = {
+    /** Asset ID */
+    assetId: string;
+    /** Confidence score of the bounding box */
+    boxScore: number;
+    /** OCR entry ID */
+    id: string;
+    /** Whether the OCR entry is visible */
+    isVisible: boolean;
+    /** Recognized text content */
+    text: string;
+    /** Confidence score of the recognized text */
+    textScore: number;
+    /** Top-left X coordinate (normalized 0–1) */
+    x1: number;
+    /** Top-right X coordinate (normalized 0–1) */
+    x2: number;
+    /** Bottom-right X coordinate (normalized 0–1) */
+    x3: number;
+    /** Bottom-left X coordinate (normalized 0–1) */
+    x4: number;
+    /** Top-left Y coordinate (normalized 0–1) */
+    y1: number;
+    /** Top-right Y coordinate (normalized 0–1) */
+    y2: number;
+    /** Bottom-right Y coordinate (normalized 0–1) */
+    y3: number;
+    /** Bottom-left Y coordinate (normalized 0–1) */
+    y4: number;
+};
 export type SyncAssetV1 = {
     /** Checksum */
     checksum: string;
@@ -7232,6 +7262,7 @@ export enum SyncEntityType {
     AssetExifV1 = "AssetExifV1",
     AssetMetadataV1 = "AssetMetadataV1",
     AssetMetadataDeleteV1 = "AssetMetadataDeleteV1",
+    AssetOcrV1 = "AssetOcrV1",
     PartnerV1 = "PartnerV1",
     PartnerDeleteV1 = "PartnerDeleteV1",
     PartnerAssetV1 = "PartnerAssetV1",
@@ -7282,6 +7313,7 @@ export enum SyncRequestType {
     AssetsV1 = "AssetsV1",
     AssetExifsV1 = "AssetExifsV1",
     AssetMetadataV1 = "AssetMetadataV1",
+    AssetOcrV1 = "AssetOcrV1",
     AuthUsersV1 = "AuthUsersV1",
     MemoriesV1 = "MemoriesV1",
     MemoryToAssetsV1 = "MemoryToAssetsV1",

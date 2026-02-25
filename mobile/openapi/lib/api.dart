@@ -321,6 +321,7 @@ part 'model/sync_asset_face_v1.dart';
 part 'model/sync_asset_face_v2.dart';
 part 'model/sync_asset_metadata_delete_v1.dart';
 part 'model/sync_asset_metadata_v1.dart';
+part 'model/sync_asset_ocr_v1.dart';
 part 'model/sync_asset_v1.dart';
 part 'model/sync_auth_user_v1.dart';
 part 'model/sync_entity_type.dart';

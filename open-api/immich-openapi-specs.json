@@ -22944,6 +22944,83 @@
         ],
         "type": "object"
       },
+      "SyncAssetOcrV1": {
+        "properties": {
+          "assetId": {
+            "description": "Asset ID",
+            "type": "string"
+          },
+          "boxScore": {
+            "description": "Confidence score of the bounding box",
+            "type": "number"
+          },
+          "id": {
+            "description": "OCR entry ID",
+            "type": "string"
+          },
+          "isVisible": {
+            "description": "Whether the OCR entry is visible",
+            "type": "boolean"
+          },
+          "text": {
+            "description": "Recognized text content",
+            "type": "string"
+          },
+          "textScore": {
+            "description": "Confidence score of the recognized text",
+            "type": "number"
+          },
+          "x1": {
+            "description": "Top-left X coordinate (normalized 0–1)",
+            "type": "number"
+          },
+          "x2": {
+            "description": "Top-right X coordinate (normalized 0–1)",
+            "type": "number"
+          },
+          "x3": {
+            "description": "Bottom-right X coordinate (normalized 0–1)",
+            "type": "number"
+          },
+          "x4": {
+            "description": "Bottom-left X coordinate (normalized 0–1)",
+            "type": "number"
+          },
+          "y1": {
+            "description": "Top-left Y coordinate (normalized 0–1)",
+            "type": "number"
+          },
+          "y2": {
+            "description": "Top-right Y coordinate (normalized 0–1)",
+            "type": "number"
+          },
+          "y3": {
+            "description": "Bottom-right Y coordinate (normalized 0–1)",
+            "type": "number"
+          },
+          "y4": {
+            "description": "Bottom-left Y coordinate (normalized 0–1)",
+            "type": "number"
+          }
+        },
+        "required": [
+          "assetId",
+          "boxScore",
+          "id",
+          "isVisible",
+          "text",
+          "textScore",
+          "x1",
+          "x2",
+          "x3",
+          "x4",
+          "y1",
+          "y2",
+          "y3",
+          "y4"
+        ],
+        "type": "object"
+      },
       "SyncAssetV1": {
         "properties": {
           "checksum": {
@@ -23165,6 +23242,7 @@
           "AssetExifV1",
           "AssetMetadataV1",
           "AssetMetadataDeleteV1",
+          "AssetOcrV1",
           "PartnerV1",
           "PartnerDeleteV1",
           "PartnerAssetV1",
@@ -23461,6 +23539,7 @@
           "AssetsV1",
           "AssetExifsV1",
           "AssetMetadataV1",
+          "AssetOcrV1",
           "AuthUsersV1",
           "MemoriesV1",
           "MemoryToAssetsV1",

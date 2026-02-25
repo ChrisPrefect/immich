@@ -193,6 +193,7 @@ export class SyncService extends BaseService {
       [SyncRequestType.AssetFacesV1]: async () => this.syncAssetFacesV1(options, response, checkpointMap),
       [SyncRequestType.AssetFacesV2]: async () => this.syncAssetFacesV2(options, response, checkpointMap),
       [SyncRequestType.UserMetadataV1]: () => this.syncUserMetadataV1(options, response, checkpointMap),
+      [SyncRequestType.AssetOcrV1]: () => this.syncAssetOcrV1(options, response, checkpointMap, auth),
     };
 
     for (const type of SYNC_TYPES_ORDER.filter((type) => dto.types.includes(type))) {
@@ -846,6 +847,23 @@ export class SyncService extends BaseService {
 
     const upsertType = SyncEntityType.AssetMetadataV1;
     const upserts = this.syncRepository.assetMetadata.getUpserts(
+      { ...options, ack: checkpointMap[upsertType] },
+      auth.user.id,
+    );
+
+    for await (const { updateId, ...data } of upserts) {
+      send(response, { type: upsertType, ids: [updateId], data });
+    }
+  }
+
+  private async syncAssetOcrV1(
+    options: SyncQueryOptions,
+    response: Writable,
+    checkpointMap: CheckpointMap,
+    auth: AuthDto,
+  ) {
+    const upsertType = SyncEntityType.AssetOcrV1;
+    const upserts = this.syncRepository.assetOcr.getUpserts(
       { ...options, ack: checkpointMap[upsertType] },
       auth.user.id,
     );

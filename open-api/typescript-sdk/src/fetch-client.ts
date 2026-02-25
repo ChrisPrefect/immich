@@ -630,7 +630,7 @@ export type AssetResponseDto = {
     resized?: boolean;
     stack?: (AssetStackResponseDto) | null;
     tags?: TagResponseDto[];
-    /** Thumbhash for thumbnail generation */
+    /** Thumbhash for thumbnail generation (base64) also used as the c query param for thumbnail cache busting. */
     thumbhash: string | null;
     /** Asset type */
     "type": AssetTypeEnum;
@@ -973,38 +973,36 @@ export type CropParameters = {
     /** Top-Left Y coordinate of crop */
     y: number;
 };
-export type AssetEditActionCrop = {
-    /** Type of edit action to perform */
-    action: AssetEditAction;
-    parameters: CropParameters;
-};
 export type RotateParameters = {
     /** Rotation angle in degrees */
     angle: number;
-};
-export type AssetEditActionRotate = {
-    /** Type of edit action to perform */
-    action: AssetEditAction;
-    parameters: RotateParameters;
 };
 export type MirrorParameters = {
     /** Axis to mirror along */
     axis: MirrorAxis;
 };
-export type AssetEditActionMirror = {
+export type AssetEditActionItemResponseDto = {
     /** Type of edit action to perform */
     action: AssetEditAction;
-    parameters: MirrorParameters;
+    id: string;
+    /** List of edit actions to apply (crop, rotate, or mirror) */
+    parameters: CropParameters | RotateParameters | MirrorParameters;
 };
-export type AssetEditsDto = {
-    /** Asset ID to apply edits to */
+export type AssetEditsResponseDto = {
+    /** Asset ID these edits belong to */
     assetId: string;
-    /** List of edit actions to apply (crop, rotate, or mirror) */
-    edits: (AssetEditActionCrop | AssetEditActionRotate | AssetEditActionMirror)[];
+    /** List of edit actions applied to the asset */
+    edits: AssetEditActionItemResponseDto[];
 };
-export type AssetEditActionListDto = {
+export type AssetEditActionItemDto = {
+    /** Type of edit action to perform */
+    action: AssetEditAction;
     /** List of edit actions to apply (crop, rotate, or mirror) */
-    edits: (AssetEditActionCrop | AssetEditActionRotate | AssetEditActionMirror)[];
+    parameters: CropParameters | RotateParameters | MirrorParameters;
+};
+export type AssetEditsCreateDto = {
+    /** List of edit actions to apply (crop, rotate, or mirror) */
+    edits: AssetEditActionItemDto[];
 };
 export type AssetMetadataResponseDto = {
     /** Metadata key */
@@ -1421,12 +1419,16 @@ export type MemoryCreateDto = {
     /** Asset IDs to associate with memory */
     assetIds?: string[];
     data: OnThisDayDto;
+    /** Date when memory should be hidden */
+    hideAt?: string;
     /** Is memory saved */
     isSaved?: boolean;
     /** Memory date */
     memoryAt: string;
     /** Date when memory was seen */
     seenAt?: string;
+    /** Date when memory should be shown */
+    showAt?: string;
     /** Memory type */
     "type": MemoryType;
 };
@@ -3069,6 +3071,26 @@ export type SyncAssetFaceV1 = {
     /** Source type */
     sourceType: string;
 };
+export type SyncAssetFaceV2 = {
+    /** Asset ID */
+    assetId: string;
+    boundingBoxX1: number;
+    boundingBoxX2: number;
+    boundingBoxY1: number;
+    boundingBoxY2: number;
+    /** Face deleted at */
+    deletedAt: string | null;
+    /** Asset face ID */
+    id: string;
+    imageHeight: number;
+    imageWidth: number;
+    /** Is the face visible in the asset */
+    isVisible: boolean;
+    /** Person ID */
+    personId: string | null;
+    /** Source type */
+    sourceType: string;
+};
 export type SyncAssetMetadataDeleteV1 = {
     /** Asset ID */
     assetId: string;
@@ -4228,7 +4250,7 @@ export function getAssetEdits({ id }: {
 }, opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
-        data: AssetEditsDto;
+        data: AssetEditsResponseDto;
     }>(`/assets/${encodeURIComponent(id)}/edits`, {
         ...opts
     }));
@@ -4236,17 +4258,17 @@ export function getAssetEdits({ id }: {
 /**
  * Apply edits to an existing asset
  */
-export function editAsset({ id, assetEditActionListDto }: {
+export function editAsset({ id, assetEditsCreateDto }: {
     id: string;
-    assetEditActionListDto: AssetEditActionListDto;
+    assetEditsCreateDto: AssetEditsCreateDto;
 }, opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
-        data: AssetEditsDto;
+        data: AssetEditsResponseDto;
     }>(`/assets/${encodeURIComponent(id)}/edits`, oazapfts.json({
         ...opts,
         method: "PUT",
-        body: assetEditActionListDto
+        body: assetEditsCreateDto
     })));
 }
 /**
@@ -7367,6 +7389,7 @@ export enum SyncEntityType {
     PersonV1 = "PersonV1",
     PersonDeleteV1 = "PersonDeleteV1",
     AssetFaceV1 = "AssetFaceV1",
+    AssetFaceV2 = "AssetFaceV2",
     AssetFaceDeleteV1 = "AssetFaceDeleteV1",
     UserMetadataV1 = "UserMetadataV1",
     UserMetadataDeleteV1 = "UserMetadataDeleteV1",
@@ -7394,6 +7417,7 @@ export enum SyncRequestType {
     UsersV1 = "UsersV1",
     PeopleV1 = "PeopleV1",
     AssetFacesV1 = "AssetFacesV1",
+    AssetFacesV2 = "AssetFacesV2",
     UserMetadataV1 = "UserMetadataV1"
 }
 export enum TranscodeHWAccel {

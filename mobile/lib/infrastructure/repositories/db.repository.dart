@@ -5,6 +5,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:immich_mobile/domain/interfaces/db.interface.dart';
 import 'package:immich_mobile/infrastructure/entities/asset_face.entity.dart';
+import 'package:immich_mobile/infrastructure/entities/asset_ocr.entity.dart';
 import 'package:immich_mobile/infrastructure/entities/auth_user.entity.dart';
 import 'package:immich_mobile/infrastructure/entities/exif.entity.dart';
 import 'package:immich_mobile/infrastructure/entities/local_album.entity.dart';
@@ -66,6 +67,7 @@ class IsarDatabaseRepository implements IDatabaseRepository {
     AssetFaceEntity,
     StoreEntity,
     TrashedLocalAssetEntity,
+    AssetOcrEntity,
   ],
   include: {'package:immich_mobile/infrastructure/entities/merged_asset.drift'},
 )
@@ -97,7 +99,7 @@ class Drift extends $Drift implements IDatabaseRepository {
   }
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -229,6 +231,9 @@ class Drift extends $Drift implements IDatabaseRepository {
           from19To20: (m, v20) async {
             await m.addColumn(v20.assetFaceEntity, v20.assetFaceEntity.isVisible);
             await m.addColumn(v20.assetFaceEntity, v20.assetFaceEntity.deletedAt);
+          },
+          from20To21: (m, v21) async {
+            await m.create(v21.assetOcrEntity);
           },
         ),
       );

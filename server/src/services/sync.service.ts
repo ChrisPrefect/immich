@@ -223,6 +223,7 @@ export class SyncService extends BaseService {
     await this.syncRepository.stack.cleanupAuditTable(pruneThreshold);
     await this.syncRepository.user.cleanupAuditTable(pruneThreshold);
     await this.syncRepository.userMetadata.cleanupAuditTable(pruneThreshold);
+    await this.syncRepository.assetOcr.cleanupAuditTable(pruneThreshold);
   }
 
   private needsFullSync(checkpointMap: CheckpointMap) {
@@ -862,6 +863,16 @@ export class SyncService extends BaseService {
     checkpointMap: CheckpointMap,
     auth: AuthDto,
   ) {
+    const deleteType = SyncEntityType.AssetOcrDeleteV1;
+    const deletes = this.syncRepository.assetOcr.getDeletes(
+      { ...options, ack: checkpointMap[deleteType] },
+      auth.user.id,
+    );
+
+    for await (const row of deletes) {
+      send(response, { type: deleteType, ids: [row.id], data: row });
+    }
+
     const upsertType = SyncEntityType.AssetOcrV1;
     const upserts = this.syncRepository.assetOcr.getUpserts(
       { ...options, ack: checkpointMap[upsertType] },

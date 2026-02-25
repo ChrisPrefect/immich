@@ -1,8 +1,22 @@
-import { Column, ForeignKeyColumn, Generated, PrimaryGeneratedColumn, Table } from '@immich/sql-tools';
+import {
+  AfterDeleteTrigger,
+  Column,
+  ForeignKeyColumn,
+  Generated,
+  PrimaryGeneratedColumn,
+  Table,
+} from '@immich/sql-tools';
 import { UpdateIdColumn } from 'src/decorators';
 import { AssetTable } from 'src/schema/tables/asset.table';
+import { asset_ocr_delete_audit } from '../functions';
 
 @Table('asset_ocr')
+@AfterDeleteTrigger({
+  scope: 'statement',
+  function: asset_ocr_delete_audit,
+  referencingOldTableAs: 'old',
+  when: 'pg_trigger_depth() = 0',
+})
 export class AssetOcrTable {
   @PrimaryGeneratedColumn()
   id!: Generated<string>;

@@ -280,9 +280,22 @@ export const asset_edit_delete = registerFunction({
       UPDATE asset
       SET "isEdited" = false
       FROM deleted_edit
-      WHERE asset.id = deleted_edit."assetId" AND asset."isEdited" 
+      WHERE asset.id = deleted_edit."assetId" AND asset."isEdited"
         AND NOT EXISTS (SELECT FROM asset_edit edit WHERE edit."assetId" = asset.id);
       RETURN NULL;
     END
   `,
+});
+
+export const asset_ocr_delete_audit = registerFunction({
+  name: 'asset_ocr_delete_audit',
+  returnType: 'TRIGGER',
+  language: 'PLPGSQL',
+  body: `
+    BEGIN
+      INSERT INTO asset_ocr_audit ("assetId")
+      SELECT "assetId"
+      FROM OLD;
+      RETURN NULL;
+    END`,
 });

@@ -7,6 +7,7 @@ import {
   asset_delete_audit,
   asset_face_audit,
   asset_metadata_audit,
+  asset_ocr_delete_audit,
   f_concat_ws,
   f_unaccent,
   immich_uuid_v7,
@@ -73,6 +74,7 @@ import { UserMetadataTable } from 'src/schema/tables/user-metadata.table';
 import { UserTable } from 'src/schema/tables/user.table';
 import { VersionHistoryTable } from 'src/schema/tables/version-history.table';
 import { WorkflowActionTable, WorkflowFilterTable, WorkflowTable } from 'src/schema/tables/workflow.table';
+import { AssetOcrAuditTable } from './tables/asset-ocr-audit.table';
 
 @Extensions(['uuid-ossp', 'unaccent', 'cube', 'earthdistance', 'pg_trgm', 'plpgsql'])
 @Database({ name: 'immich' })
@@ -156,6 +158,7 @@ export class ImmichDatabase {
     user_metadata_audit,
     asset_metadata_audit,
     asset_face_audit,
+    asset_ocr_delete_audit,
   ];
 
   enum = [assets_status_enum, asset_face_source_type, asset_visibility_enum];
@@ -192,6 +195,7 @@ export interface DB {
   asset_metadata_audit: AssetMetadataAuditTable;
   asset_job_status: AssetJobStatusTable;
   asset_ocr: AssetOcrTable;
+  asset_ocr_audit: AssetOcrAuditTable;
   ocr_search: OcrSearchTable;
 
   audit: AuditTable;

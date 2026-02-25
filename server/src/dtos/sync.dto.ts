@@ -264,6 +264,18 @@ export class SyncAssetOcrV1 {
 }
 
 @ExtraModel()
+export class SyncAssetOcrDeleteV1 {
+  @ApiProperty({ description: 'Audit row ID of the deleted OCR entry' })
+  id!: string;
+
+  @ApiProperty({ description: 'Original asset ID of the deleted OCR entry' })
+  assetId!: string;
+
+  @ApiProperty({ description: 'Timestamp when the OCR entry was deleted' })
+  deletedAt!: Date;
+}
+
+@ExtraModel()
 export class SyncAssetMetadataV1 {
   @ApiProperty({ description: 'Asset ID' })
   assetId!: string;
@@ -526,6 +538,7 @@ export type SyncItem = {
   [SyncEntityType.AssetMetadataDeleteV1]: SyncAssetMetadataDeleteV1;
   [SyncEntityType.AssetExifV1]: SyncAssetExifV1;
   [SyncEntityType.AssetOcrV1]: SyncAssetOcrV1;
+  [SyncEntityType.AssetOcrDeleteV1]: SyncAssetOcrDeleteV1;
   [SyncEntityType.PartnerAssetV1]: SyncAssetV1;
   [SyncEntityType.PartnerAssetBackfillV1]: SyncAssetV1;
   [SyncEntityType.PartnerAssetDeleteV1]: SyncAssetDeleteV1;

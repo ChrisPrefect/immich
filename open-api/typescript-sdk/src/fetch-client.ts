@@ -3073,6 +3073,14 @@ export type SyncAssetMetadataV1 = {
     /** Value */
     value: object;
 };
+export type SyncAssetOcrDeleteV1 = {
+    /** Original asset ID of the deleted OCR entry */
+    assetId: string;
+    /** Timestamp when the OCR entry was deleted */
+    deletedAt: string;
+    /** Audit row ID of the deleted OCR entry */
+    id: string;
+};
 export type SyncAssetOcrV1 = {
     /** Asset ID */
     assetId: string;
@@ -7263,6 +7271,7 @@ export enum SyncEntityType {
     AssetMetadataV1 = "AssetMetadataV1",
     AssetMetadataDeleteV1 = "AssetMetadataDeleteV1",
     AssetOcrV1 = "AssetOcrV1",
+    AssetOcrDeleteV1 = "AssetOcrDeleteV1",
     PartnerV1 = "PartnerV1",
     PartnerDeleteV1 = "PartnerDeleteV1",
     PartnerAssetV1 = "PartnerAssetV1",

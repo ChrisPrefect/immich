@@ -22944,6 +22944,29 @@
         ],
         "type": "object"
       },
+      "SyncAssetOcrDeleteV1": {
+        "properties": {
+          "assetId": {
+            "description": "Original asset ID of the deleted OCR entry",
+            "type": "string"
+          },
+          "deletedAt": {
+            "description": "Timestamp when the OCR entry was deleted",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Audit row ID of the deleted OCR entry",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assetId",
+          "deletedAt",
+          "id"
+        ],
+        "type": "object"
+      },
       "SyncAssetOcrV1": {
         "properties": {
           "assetId": {
@@ -23243,6 +23266,7 @@
           "AssetMetadataV1",
           "AssetMetadataDeleteV1",
           "AssetOcrV1",
+          "AssetOcrDeleteV1",
           "PartnerV1",
           "PartnerDeleteV1",
           "PartnerAssetV1",

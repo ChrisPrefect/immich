@@ -17,7 +17,7 @@ from
 group by
   "type"
 
--- IntegrityRepository.getIntegrityReports
+-- IntegrityRepository.getIntegrityReport
 select
   "id",
   "type",

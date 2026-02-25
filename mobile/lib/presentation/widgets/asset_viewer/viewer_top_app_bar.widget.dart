@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/providers/infrastructure/ocr.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/favorite_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/motion_photo_action_button.widget.dart';
@@ -33,6 +34,7 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final isOwner = asset is RemoteAsset && asset.ownerId == user?.id;
     final isInLockedView = ref.watch(inLockedViewProvider);
     final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);
+    final hasOcr = asset is RemoteAsset && ref.watch(driftOcrAssetProvider(asset.id)).valueOrNull?.isNotEmpty == true;
 
     final showingDetails = ref.watch(assetViewerProvider.select((state) => state.showingDetails));
     double opacity = ref.watch(assetViewerProvider.select((state) => state.backgroundOpacity));
@@ -47,8 +49,15 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     }
 
     final originalTheme = context.themeData;
+    final showingOcr = ref.watch(assetViewerProvider.select((state) => state.showingOcr));
 
     final actions = <Widget>[
+      if (hasOcr)
+        IconButton(
+          icon: Icon(showingOcr ? Icons.text_fields : Icons.text_fields_outlined),
+          onPressed: () => ref.read(assetViewerProvider.notifier).toggleOcr(),
+          color: showingOcr ? context.primaryColor : null,
+        ),
       if (asset.isMotionPhoto) const MotionPhotoActionButton(iconOnly: true),
       if (album != null && album.isActivityEnabled && album.isShared)
         IconButton(

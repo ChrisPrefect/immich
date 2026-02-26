@@ -33,10 +33,48 @@ jobs:
           token: ${{ steps.token.outputs.token }}
           fetch-depth: 0
 
+      - name: Determine changed web files
+        id: changed-files
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          script: |
+            const files = [];
+            const perPage = 100;
+            let page = 1;
+            while (true) {
+              const { data } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                per_page: perPage,
+                page,
+              });
+              files.push(...data);
+              if (data.length < perPage) break;
+              page++;
+            }
+
+            const webPrefixes = ['web/', 'i18n/', 'open-api/typescript-sdk/'];
+            const webFiles = files
+              .map(f => f.filename)
+              .filter(f => webPrefixes.some(p => f.startsWith(p)));
+
+            console.log(`Total PR files: ${files.length}`);
+            console.log(`Web-related files: ${webFiles.length}`);
+            for (const f of webFiles) {
+              console.log(`  ${f}`);
+            }
+
+            core.setOutput('files', webFiles.join('\n'));
+            core.setOutput('has_changes', webFiles.length > 0 ? 'true' : 'false');
+
       - name: Setup pnpm
+        if: steps.changed-files.outputs.has_changes == 'true'
         uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
       - name: Setup Node
+        if: steps.changed-files.outputs.has_changes == 'true'
         uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
         with:
           node-version-file: './e2e/.nvmrc'
@@ -44,27 +82,12 @@ jobs:
           cache-dependency-path: '**/pnpm-lock.yaml'
 
       - name: Install e2e dependencies
+        if: steps.changed-files.outputs.has_changes == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright
+        if: steps.changed-files.outputs.has_changes == 'true'
         run: pnpm exec playwright install chromium --only-shell
-
-      - name: Determine changed web files
-        id: changed-files
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA" -- 'web/' 'i18n/' 'open-api/typescript-sdk/' | head -500)
-          echo "files<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$CHANGED" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-
-          if [ -z "$CHANGED" ]; then
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_changes=true" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Analyze affected routes
         if: steps.changed-files.outputs.has_changes == 'true'
@@ -72,7 +95,6 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
-          # Run the dependency analyzer
           echo "Changed files:"
           echo "$CHANGED_FILES"
           echo "---"
@@ -333,23 +355,50 @@ jobs:
 
       - name: No web changes
         if: steps.changed-files.outputs.has_changes != 'true'
-        uses: mshick/add-pr-comment@b8f338c590a895d50bcbfa6c5859251edc8952fc # v2.8.2
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ steps.token.outputs.token }}
-          message-id: 'visual-review'
-          message: |
-            ## Visual Review
-
-            No web-related file changes detected in this PR. Visual review not needed.
+          script: |
+            const body = '## Visual Review\n\nNo web-related file changes detected in this PR. Visual review not needed.';
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.data.find(c => c.body && c.body.includes('## Visual Review'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
+              });
+            }
 
       - name: No affected routes
         if: steps.changed-files.outputs.has_changes == 'true' && steps.routes.outputs.has_routes != 'true'
-        uses: mshick/add-pr-comment@b8f338c590a895d50bcbfa6c5859251edc8952fc # v2.8.2
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           github-token: ${{ steps.token.outputs.token }}
-          message-id: 'visual-review'
-          message: |
-            ## Visual Review
-
-            Changed files don't affect any pages with screenshot scenarios configured.
-            To add coverage, define new scenarios in `e2e/src/screenshots/page-map.ts`.
+          script: |
+            const body = '## Visual Review\n\nChanged files don\'t affect any pages with screenshot scenarios configured.\nTo add coverage, define new scenarios in `e2e/src/screenshots/page-map.ts`.';
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.data.find(c => c.body && c.body.includes('## Visual Review'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
+              });
+            }

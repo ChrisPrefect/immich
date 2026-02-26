@@ -18,7 +18,10 @@
     "format:fix": "prettier --write .",
     "lint": "eslint \"src/**/*.ts\" --max-warnings 0",
     "lint:fix": "pnpm run lint --fix",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "screenshots": "pnpm exec playwright test --config playwright.screenshot.config.ts",
+    "screenshots:compare": "npx tsx src/screenshots/compare.ts",
+    "screenshots:analyze": "npx tsx src/screenshots/analyze-deps.ts"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,330 @@
+name: Visual Review
+
+on:
+  pull_request:
+    types: [labeled, synchronize]
+
+permissions: {}
+
+jobs:
+  visual-diff:
+    name: Visual Diff Screenshots
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event.action == 'labeled' && github.event.label.name == 'visual-review') ||
+      (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'visual-review'))
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - id: token
+        uses: immich-app/devtools/actions/create-workflow-token@05e16407c0a5492138bb38139c9d9bf067b40886 # create-workflow-token-action-v1.0.1
+        with:
+          app-id: ${{ secrets.PUSH_O_MATIC_APP_ID }}
+          private-key: ${{ secrets.PUSH_O_MATIC_APP_KEY }}
+
+      - name: Checkout PR branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          token: ${{ steps.token.outputs.token }}
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+
+      - name: Setup Node
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version-file: './e2e/.nvmrc'
+          cache: 'pnpm'
+          cache-dependency-path: '**/pnpm-lock.yaml'
+
+      - name: Install Playwright
+        run: pnpm exec playwright install chromium --only-shell
+        working-directory: ./e2e
+
+      - name: Determine changed web files
+        id: changed-files
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA" -- 'web/' 'i18n/' 'open-api/typescript-sdk/' | head -500)
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          # Check if there are any web changes at all
+          if [ -z "$CHANGED" ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Analyze affected routes
+        if: steps.changed-files.outputs.has_changes == 'true'
+        id: routes
+        run: |
+          # Install dependencies for the analyzer
+          pnpm install --frozen-lockfile
+          working_dir=$(pwd)
+
+          # Run the dependency analyzer
+          CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
+          ROUTES=$(echo "$CHANGED_FILES" | xargs npx tsx src/screenshots/analyze-deps.ts 2>/dev/null | grep "^  /" | sed 's/^  //' || true)
+
+          echo "routes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$ROUTES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          if [ -z "$ROUTES" ]; then
+            echo "has_routes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_routes=true" >> "$GITHUB_OUTPUT"
+
+            # Build the scenario filter JSON array
+            SCENARIO_NAMES=$(npx tsx -e "
+              import { getScenariosForRoutes } from './src/screenshots/page-map.ts';
+              const routes = process.argv.slice(1);
+              const scenarios = getScenariosForRoutes(routes);
+              console.log(JSON.stringify(scenarios.map(s => s.name)));
+            " $ROUTES)
+            echo "scenarios=$SCENARIO_NAMES" >> "$GITHUB_OUTPUT"
+          fi
+        working-directory: ./e2e
+
+      - name: Post initial comment
+        if: steps.changed-files.outputs.has_changes == 'true' && steps.routes.outputs.has_routes == 'true'
+        uses: mshick/add-pr-comment@b8f338c590a895d50bcbfa6c5859251edc8952fc # v2.8.2
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          message-id: 'visual-review'
+          message: |
+            ## Visual Review
+
+            Generating screenshots for affected pages...
+
+            Affected routes:
+            ```
+            ${{ steps.routes.outputs.routes }}
+            ```
+
+      # === Screenshot PR version ===
+      - name: Build SDK (PR)
+        if: steps.routes.outputs.has_routes == 'true'
+        run: pnpm install --frozen-lockfile && pnpm build
+        working-directory: ./open-api/typescript-sdk
+
+      - name: Build web (PR)
+        if: steps.routes.outputs.has_routes == 'true'
+        run: pnpm install --frozen-lockfile && pnpm build
+        working-directory: ./web
+
+      - name: Take screenshots (PR)
+        if: steps.routes.outputs.has_routes == 'true'
+        env:
+          PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS: '1'
+          SCREENSHOT_OUTPUT_DIR: ${{ github.workspace }}/screenshots/pr
+          SCREENSHOT_SCENARIOS: ${{ steps.routes.outputs.scenarios }}
+          SCREENSHOT_BASE_URL: http://127.0.0.1:4173
+        run: |
+          # Start the preview server in background
+          cd ../web && pnpm preview --port 4173 --host 127.0.0.1 &
+          SERVER_PID=$!
+
+          # Wait for server to be ready
+          for i in $(seq 1 30); do
+            if curl -s http://127.0.0.1:4173 > /dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+
+          # Run screenshot tests
+          pnpm exec playwright test --config playwright.screenshot.config.ts || true
+
+          # Stop the preview server
+          kill $SERVER_PID 2>/dev/null || true
+        working-directory: ./e2e
+
+      # === Screenshot base version ===
+      - name: Checkout base web directory
+        if: steps.routes.outputs.has_routes == 'true'
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          # Restore web directory from base branch
+          git checkout "$BASE_SHA" -- web/ open-api/typescript-sdk/ i18n/ || true
+
+      - name: Build SDK (base)
+        if: steps.routes.outputs.has_routes == 'true'
+        run: pnpm install --frozen-lockfile && pnpm build
+        working-directory: ./open-api/typescript-sdk
+
+      - name: Build web (base)
+        if: steps.routes.outputs.has_routes == 'true'
+        run: pnpm install --frozen-lockfile && pnpm build
+        working-directory: ./web
+
+      - name: Take screenshots (base)
+        if: steps.routes.outputs.has_routes == 'true'
+        env:
+          PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS: '1'
+          SCREENSHOT_OUTPUT_DIR: ${{ github.workspace }}/screenshots/base
+          SCREENSHOT_SCENARIOS: ${{ steps.routes.outputs.scenarios }}
+          SCREENSHOT_BASE_URL: http://127.0.0.1:4173
+        run: |
+          # Start the preview server in background
+          cd ../web && pnpm preview --port 4173 --host 127.0.0.1 &
+          SERVER_PID=$!
+
+          # Wait for server to be ready
+          for i in $(seq 1 30); do
+            if curl -s http://127.0.0.1:4173 > /dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+
+          # Run screenshot tests
+          pnpm exec playwright test --config playwright.screenshot.config.ts || true
+
+          # Stop the preview server
+          kill $SERVER_PID 2>/dev/null || true
+        working-directory: ./e2e
+
+      # === Compare and report ===
+      - name: Compare screenshots
+        if: steps.routes.outputs.has_routes == 'true'
+        id: compare
+        run: |
+          npx tsx src/screenshots/compare.ts \
+            "${{ github.workspace }}/screenshots/base" \
+            "${{ github.workspace }}/screenshots/pr" \
+            "${{ github.workspace }}/screenshots/diff"
+        working-directory: ./e2e
+
+      - name: Upload screenshot artifacts
+        if: steps.routes.outputs.has_routes == 'true'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: visual-review-screenshots
+          path: screenshots/
+          retention-days: 14
+
+      - name: Post comparison results
+        if: steps.routes.outputs.has_routes == 'true'
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const diffDir = path.join('${{ github.workspace }}', 'screenshots', 'diff');
+            const baseDir = path.join('${{ github.workspace }}', 'screenshots', 'base');
+            const prDir = path.join('${{ github.workspace }}', 'screenshots', 'pr');
+
+            // Read comparison results
+            let results;
+            try {
+              results = JSON.parse(fs.readFileSync(path.join(diffDir, 'results.json'), 'utf8'));
+            } catch {
+              // Post a simple message if comparison failed
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '## Visual Review\n\nScreenshot comparison failed. Check the workflow artifacts for details.'
+              });
+              return;
+            }
+
+            const changed = results.filter(r => r.changePercent > 0.1);
+            const unchanged = results.filter(r => r.changePercent <= 0.1);
+
+            let body = '## Visual Review\n\n';
+
+            if (changed.length === 0) {
+              body += 'No visual changes detected in the affected pages.\n';
+            } else {
+              body += `Found **${changed.length}** page(s) with visual changes`;
+              if (unchanged.length > 0) {
+                body += ` (${unchanged.length} unchanged)`;
+              }
+              body += '.\n\n';
+              body += '> **Note:** Download the `visual-review-screenshots` artifact to view full-resolution before/after/diff images.\n\n';
+
+              for (const result of changed) {
+                body += `### ${result.name}\n\n`;
+
+                if (!result.baseExists) {
+                  body += '**New page** — no base screenshot to compare against.\n\n';
+                  continue;
+                }
+
+                if (!result.prExists) {
+                  body += '**Removed page** — no longer exists in the PR.\n\n';
+                  continue;
+                }
+
+                body += `Change: **${result.changePercent.toFixed(1)}%** of pixels (${result.diffPixels.toLocaleString()} pixels differ)\n\n`;
+              }
+            }
+
+            if (unchanged.length > 0) {
+              body += '<details>\n<summary>Unchanged pages (' + unchanged.length + ')</summary>\n\n';
+              for (const result of unchanged) {
+                body += `- ${result.name}\n`;
+              }
+              body += '\n</details>\n';
+            }
+
+            // Find and update existing comment or create new one
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.data.find(c =>
+              c.body && c.body.includes('## Visual Review') && c.body.includes('visual-review')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: No web changes
+        if: steps.changed-files.outputs.has_changes != 'true'
+        uses: mshick/add-pr-comment@b8f338c590a895d50bcbfa6c5859251edc8952fc # v2.8.2
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          message-id: 'visual-review'
+          message: |
+            ## Visual Review
+
+            No web-related file changes detected in this PR. Visual review not needed.
+
+      - name: No affected routes
+        if: steps.changed-files.outputs.has_changes == 'true' && steps.routes.outputs.has_routes != 'true'
+        uses: mshick/add-pr-comment@b8f338c590a895d50bcbfa6c5859251edc8952fc # v2.8.2
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          message-id: 'visual-review'
+          message: |
+            ## Visual Review
+
+            Changed files don't affect any pages with screenshot scenarios configured.
+            To add coverage, define new scenarios in `e2e/src/screenshots/page-map.ts`.

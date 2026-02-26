@@ -103,16 +103,22 @@ for (const scenario of allScenarios) {
     // Wait for specific selector if specified
     if (scenario.waitForSelector) {
       try {
-        await page.waitForSelector(scenario.waitForSelector, { timeout: 5000 });
+        await page.waitForSelector(scenario.waitForSelector, { timeout: 15_000 });
       } catch {
-        // Continue with screenshot even if selector doesn't appear
+        console.warn(`Selector ${scenario.waitForSelector} not found for ${scenario.name}, continuing...`);
       }
     }
 
+    // Wait for loading spinners to disappear
+    await page
+      .waitForFunction(
+        () => document.querySelectorAll('[data-testid="loading-spinner"]').length === 0,
+        { timeout: 10_000 },
+      )
+      .catch(() => {});
+
     // Wait for animations/transitions to settle
-    if (scenario.settleTime) {
-      await page.waitForTimeout(scenario.settleTime);
-    }
+    await page.waitForTimeout(scenario.settleTime ?? 500);
 
     // Take the screenshot
     await page.screenshot({

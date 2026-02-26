@@ -225,10 +225,10 @@ export function generateMarkdownReport(results: ComparisonResult[], artifactUrl:
 
 // CLI usage
 if (process.argv[1]?.endsWith('compare.ts') || process.argv[1]?.endsWith('compare.js')) {
-  const [baseDir, prDir, outputDir] = process.argv.slice(2);
+  const [baseDir, prDir, outputDir, imageBaseUrl] = process.argv.slice(2);
 
   if (!baseDir || !prDir || !outputDir) {
-    console.log('Usage: compare.ts <base-dir> <pr-dir> <output-dir>');
+    console.log('Usage: compare.ts <base-dir> <pr-dir> <output-dir> [image-base-url]');
     process.exit(1);
   }
 
@@ -245,7 +245,7 @@ if (process.argv[1]?.endsWith('compare.ts') || process.argv[1]?.endsWith('compar
     console.log(`  ${r.name}: ${status} (${r.changePercent.toFixed(1)}%)`);
   }
 
-  const report = generateMarkdownReport(results, '.');
+  const report = generateMarkdownReport(results, imageBaseUrl || '.');
   const reportPath = join(resolve(outputDir), 'report.md');
   writeFileSync(reportPath, report);
   console.log(`\nReport written to: ${reportPath}`);

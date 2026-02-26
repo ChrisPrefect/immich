@@ -14,7 +14,7 @@ jobs:
       (github.event.action == 'labeled' && github.event.label.name == 'visual-review') ||
       (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'visual-review'))
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     defaults:
       run:
@@ -244,11 +244,13 @@ jobs:
         id: compare
         env:
           WORKSPACE_DIR: ${{ github.workspace }}
+          IMAGE_BASE_URL: https://raw.githubusercontent.com/${{ github.repository }}/visual-review/pr-${{ github.event.pull_request.number }}
         run: |
           pnpm exec tsx src/screenshots/compare.ts \
             "$WORKSPACE_DIR/screenshots/base" \
             "$WORKSPACE_DIR/screenshots/pr" \
-            "$WORKSPACE_DIR/screenshots/diff"
+            "$WORKSPACE_DIR/screenshots/diff" \
+            "$IMAGE_BASE_URL"
 
       - name: Upload screenshot artifacts
         if: steps.routes.outputs.has_routes == 'true'
@@ -258,72 +260,45 @@ jobs:
           path: screenshots/
           retention-days: 14
 
+      - name: Push screenshots to review branch
+        if: steps.routes.outputs.has_routes == 'true'
+        env:
+          REVIEW_BRANCH: visual-review/pr-${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          # Save screenshots before git operations
+          cp -r screenshots /tmp/vr-screenshots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan "$REVIEW_BRANCH"
+          git rm -rf . 2>/dev/null || true
+          cp -r /tmp/vr-screenshots/base . 2>/dev/null || true
+          cp -r /tmp/vr-screenshots/pr . 2>/dev/null || true
+          cp -r /tmp/vr-screenshots/diff . 2>/dev/null || true
+          git add base/ pr/ diff/ 2>/dev/null || true
+          git commit -m "Visual review screenshots for PR #${{ github.event.pull_request.number }}" --allow-empty
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push -f origin "$REVIEW_BRANCH"
+        working-directory: .
+
       - name: Post comparison results
         if: steps.routes.outputs.has_routes == 'true'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
-        env:
-          WORKSPACE_DIR: ${{ github.workspace }}
         with:
           github-token: ${{ steps.token.outputs.token }}
           script: |
             const fs = require('fs');
             const path = require('path');
 
-            const workspaceDir = process.env.WORKSPACE_DIR;
-            const diffDir = path.join(workspaceDir, 'screenshots', 'diff');
+            // Read from /tmp copy since git push step may have cleared the workspace
+            const reportPath = path.join('/tmp', 'vr-screenshots', 'diff', 'report.md');
 
-            // Read comparison results
-            let results;
+            let body;
             try {
-              results = JSON.parse(fs.readFileSync(path.join(diffDir, 'results.json'), 'utf8'));
+              body = fs.readFileSync(reportPath, 'utf8');
             } catch {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: '## Visual Review\n\nScreenshot comparison failed. Check the workflow artifacts for details.'
-              });
-              return;
-            }
-
-            const changed = results.filter(r => r.changePercent > 0.1);
-            const unchanged = results.filter(r => r.changePercent <= 0.1);
-
-            let body = '## Visual Review\n\n';
-
-            if (changed.length === 0) {
-              body += 'No visual changes detected in the affected pages.\n';
-            } else {
-              body += `Found **${changed.length}** page(s) with visual changes`;
-              if (unchanged.length > 0) {
-                body += ` (${unchanged.length} unchanged)`;
-              }
-              body += '.\n\n';
-              body += '> **Note:** Download the `visual-review-screenshots` artifact to view full-resolution before/after/diff images.\n\n';
-
-              for (const result of changed) {
-                body += `### ${result.name}\n\n`;
-
-                if (!result.baseExists) {
-                  body += '**New page** — no base screenshot to compare against.\n\n';
-                  continue;
-                }
-
-                if (!result.prExists) {
-                  body += '**Removed page** — no longer exists in the PR.\n\n';
-                  continue;
-                }
-
-                body += `Change: **${result.changePercent.toFixed(1)}%** of pixels (${result.diffPixels.toLocaleString()} pixels differ)\n\n`;
-              }
-            }
-
-            if (unchanged.length > 0) {
-              body += '<details>\n<summary>Unchanged pages (' + unchanged.length + ')</summary>\n\n';
-              for (const result of unchanged) {
-                body += `- ${result.name}\n`;
-              }
-              body += '\n</details>\n';
+              body = '## Visual Review\n\nScreenshot comparison failed. Check the workflow artifacts for details.';
             }
 
             // Find and update existing comment or create new one

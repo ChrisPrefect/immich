@@ -90,7 +90,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   late final _heroOffset = widget.heroOffset ?? TabsRouterScope.of(context)?.controller.activeIndex ?? 0;
   late final _pageController = PageController(initialPage: widget.initialIndex);
   late final _preloader = AssetPreloader(timelineService: ref.read(timelineServiceProvider), mounted: () => mounted);
-  Map<String, GlobalKey> _videoPlayerKeys = {};
+  final Map<String, GlobalKey> _videoPlayerKeys = {};
 
   StreamSubscription? _reloadSubscription;
   KeepAliveLink? _stackChildrenKeepAlive;

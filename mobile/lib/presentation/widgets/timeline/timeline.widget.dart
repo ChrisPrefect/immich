@@ -29,7 +29,7 @@ import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
 import 'package:immich_mobile/widgets/common/mesmerizing_sliver_app_bar.dart';
 import 'package:immich_mobile/widgets/common/selection_sliver_app_bar.dart';
 
-class Timeline extends ConsumerWidget {
+class Timeline extends StatelessWidget {
   const Timeline({
     super.key,
     this.topSliverWidget,
@@ -43,6 +43,7 @@ class Timeline extends ConsumerWidget {
     this.snapToMonth = true,
     this.initialScrollOffset,
     this.readOnly = false,
+    this.persistentBottomBar = false,
   });
 
   final Widget? topSliverWidget;
@@ -56,17 +57,18 @@ class Timeline extends ConsumerWidget {
   final bool snapToMonth;
   final double? initialScrollOffset;
   final bool readOnly;
+  final bool persistentBottomBar;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       floatingActionButton: const DownloadStatusFloatingButton(),
       body: LayoutBuilder(
         builder: (_, constraints) => ProviderScope(
           overrides: [
-            timelineArgsProvider.overrideWithValue(
-              TimelineArgs(
+            timelineArgsProvider.overrideWith(
+              (ref) => TimelineArgs(
                 maxWidth: constraints.maxWidth,
                 maxHeight: constraints.maxHeight,
                 columnCount: ref.watch(settingsProvider.select((s) => s.get(Setting.tilesPerRow))),
@@ -78,14 +80,15 @@ class Timeline extends ConsumerWidget {
             if (readOnly) readonlyModeProvider.overrideWith(() => _AlwaysReadOnlyNotifier()),
           ],
           child: _SliverTimeline(
-            key: const ValueKey('_sliver_timeline'),
             topSliverWidget: topSliverWidget,
             topSliverWidgetHeight: topSliverWidgetHeight,
             appBar: appBar,
             bottomSheet: bottomSheet,
             withScrubber: withScrubber,
+            persistentBottomBar: persistentBottomBar,
             snapToMonth: snapToMonth,
             initialScrollOffset: initialScrollOffset,
+            maxWidth: constraints.maxWidth,
           ),
         ),
       ),
@@ -106,14 +109,15 @@ class _AlwaysReadOnlyNotifier extends ReadOnlyModeNotifier {
 
 class _SliverTimeline extends ConsumerStatefulWidget {
   const _SliverTimeline({
-    super.key,
     this.topSliverWidget,
     this.topSliverWidgetHeight,
     this.appBar,
     this.bottomSheet,
     this.withScrubber = true,
+    this.persistentBottomBar = false,
     this.snapToMonth = true,
     this.initialScrollOffset,
+    this.maxWidth,
   });
 
   final Widget? topSliverWidget;
@@ -121,8 +125,10 @@ class _SliverTimeline extends ConsumerStatefulWidget {
   final Widget? appBar;
   final Widget? bottomSheet;
   final bool withScrubber;
+  final bool persistentBottomBar;
   final bool snapToMonth;
   final double? initialScrollOffset;
+  final double? maxWidth;
 
   @override
   ConsumerState createState() => _SliverTimelineState();
@@ -160,6 +166,20 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
     ref.listenManual(multiSelectProvider.select((s) => s.isEnabled), _onMultiSelectionToggled);
   }
 
+  @override
+  void didUpdateWidget(covariant _SliverTimeline oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.maxWidth != oldWidget.maxWidth) {
+      final asyncSegments = ref.read(timelineSegmentProvider);
+      asyncSegments.whenData((segments) {
+        final index = _getCurrentAssetIndex(segments);
+        // Refresh to wait for new segments to be generated with the updated width before restoring the scroll position
+        final _ = ref.refresh(timelineArgsProvider);
+        _restoreAssetIndex = index;
+      });
+    }
+  }
+
   void _onEvent(Event event) {
     switch (event) {
       case ScrollToTopEvent():
@@ -175,10 +195,6 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
       default:
         break;
     }
-  }
-
-  void _onMultiSelectionToggled(_, bool isEnabled) {
-    EventStream.shared.emit(MultiSelectToggleEvent(isEnabled));
   }
 
   void _restoreAssetPosition(_) {
@@ -201,6 +217,10 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
       }
     });
     _restoreAssetIndex = null;
+  }
+
+  void _onMultiSelectionToggled(_, bool isEnabled) {
+    EventStream.shared.emit(MultiSelectToggleEvent(isEnabled));
   }
 
   int? _getCurrentAssetIndex(List<Segment> segments) {
@@ -341,6 +361,9 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
     final isSelectionMode = ref.watch(multiSelectProvider.select((s) => s.forceEnable));
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
     final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);
+    final isMultiSelectStatusVisible = !isSelectionMode && isMultiSelectEnabled;
+    final isBottomWidgetVisible =
+        widget.bottomSheet != null && (isMultiSelectStatusVisible || widget.persistentBottomBar);
 
     return PopScope(
       canPop: !isMultiSelectEnabled,
@@ -407,66 +430,56 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
 
           return PrimaryScrollController(
             controller: _scrollController,
-            child: NotificationListener<ScrollEndNotification>(
-              onNotification: (notification) {
-                final currentIndex = _getCurrentAssetIndex(segments);
-                if (currentIndex != null && mounted) {
-                  _restoreAssetIndex = currentIndex;
-                }
-                return false;
-              },
-              child: RawGestureDetector(
-                gestures: {
-                  CustomScaleGestureRecognizer: GestureRecognizerFactoryWithHandlers<CustomScaleGestureRecognizer>(
-                    () => CustomScaleGestureRecognizer(),
-                    (CustomScaleGestureRecognizer scale) {
-                      scale.onStart = (details) {
-                        _baseScaleFactor = _scaleFactor;
-                      };
+            child: RawGestureDetector(
+              gestures: {
+                CustomScaleGestureRecognizer: GestureRecognizerFactoryWithHandlers<CustomScaleGestureRecognizer>(
+                  () => CustomScaleGestureRecognizer(),
+                  (CustomScaleGestureRecognizer scale) {
+                    scale.onStart = (details) {
+                      _baseScaleFactor = _scaleFactor;
+                    };
 
-                      scale.onUpdate = (details) {
-                        final newScaleFactor = math.max(math.min(5.0, _baseScaleFactor * details.scale), 1.0);
-                        final newPerRow = 7 - newScaleFactor.toInt();
+                    scale.onUpdate = (details) {
+                      final newScaleFactor = math.max(math.min(5.0, _baseScaleFactor * details.scale), 1.0);
+                      final newPerRow = 7 - newScaleFactor.toInt();
+
+                      if (newPerRow != _perRow) {
                         final targetAssetIndex = _getCurrentAssetIndex(segments);
+                        setState(() {
+                          _scaleFactor = newScaleFactor;
+                          _perRow = newPerRow;
+                          _restoreAssetIndex = targetAssetIndex;
+                        });
 
-                        if (newPerRow != _perRow) {
-                          setState(() {
-                            _scaleFactor = newScaleFactor;
-                            _perRow = newPerRow;
-                            _restoreAssetIndex = targetAssetIndex;
-                          });
-
-                          ref.read(settingsProvider.notifier).set(Setting.tilesPerRow, _perRow);
-                        }
-                      };
-                    },
-                  ),
-                },
-                child: TimelineDragRegion(
-                  onStart: !isReadonlyModeEnabled ? _setDragStartIndex : null,
-                  onAssetEnter: _handleDragAssetEnter,
-                  onEnd: !isReadonlyModeEnabled ? _stopDrag : null,
-                  onScroll: _dragScroll,
-                  onScrollStart: () {
-                    // Minimize the bottom sheet when drag selection starts
-                    ref.read(timelineStateProvider.notifier).setScrolling(true);
+                        ref.read(settingsProvider.notifier).set(Setting.tilesPerRow, _perRow);
+                      }
+                    };
                   },
-                  child: Stack(
-                    children: [
-                      timeline,
-                      if (!isSelectionMode && isMultiSelectEnabled) ...[
-                        Positioned(
-                          top: MediaQuery.paddingOf(context).top,
-                          left: 25,
-                          child: const SizedBox(
-                            height: kToolbarHeight,
-                            child: Center(child: _MultiSelectStatusButton()),
-                          ),
+                ),
+              },
+              child: TimelineDragRegion(
+                onStart: !isReadonlyModeEnabled ? _setDragStartIndex : null,
+                onAssetEnter: _handleDragAssetEnter,
+                onEnd: !isReadonlyModeEnabled ? _stopDrag : null,
+                onScroll: _dragScroll,
+                onScrollStart: () {
+                  // Minimize the bottom sheet when drag selection starts
+                  ref.read(timelineStateProvider.notifier).setScrolling(true);
+                },
+                child: Stack(
+                  children: [
+                    timeline,
+                    if (isBottomWidgetVisible)
+                      Positioned(
+                        top: MediaQuery.paddingOf(context).top,
+                        left: 25,
+                        child: const SizedBox(
+                          height: kToolbarHeight,
+                          child: Center(child: _MultiSelectStatusButton()),
                         ),
-                        if (widget.bottomSheet != null) widget.bottomSheet!,
-                      ],
-                    ],
-                  ),
+                      ),
+                    if (isBottomWidgetVisible) widget.bottomSheet!,
+                  ],
                 ),
               ),
             ),

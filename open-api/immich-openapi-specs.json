@@ -22614,6 +22614,17 @@
         ],
         "type": "object"
       },
+      "SyncAssetEditDeleteV1": {
+        "properties": {
+          "editId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "editId"
+        ],
+        "type": "object"
+      },
       "SyncAssetExifV1": {
         "properties": {
           "assetId": {
@@ -23263,6 +23274,8 @@
           "AssetV1",
           "AssetDeleteV1",
           "AssetExifV1",
+          "AssetEditV1",
+          "AssetEditDeleteV1",
           "AssetMetadataV1",
           "AssetMetadataDeleteV1",
           "AssetOcrV1",
@@ -23562,6 +23575,7 @@
           "AlbumAssetExifsV1",
           "AssetsV1",
           "AssetExifsV1",
+          "AssetEditsV1",
           "AssetMetadataV1",
           "AssetOcrV1",
           "AuthUsersV1",

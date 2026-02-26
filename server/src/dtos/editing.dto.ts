@@ -1,6 +1,7 @@
-import { ApiExtraModels, ApiProperty, getSchemaPath } from '@nestjs/swagger';
+import { ApiProperty, getSchemaPath } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { ArrayMinSize, IsEnum, IsInt, Min, ValidateNested } from 'class-validator';
+import { ExtraModel } from 'src/dtos/sync.dto';
 import { IsAxisAlignedRotation, IsUniqueEditActions, ValidateEnum, ValidateUUID } from 'src/validation';
 
 export enum AssetEditAction {
@@ -14,6 +15,7 @@ export enum MirrorAxis {
   Vertical = 'vertical',
 }
 
+@ExtraModel()
 export class CropParameters {
   @IsInt()
   @Min(0)
@@ -36,12 +38,14 @@ export class CropParameters {
   height!: number;
 }
 
+@ExtraModel()
 export class RotateParameters {
   @IsAxisAlignedRotation()
   @ApiProperty({ description: 'Rotation angle in degrees' })
   angle!: number;
 }
 
+@ExtraModel()
 export class MirrorParameters {
   @IsEnum(MirrorAxis)
   @ApiProperty({ enum: MirrorAxis, enumName: 'MirrorAxis', description: 'Axis to mirror along' })
@@ -63,7 +67,6 @@ export type AssetEditActionItem =
       parameters: MirrorParameters;
     };
 
-@ApiExtraModels(CropParameters, RotateParameters, MirrorParameters)
 export class AssetEditActionItemDto {
   @ValidateEnum({ name: 'AssetEditAction', enum: AssetEditAction, description: 'Type of edit action to perform' })
   action!: AssetEditAction;

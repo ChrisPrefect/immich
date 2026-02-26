@@ -595,7 +595,7 @@ export class PersonService extends BaseService {
           update.birthDate = mergePerson.birthDate;
         }
 
-        if (Object.keys(update).length > 1) {
+        if (Object.keys(update).length > 0) {
           primaryPerson = await this.personRepository.update(update);
         }
 

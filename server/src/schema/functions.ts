@@ -287,19 +287,6 @@ export const asset_edit_delete = registerFunction({
   `,
 });
 
-export const asset_edit_audit = registerFunction({
-  name: 'asset_edit_audit',
-  returnType: 'TRIGGER',
-  language: 'PLPGSQL',
-  body: `
-    BEGIN
-      INSERT INTO asset_edit_audit ("editId", "assetId")
-      SELECT "id", "assetId"
-      FROM OLD;
-      RETURN NULL;
-    END`,
-});
-
 export const asset_ocr_delete_audit = registerFunction({
   name: 'asset_ocr_delete_audit',
   returnType: 'TRIGGER',

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Kysely } from 'kysely';
 import { InjectKysely } from 'nestjs-kysely';
-import { columns } from 'src/database';
 import { DummyValue, GenerateSql } from 'src/decorators';
 import { AssetEditActionItem, AssetEditActionItemResponseDto } from 'src/dtos/editing.dto';
 import { DB } from 'src/schema';
@@ -10,7 +9,9 @@ import { DB } from 'src/schema';
 export class AssetEditRepository {
   constructor(@InjectKysely() private db: Kysely<DB>) {}
 
-  @GenerateSql({ params: [DummyValue.UUID] })
+  @GenerateSql({
+    params: [DummyValue.UUID],
+  })
   replaceAll(assetId: string, edits: AssetEditActionItem[]): Promise<AssetEditActionItemResponseDto[]> {
     return this.db.transaction().execute(async (trx) => {
       await trx.deleteFrom('asset_edit').where('assetId', '=', assetId).execute();
@@ -27,21 +28,13 @@ export class AssetEditRepository {
     });
   }
 
-  @GenerateSql({ params: [DummyValue.UUID] })
+  @GenerateSql({
+    params: [DummyValue.UUID],
+  })
   getAll(assetId: string): Promise<AssetEditActionItemResponseDto[]> {
     return this.db
       .selectFrom('asset_edit')
       .select(['id', 'action', 'parameters'])
-      .where('assetId', '=', assetId)
-      .orderBy('sequence', 'asc')
-      .execute();
-  }
-
-  @GenerateSql({ params: [DummyValue.UUID] })
-  getWithSyncInfo(assetId: string) {
-    return this.db
-      .selectFrom('asset_edit')
-      .select(columns.syncAssetEdit)
       .where('assetId', '=', assetId)
       .orderBy('sequence', 'asc')
       .execute();

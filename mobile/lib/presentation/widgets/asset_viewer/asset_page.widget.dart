@@ -19,10 +19,10 @@ import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart'
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
-import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/asset_viewer/asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
+import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/widgets/common/immich_loading_indicator.dart';
 import 'package:immich_mobile/widgets/photo_view/photo_view.dart';
 
@@ -31,9 +31,16 @@ enum _DragIntent { none, scroll, dismiss }
 class AssetPage extends ConsumerStatefulWidget {
   final int index;
   final int heroOffset;
+  final Map<String, GlobalKey> videoPlayerKeys;
   final void Function(int direction)? onTapNavigate;
 
-  const AssetPage({super.key, required this.index, required this.heroOffset, this.onTapNavigate});
+  const AssetPage({
+    super.key,
+    required this.index,
+    required this.heroOffset,
+    required this.videoPlayerKeys,
+    this.onTapNavigate,
+  });
 
   @override
   ConsumerState createState() => _AssetPageState();
@@ -293,6 +300,11 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     _listenForScaleBoundaries(controller);
   }
 
+  GlobalKey _getVideoPlayerKey(String id) {
+    widget.videoPlayerKeys.putIfAbsent(id, () => GlobalKey());
+    return widget.videoPlayerKeys[id]!;
+  }
+
   Widget _buildPhotoView(
     BaseAsset displayAsset,
     BaseAsset asset, {
@@ -350,7 +362,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       enablePanAlways: true,
       backgroundDecoration: backgroundDecoration,
       child: NativeVideoViewer(
-        key: ValueKey(displayAsset),
+        key: _getVideoPlayerKey(displayAsset.heroTag),
         asset: displayAsset,
         scaleStateNotifier: _videoScaleStateNotifier,
         disableScaleGestures: showingDetails,

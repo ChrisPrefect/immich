@@ -18,8 +18,8 @@ import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_page.widge
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_preloader.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_stack.provider.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_viewer.state.dart';
-import 'package:immich_mobile/presentation/widgets/asset_viewer/viewer_top_app_bar.widget.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/viewer_bottom_app_bar.widget.dart';
+import 'package:immich_mobile/presentation/widgets/asset_viewer/viewer_top_app_bar.widget.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_value_provider.dart';
 import 'package:immich_mobile/providers/cast.provider.dart';
@@ -90,6 +90,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   late final _heroOffset = widget.heroOffset ?? TabsRouterScope.of(context)?.controller.activeIndex ?? 0;
   late final _pageController = PageController(initialPage: widget.initialIndex);
   late final _preloader = AssetPreloader(timelineService: ref.read(timelineServiceProvider), mounted: () => mounted);
+  Map<String, GlobalKey> _videoPlayerKeys = {};
 
   StreamSubscription? _reloadSubscription;
   KeepAliveLink? _stackChildrenKeepAlive;
@@ -124,6 +125,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   @override
   void dispose() {
+    _videoPlayerKeys.clear();
     _pageController.dispose();
     _preloader.dispose();
     _reloadSubscription?.cancel();
@@ -287,8 +289,12 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
                     : const FastClampingScrollPhysics(),
                 itemCount: ref.read(timelineServiceProvider).totalAssets,
                 onPageChanged: (index) => _onAssetChanged(index),
-                itemBuilder: (context, index) =>
-                    AssetPage(index: index, heroOffset: _heroOffset, onTapNavigate: _onTapNavigate),
+                itemBuilder: (context, index) => AssetPage(
+                  index: index,
+                  heroOffset: _heroOffset,
+                  videoPlayerKeys: _videoPlayerKeys,
+                  onTapNavigate: _onTapNavigate,
+                ),
               ),
             ),
             if (!CurrentPlatform.isIOS)

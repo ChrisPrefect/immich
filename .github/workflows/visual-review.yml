@@ -16,6 +16,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    defaults:
+      run:
+        working-directory: ./e2e
     steps:
       - id: token
         uses: immich-app/devtools/actions/create-workflow-token@05e16407c0a5492138bb38139c9d9bf067b40886 # create-workflow-token-action-v1.0.1
@@ -40,9 +43,11 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: '**/pnpm-lock.yaml'
 
+      - name: Install e2e dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Install Playwright
         run: pnpm exec playwright install chromium --only-shell
-        working-directory: ./e2e
 
       - name: Determine changed web files
         id: changed-files
@@ -55,7 +60,6 @@ jobs:
           echo "$CHANGED" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
-          # Check if there are any web changes at all
           if [ -z "$CHANGED" ]; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
@@ -68,11 +72,12 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
-          # Install dependencies for the analyzer
-          pnpm install --frozen-lockfile
-
           # Run the dependency analyzer
-          ROUTES=$(echo "$CHANGED_FILES" | xargs npx tsx src/screenshots/analyze-deps.ts 2>/dev/null | grep "^  /" | sed 's/^  //' || true)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo "---"
+
+          ROUTES=$(echo "$CHANGED_FILES" | xargs pnpm exec tsx src/screenshots/analyze-deps.ts 2>&1 | tee /dev/stderr | grep "^  /" | sed 's/^  //' || true)
 
           echo "routes<<EOF" >> "$GITHUB_OUTPUT"
           echo "$ROUTES" >> "$GITHUB_OUTPUT"
@@ -84,15 +89,15 @@ jobs:
             echo "has_routes=true" >> "$GITHUB_OUTPUT"
 
             # Build the scenario filter JSON array
-            SCENARIO_NAMES=$(npx tsx -e "
+            SCENARIO_NAMES=$(pnpm exec tsx -e "
               import { getScenariosForRoutes } from './src/screenshots/page-map.ts';
               const routes = process.argv.slice(1);
               const scenarios = getScenariosForRoutes(routes);
               console.log(JSON.stringify(scenarios.map(s => s.name)));
             " $ROUTES)
             echo "scenarios=$SCENARIO_NAMES" >> "$GITHUB_OUTPUT"
+            echo "Scenarios: $SCENARIO_NAMES"
           fi
-        working-directory: ./e2e
 
       - name: Post initial comment
         if: steps.changed-files.outputs.has_changes == 'true' && steps.routes.outputs.has_routes == 'true'
@@ -152,6 +157,7 @@ jobs:
           # Wait for server to be ready
           for i in $(seq 1 30); do
             if curl -s http://127.0.0.1:4173 > /dev/null 2>&1; then
+              echo "Server ready after ${i}s"
               break
             fi
             sleep 1
@@ -162,7 +168,6 @@ jobs:
 
           # Stop the preview server
           kill $SERVER_PID 2>/dev/null || true
-        working-directory: ./e2e
 
       # === Screenshot base version ===
       - name: Checkout base web directory
@@ -172,6 +177,7 @@ jobs:
         run: |
           # Restore web directory from base branch
           git checkout "$BASE_SHA" -- web/ open-api/typescript-sdk/ i18n/ || true
+        working-directory: .
 
       - name: Build SDK (base)
         if: steps.routes.outputs.has_routes == 'true'
@@ -198,6 +204,7 @@ jobs:
           # Wait for server to be ready
           for i in $(seq 1 30); do
             if curl -s http://127.0.0.1:4173 > /dev/null 2>&1; then
+              echo "Server ready after ${i}s"
               break
             fi
             sleep 1
@@ -208,7 +215,6 @@ jobs:
 
           # Stop the preview server
           kill $SERVER_PID 2>/dev/null || true
-        working-directory: ./e2e
 
       # === Compare and report ===
       - name: Compare screenshots
@@ -217,11 +223,10 @@ jobs:
         env:
           WORKSPACE_DIR: ${{ github.workspace }}
         run: |
-          npx tsx src/screenshots/compare.ts \
+          pnpm exec tsx src/screenshots/compare.ts \
             "$WORKSPACE_DIR/screenshots/base" \
             "$WORKSPACE_DIR/screenshots/pr" \
             "$WORKSPACE_DIR/screenshots/diff"
-        working-directory: ./e2e
 
       - name: Upload screenshot artifacts
         if: steps.routes.outputs.has_routes == 'true'
@@ -244,15 +249,12 @@ jobs:
 
             const workspaceDir = process.env.WORKSPACE_DIR;
             const diffDir = path.join(workspaceDir, 'screenshots', 'diff');
-            const baseDir = path.join(workspaceDir, 'screenshots', 'base');
-            const prDir = path.join(workspaceDir, 'screenshots', 'pr');
 
             // Read comparison results
             let results;
             try {
               results = JSON.parse(fs.readFileSync(path.join(diffDir, 'results.json'), 'utf8'));
             } catch {
-              // Post a simple message if comparison failed
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -310,7 +312,7 @@ jobs:
             });
 
             const botComment = comments.data.find(c =>
-              c.body && c.body.includes('## Visual Review') && c.body.includes('visual-review')
+              c.body && c.body.includes('## Visual Review')
             );
 
             if (botComment) {

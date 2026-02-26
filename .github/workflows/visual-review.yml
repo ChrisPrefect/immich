@@ -46,9 +46,10 @@ jobs:
 
       - name: Determine changed web files
         id: changed-files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           CHANGED=$(git diff --name-only "$BASE_SHA"..."$HEAD_SHA" -- 'web/' 'i18n/' 'open-api/typescript-sdk/' | head -500)
           echo "files<<EOF" >> "$GITHUB_OUTPUT"
           echo "$CHANGED" >> "$GITHUB_OUTPUT"
@@ -64,13 +65,13 @@ jobs:
       - name: Analyze affected routes
         if: steps.changed-files.outputs.has_changes == 'true'
         id: routes
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
           # Install dependencies for the analyzer
           pnpm install --frozen-lockfile
-          working_dir=$(pwd)
 
           # Run the dependency analyzer
-          CHANGED_FILES="${{ steps.changed-files.outputs.files }}"
           ROUTES=$(echo "$CHANGED_FILES" | xargs npx tsx src/screenshots/analyze-deps.ts 2>/dev/null | grep "^  /" | sed 's/^  //' || true)
 
           echo "routes<<EOF" >> "$GITHUB_OUTPUT"
@@ -95,19 +96,35 @@ jobs:
 
       - name: Post initial comment
         if: steps.changed-files.outputs.has_changes == 'true' && steps.routes.outputs.has_routes == 'true'
-        uses: mshick/add-pr-comment@b8f338c590a895d50bcbfa6c5859251edc8952fc # v2.8.2
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          AFFECTED_ROUTES: ${{ steps.routes.outputs.routes }}
         with:
           github-token: ${{ steps.token.outputs.token }}
-          message-id: 'visual-review'
-          message: |
-            ## Visual Review
-
-            Generating screenshots for affected pages...
-
-            Affected routes:
-            ```
-            ${{ steps.routes.outputs.routes }}
-            ```
+          script: |
+            const routes = process.env.AFFECTED_ROUTES || '';
+            const body = `## Visual Review\n\nGenerating screenshots for affected pages...\n\nAffected routes:\n\`\`\`\n${routes}\n\`\`\``;
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.data.find(c => c.body && c.body.includes('## Visual Review'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
 
       # === Screenshot PR version ===
       - name: Build SDK (PR)
@@ -150,8 +167,9 @@ jobs:
       # === Screenshot base version ===
       - name: Checkout base web directory
         if: steps.routes.outputs.has_routes == 'true'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
           # Restore web directory from base branch
           git checkout "$BASE_SHA" -- web/ open-api/typescript-sdk/ i18n/ || true
 
@@ -196,11 +214,13 @@ jobs:
       - name: Compare screenshots
         if: steps.routes.outputs.has_routes == 'true'
         id: compare
+        env:
+          WORKSPACE_DIR: ${{ github.workspace }}
         run: |
           npx tsx src/screenshots/compare.ts \
-            "${{ github.workspace }}/screenshots/base" \
-            "${{ github.workspace }}/screenshots/pr" \
-            "${{ github.workspace }}/screenshots/diff"
+            "$WORKSPACE_DIR/screenshots/base" \
+            "$WORKSPACE_DIR/screenshots/pr" \
+            "$WORKSPACE_DIR/screenshots/diff"
         working-directory: ./e2e
 
       - name: Upload screenshot artifacts
@@ -214,15 +234,18 @@ jobs:
       - name: Post comparison results
         if: steps.routes.outputs.has_routes == 'true'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          WORKSPACE_DIR: ${{ github.workspace }}
         with:
           github-token: ${{ steps.token.outputs.token }}
           script: |
             const fs = require('fs');
             const path = require('path');
 
-            const diffDir = path.join('${{ github.workspace }}', 'screenshots', 'diff');
-            const baseDir = path.join('${{ github.workspace }}', 'screenshots', 'base');
-            const prDir = path.join('${{ github.workspace }}', 'screenshots', 'pr');
+            const workspaceDir = process.env.WORKSPACE_DIR;
+            const diffDir = path.join(workspaceDir, 'screenshots', 'diff');
+            const baseDir = path.join(workspaceDir, 'screenshots', 'base');
+            const prDir = path.join(workspaceDir, 'screenshots', 'pr');
 
             // Read comparison results
             let results;

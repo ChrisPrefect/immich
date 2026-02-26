@@ -454,6 +454,13 @@ export const columns = {
     'asset_ocr.updateId',
     'asset_ocr.isVisible',
   ],
+  syncAssetEdit: [
+    'asset_edit.id',
+    'asset_edit.assetId',
+    'asset_edit.sequence',
+    'asset_edit.action',
+    'asset_edit.parameters',
+  ],
   exif: [
     'asset_exif.assetId',
     'asset_exif.autoStackId',

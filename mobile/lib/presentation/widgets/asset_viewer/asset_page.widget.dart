@@ -16,8 +16,10 @@ import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_viewer.sta
 import 'package:immich_mobile/presentation/widgets/asset_viewer/video_viewer.widget.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
+import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_controls_provider.dart';
+import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/asset_viewer/asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
@@ -29,8 +31,9 @@ enum _DragIntent { none, scroll, dismiss }
 class AssetPage extends ConsumerStatefulWidget {
   final int index;
   final int heroOffset;
+  final void Function(int direction)? onTapNavigate;
 
-  const AssetPage({super.key, required this.index, required this.heroOffset});
+  const AssetPage({super.key, required this.index, required this.heroOffset, this.onTapNavigate});
 
   @override
   ConsumerState createState() => _AssetPageState();
@@ -50,19 +53,17 @@ class _AssetPageState extends ConsumerState<AssetPage> {
 
   final _scrollController = ScrollController();
   late final _proxyScrollController = ProxyScrollController(scrollController: _scrollController);
+  final ValueNotifier<PhotoViewScaleState> _videoScaleStateNotifier = ValueNotifier(PhotoViewScaleState.initial);
 
   double _snapOffset = 0.0;
-  double _lastScrollOffset = 0.0;
 
   DragStartDetails? _dragStart;
   _DragIntent _dragIntent = _DragIntent.none;
   Drag? _drag;
-  bool _shouldPopOnDrag = false;
 
   @override
   void initState() {
     super.initState();
-    _proxyScrollController.addListener(_onScroll);
     _eventSubscription = EventStream.shared.listen(_onEvent);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_proxyScrollController.hasClients) return;
@@ -78,6 +79,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     _proxyScrollController.dispose();
     _scaleBoundarySub?.cancel();
     _eventSubscription?.cancel();
+    _videoScaleStateNotifier.dispose();
     super.dispose();
   }
 
@@ -91,7 +93,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
 
   void _showDetails() {
     if (!_proxyScrollController.hasClients || _snapOffset <= 0) return;
-    _lastScrollOffset = _proxyScrollController.offset;
+    _viewer.setShowingDetails(true);
     _proxyScrollController.animateTo(_snapOffset, duration: Durations.medium2, curve: Curves.easeOutCubic);
   }
 
@@ -103,20 +105,17 @@ class _AssetPageState extends ConsumerState<AssetPage> {
         SnapScrollPhysics.target(position, scrollVelocity, _snapOffset) < SnapScrollPhysics.minSnapDistance;
   }
 
-  void _onScroll() {
+  void _syncShowingDetails() {
     final offset = _proxyScrollController.offset;
-    if (offset > SnapScrollPhysics.minSnapDistance && offset > _lastScrollOffset) {
+    if (offset > SnapScrollPhysics.minSnapDistance) {
       _viewer.setShowingDetails(true);
     } else if (offset < SnapScrollPhysics.minSnapDistance - kTouchSlop) {
       _viewer.setShowingDetails(false);
     }
-    _lastScrollOffset = offset;
   }
 
   void _beginDrag(DragStartDetails details) {
     _dragStart = details;
-    _shouldPopOnDrag = false;
-    _lastScrollOffset = _proxyScrollController.hasClients ? _proxyScrollController.offset : 0.0;
 
     if (_viewController != null) {
       _initialPhotoViewState = _viewController!.value;
@@ -150,6 +149,8 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       case _DragIntent.scroll:
         if (_drag == null) _startProxyDrag();
         _drag?.update(details);
+
+        _syncShowingDetails();
       case _DragIntent.dismiss:
         _handleDragDown(context, details.localPosition - _dragStart!.localPosition);
     }
@@ -158,6 +159,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
   void _endDrag(DragEndDetails details) {
     if (_dragStart == null) return;
 
+    final start = _dragStart;
     _dragStart = null;
 
     final intent = _dragIntent;
@@ -167,13 +169,13 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       case _DragIntent.none:
       case _DragIntent.scroll:
         final scrollVelocity = -(details.primaryVelocity ?? 0.0);
-        if (_willClose(scrollVelocity)) {
-          _viewer.setShowingDetails(false);
-        }
+        _viewer.setShowingDetails(!_willClose(scrollVelocity));
+
         _drag?.end(details);
         _drag = null;
       case _DragIntent.dismiss:
-        if (_shouldPopOnDrag) {
+        const popThreshold = 75.0;
+        if (details.localPosition.dy - start!.localPosition.dy > popThreshold) {
           context.maybePop();
           return;
         }
@@ -192,7 +194,6 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     PhotoViewControllerBase controller,
     PhotoViewScaleStateController scaleStateController,
   ) {
-    _viewController = controller;
     if (!_showingDetails && _isZoomed) return;
     _beginDrag(details);
   }
@@ -206,12 +207,8 @@ class _AssetPageState extends ConsumerState<AssetPage> {
 
   void _handleDragDown(BuildContext context, Offset delta) {
     const dragRatio = 0.2;
-    const popThreshold = 75.0;
-
-    _shouldPopOnDrag = delta.dy > popThreshold;
 
     final distance = delta.dy.abs();
-
     final maxScaleDistance = context.height * 0.5;
     final scaleReduction = (distance / maxScaleDistance).clamp(0.0, dragRatio);
     final initialScale = _viewController?.initialScale ?? _initialPhotoViewState.scale;
@@ -224,17 +221,39 @@ class _AssetPageState extends ConsumerState<AssetPage> {
   }
 
   void _onTapUp(BuildContext context, TapUpDetails details, PhotoViewControllerValue controllerValue) {
-    if (!_showingDetails && _dragStart == null) _viewer.toggleControls();
+    if (_showingDetails || _dragStart != null) return;
+
+    final tapToNavigate = ref.read(appSettingsServiceProvider).getSetting<bool>(AppSettingsEnum.tapToNavigate);
+    if (!tapToNavigate) {
+      _viewer.toggleControls();
+      return;
+    }
+
+    final tapX = details.globalPosition.dx;
+    final screenWidth = context.width;
+
+    // Navigate if the user taps in the leftmost or rightmost quarter of the screen
+    final tappedLeftSide = tapX < screenWidth / 4;
+    final tappedRightSide = tapX > screenWidth * (3 / 4);
+
+    if (tappedLeftSide) {
+      widget.onTapNavigate?.call(-1);
+    } else if (tappedRightSide) {
+      widget.onTapNavigate?.call(1);
+    } else {
+      _viewer.toggleControls();
+    }
   }
 
   void _onLongPress(BuildContext context, LongPressStartDetails details, PhotoViewControllerValue controllerValue) =>
       ref.read(isPlayingMotionVideoProvider.notifier).playing = true;
 
   void _onScaleStateChanged(PhotoViewScaleState scaleState) {
-    _isZoomed = switch (scaleState) {
-      PhotoViewScaleState.zoomedIn || PhotoViewScaleState.covering => true,
-      _ => false,
-    };
+    _isZoomed =
+        scaleState == PhotoViewScaleState.zoomedIn ||
+        scaleState == PhotoViewScaleState.covering ||
+        _videoScaleStateNotifier.value == PhotoViewScaleState.zoomedIn ||
+        _videoScaleStateNotifier.value == PhotoViewScaleState.covering;
     _viewer.setZoomed(_isZoomed);
 
     if (scaleState != PhotoViewScaleState.initial) {
@@ -288,7 +307,7 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     if (displayAsset.isImage && !isPlayingMotionVideo) {
       final size = context.sizeData;
       return PhotoView(
-        key: ValueKey(displayAsset.heroTag),
+        key: Key(displayAsset.heroTag),
         index: widget.index,
         imageProvider: getFullImageProvider(displayAsset, size: size),
         heroAttributes: heroAttributes,
@@ -316,34 +335,32 @@ class _AssetPageState extends ConsumerState<AssetPage> {
     }
 
     return PhotoView.customChild(
+      key: Key(displayAsset.heroTag),
       onDragStart: _onDragStart,
       onDragUpdate: _onDragUpdate,
       onDragEnd: _onDragEnd,
       onDragCancel: _onDragCancel,
-      onTapUp: _onTapUp,
       heroAttributes: heroAttributes,
       filterQuality: FilterQuality.high,
-      maxScale: 1.0,
       basePosition: Alignment.center,
       disableScaleGestures: true,
-      scaleStateChangedCallback: _onScaleStateChanged,
+      minScale: PhotoViewComputedScale.contained,
+      initialScale: PhotoViewComputedScale.contained,
+      tightMode: true,
       onPageBuild: _onPageBuild,
       enablePanAlways: true,
       backgroundDecoration: backgroundDecoration,
-      child: SizedBox(
-        width: context.width,
-        height: context.height,
-        child: NativeVideoViewer(
-          key: ValueKey(displayAsset.heroTag),
-          asset: displayAsset,
-          image: Image(
-            key: ValueKey(displayAsset),
-            image: getFullImageProvider(displayAsset, size: context.sizeData),
-            fit: BoxFit.contain,
-            height: context.height,
-            width: context.width,
-            alignment: Alignment.center,
-          ),
+      child: NativeVideoViewer(
+        key: _NativeVideoViewerKey(displayAsset.heroTag),
+        asset: displayAsset,
+        scaleStateNotifier: _videoScaleStateNotifier,
+        disableScaleGestures: showingDetails,
+        image: Image(
+          image: getFullImageProvider(displayAsset, size: context.sizeData),
+          height: context.height,
+          width: context.width,
+          fit: BoxFit.contain,
+          alignment: Alignment.center,
         ),
       ),
     );
@@ -441,4 +458,26 @@ class _AssetPageState extends ConsumerState<AssetPage> {
       ),
     );
   }
+}
+
+// A global key is used for video viewers to prevent them from being
+// unnecessarily recreated. They're quite expensive, and maintain internal
+// state. This can cause videos to restart multiple times during normal usage,
+// like a hero animation.
+//
+// A plain ValueKey is insufficient, as it does not allow widgets to reparent. A
+// GlobalObjectKey is fragile, as it checks if the given objects are identical,
+// rather than equal. Hero tags are created with string interpolation, which
+// prevents Dart from interning them. As such, hero tags are not identical, even
+// if they are equal.
+class _NativeVideoViewerKey extends GlobalKey {
+  final String value;
+
+  const _NativeVideoViewerKey(this.value) : super.constructor();
+
+  @override
+  bool operator ==(Object other) => other is _NativeVideoViewerKey && other.value == value;
+
+  @override
+  int get hashCode => value.hashCode;
 }

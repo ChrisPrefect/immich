@@ -22,6 +22,31 @@ const config = {
       fallback: 'index.html',
       precompress: true,
     }),
+    csp: {
+      mode: 'hash',
+      directives: {
+        'default-src': ['self'],
+        'script-src': [
+          'self',
+          'https://www.gstatic.com',
+          'wasm-unsafe-eval',
+          'sha256-h5wSYKWbmHcoYTdkHNNguMswVNCphpvwW+uxooXhF/Y=',
+        ],
+        'style-src': ['self', 'unsafe-inline'],
+        'img-src': ['self', 'data:', 'blob:'],
+        'connect-src': [
+          'self',
+          'blob:',
+          'https://pay.futo.org',
+          'https://static.immich.cloud',
+          'https://tiles.immich.cloud',
+        ],
+        'worker-src': ['self', 'blob:'],
+        'frame-src': ['none'],
+        'object-src': ['none'],
+        'base-uri': ['self'],
+      },
+    },
     alias: {
       $lib: 'src/lib',
       '$lib/*': 'src/lib/*',

@@ -14,7 +14,7 @@ jobs:
       (github.event.action == 'labeled' && github.event.label.name == 'visual-review') ||
       (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'visual-review'))
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
     defaults:
       run:
@@ -188,8 +188,12 @@ jobs:
           # Run screenshot tests
           pnpm exec playwright test --config playwright.screenshot.config.ts || true
 
-          # Stop the preview server
+          # Stop the preview server and all children (pnpm spawns vite as child)
           kill $SERVER_PID 2>/dev/null || true
+          sleep 1
+          # Ensure port is fully released — kill any lingering vite process
+          fuser -k 4173/tcp 2>/dev/null || true
+          sleep 1
 
       # === Screenshot base version ===
       # Disable pnpm's verifyDepsBeforeRun for all base steps since the base
@@ -201,6 +205,8 @@ jobs:
         run: |
           # Restore web directory from base branch
           git checkout "$BASE_SHA" -- web/ open-api/typescript-sdk/ i18n/ || true
+          # Clear SvelteKit build cache to avoid stale artifacts from the PR build
+          rm -rf web/.svelte-kit web/build
         working-directory: .
 
       - name: Build SDK (base)
@@ -230,6 +236,10 @@ jobs:
           SCREENSHOT_BASE_URL: http://127.0.0.1:4173
           PNPM_VERIFY_DEPS_BEFORE_RUN: 'false'
         run: |
+          # Kill any process still on port 4173 from the PR step
+          fuser -k 4173/tcp 2>/dev/null || true
+          sleep 1
+
           # Start the preview server in background
           cd ../web && pnpm preview --port 4173 --host 127.0.0.1 &
           SERVER_PID=$!
@@ -248,6 +258,7 @@ jobs:
 
           # Stop the preview server
           kill $SERVER_PID 2>/dev/null || true
+          fuser -k 4173/tcp 2>/dev/null || true
 
       - name: Restore PR source
         if: steps.routes.outputs.has_routes == 'true'
@@ -260,60 +271,46 @@ jobs:
       # === Compare and report ===
       - name: Compare screenshots
         if: steps.routes.outputs.has_routes == 'true'
-        id: compare
         env:
           WORKSPACE_DIR: ${{ github.workspace }}
-          IMAGE_BASE_URL: https://raw.githubusercontent.com/${{ github.repository }}/visual-review/pr-${{ github.event.pull_request.number }}
         run: |
           # Ensure directories exist even if base screenshots were skipped
           mkdir -p "$WORKSPACE_DIR/screenshots/base" "$WORKSPACE_DIR/screenshots/pr" "$WORKSPACE_DIR/screenshots/diff"
           pnpm exec tsx src/screenshots/compare.ts \
             "$WORKSPACE_DIR/screenshots/base" \
             "$WORKSPACE_DIR/screenshots/pr" \
-            "$WORKSPACE_DIR/screenshots/diff" \
-            "$IMAGE_BASE_URL"
+            "$WORKSPACE_DIR/screenshots/diff"
 
       - name: Upload screenshot artifacts
         if: steps.routes.outputs.has_routes == 'true'
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: visual-review-screenshots
           path: screenshots/
           retention-days: 14
 
-      - name: Push screenshots to review branch
+      - name: Upload HTML report
         if: steps.routes.outputs.has_routes == 'true'
-        env:
-          REVIEW_BRANCH: visual-review/pr-${{ github.event.pull_request.number }}
-          GH_TOKEN: ${{ steps.token.outputs.token }}
-        run: |
-          cd "$GITHUB_WORKSPACE"
-          # Save screenshots before git operations
-          cp -r screenshots /tmp/vr-screenshots
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan "$REVIEW_BRANCH"
-          git rm -rf . 2>/dev/null || true
-          cp -r /tmp/vr-screenshots/base . 2>/dev/null || true
-          cp -r /tmp/vr-screenshots/pr . 2>/dev/null || true
-          cp -r /tmp/vr-screenshots/diff . 2>/dev/null || true
-          git add base/ pr/ diff/ 2>/dev/null || true
-          git commit -m "Visual review screenshots for PR #${{ github.event.pull_request.number }}" --allow-empty
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-          git push -f origin "$REVIEW_BRANCH"
-        working-directory: .
+        id: html-report
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          path: screenshots/diff/visual-review.html
+          archive: false
+          retention-days: 14
 
       - name: Post comparison results
         if: steps.routes.outputs.has_routes == 'true'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          REPORT_URL: ${{ steps.html-report.outputs.artifact-url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
           github-token: ${{ steps.token.outputs.token }}
           script: |
             const fs = require('fs');
             const path = require('path');
 
-            // Read from /tmp copy since git push step may have cleared the workspace
-            const reportPath = path.join('/tmp', 'vr-screenshots', 'diff', 'report.md');
+            const reportPath = path.join(process.env.GITHUB_WORKSPACE, 'screenshots', 'diff', 'report.md');
 
             let body;
             try {
@@ -321,6 +318,15 @@ jobs:
             } catch {
               body = '## Visual Review\n\nScreenshot comparison failed. Check the workflow artifacts for details.';
             }
+
+            // Append links to the HTML report artifact and workflow run
+            const reportUrl = process.env.REPORT_URL;
+            const runUrl = process.env.RUN_URL;
+            body += '\n---\n';
+            if (reportUrl) {
+              body += `[View full visual comparison](${reportUrl}) | `;
+            }
+            body += `[Download all screenshots](${runUrl}#artifacts)\n`;
 
             // Find and update existing comment or create new one
             const comments = await github.rest.issues.listComments({

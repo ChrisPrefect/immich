@@ -174,8 +174,8 @@ function normalizeImage(png: PNG, targetWidth: number, targetHeight: number): Ui
   return data;
 }
 
-/** Generate a markdown report for PR comment. */
-export function generateMarkdownReport(results: ComparisonResult[], artifactUrl: string): string {
+/** Generate a text-only markdown summary for the PR comment. */
+export function generateMarkdownReport(results: ComparisonResult[]): string {
   const changed = results.filter((r) => r.changePercent > 0.1);
   const unchanged = results.filter((r) => r.changePercent <= 0.1);
 
@@ -190,27 +190,20 @@ export function generateMarkdownReport(results: ComparisonResult[], artifactUrl:
   }
   md += '.\n\n';
 
+  md += '| Page | Status | Change |\n';
+  md += '|------|--------|--------|\n';
+
   for (const result of changed) {
-    md += `### ${result.name}\n\n`;
-
     if (!result.baseExists) {
-      md += '**New page** (no base screenshot to compare)\n\n';
-      md += `| PR |\n|---|\n| ![${result.name} PR](${artifactUrl}/${result.name}.png) |\n\n`;
-      continue;
+      md += `| ${result.name} | New | - |\n`;
+    } else if (!result.prExists) {
+      md += `| ${result.name} | Removed | - |\n`;
+    } else {
+      md += `| ${result.name} | Changed | ${result.changePercent.toFixed(1)}% |\n`;
     }
-
-    if (!result.prExists) {
-      md += '**Removed page** (no PR screenshot)\n\n';
-      continue;
-    }
-
-    md += `Change: **${result.changePercent.toFixed(1)}%** (${result.diffPixels.toLocaleString()} pixels)\n\n`;
-    md += '| Base | PR | Diff |\n';
-    md += '|------|-------|------|\n';
-    md += `| ![base](${artifactUrl}/base/${result.name}.png) `;
-    md += `| ![pr](${artifactUrl}/pr/${result.name}.png) `;
-    md += `| ![diff](${artifactUrl}/diff/${result.name}-diff.png) |\n\n`;
   }
+
+  md += '\n';
 
   if (unchanged.length > 0) {
     md += '<details>\n<summary>Unchanged pages</summary>\n\n';
@@ -223,20 +216,116 @@ export function generateMarkdownReport(results: ComparisonResult[], artifactUrl:
   return md;
 }
 
+/** Generate an HTML report with embedded base64 images for the artifact. */
+export function generateHtmlReport(results: ComparisonResult[]): string {
+  const changed = results.filter((r) => r.changePercent > 0.1);
+  const unchanged = results.filter((r) => r.changePercent <= 0.1);
+
+  function imgTag(filePath: string | null, alt: string): string {
+    if (!filePath || !existsSync(filePath)) {
+      return `<div class="no-image">${alt} not available</div>`;
+    }
+    const data = readFileSync(filePath);
+    return `<img src="data:image/png;base64,${data.toString('base64')}" alt="${alt}" loading="lazy" />`;
+  }
+
+  let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visual Review</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+         background: #0d1117; color: #e6edf3; padding: 32px; line-height: 1.5; }
+  .container { max-width: 1800px; margin: 0 auto; }
+  h1 { font-size: 24px; border-bottom: 1px solid #30363d; padding-bottom: 12px; margin-bottom: 24px; }
+  .summary { color: #8b949e; margin-bottom: 32px; font-size: 16px; }
+  .scenario { margin-bottom: 40px; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
+  .scenario-header { background: #161b22; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+  .scenario-header h2 { font-size: 16px; font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+  .badge-changed { background: #da363380; color: #f85149; }
+  .badge-new { background: #1f6feb80; color: #58a6ff; }
+  .badge-removed { background: #6e767e80; color: #8b949e; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: #30363d; }
+  .grid-cell { background: #0d1117; }
+  .grid-label { text-align: center; padding: 8px; font-size: 13px; color: #8b949e; font-weight: 600;
+                background: #161b22; text-transform: uppercase; letter-spacing: 0.5px; }
+  .grid-cell img { width: 100%; display: block; }
+  .no-image { padding: 40px; text-align: center; color: #484f58; font-style: italic; }
+  .unchanged-section { margin-top: 32px; color: #8b949e; }
+  .unchanged-section summary { cursor: pointer; font-size: 14px; }
+  .unchanged-section ul { margin-top: 8px; padding-left: 24px; }
+  .unchanged-section li { font-size: 14px; margin: 4px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Visual Review</h1>
+`;
+
+  if (changed.length === 0) {
+    html += '<p class="summary">No visual changes detected in the affected pages.</p>';
+  } else {
+    html += `<p class="summary">Found <strong>${changed.length}</strong> page(s) with visual changes`;
+    if (unchanged.length > 0) {
+      html += ` (${unchanged.length} unchanged)`;
+    }
+    html += '.</p>\n';
+
+    for (const result of changed) {
+      html += '<div class="scenario">\n<div class="scenario-header">\n';
+      html += `<h2>${result.name}</h2>\n`;
+
+      if (!result.baseExists) {
+        html += '<span class="badge badge-new">New</span>\n';
+        html += '</div>\n';
+        html += `<div style="padding: 16px;">${imgTag(result.prImagePath, 'PR')}</div>\n`;
+        html += '</div>\n';
+        continue;
+      }
+
+      if (!result.prExists) {
+        html += '<span class="badge badge-removed">Removed</span>\n';
+        html += '</div>\n</div>\n';
+        continue;
+      }
+
+      html += `<span class="badge badge-changed">${result.changePercent.toFixed(1)}% changed</span>\n`;
+      html += '</div>\n';
+      html += '<div class="grid">\n';
+      html += `<div class="grid-cell"><div class="grid-label">Base</div>${imgTag(result.baseImagePath, 'Base')}</div>\n`;
+      html += `<div class="grid-cell"><div class="grid-label">PR</div>${imgTag(result.prImagePath, 'PR')}</div>\n`;
+      html += `<div class="grid-cell"><div class="grid-label">Diff</div>${imgTag(result.diffImagePath, 'Diff')}</div>\n`;
+      html += '</div>\n</div>\n';
+    }
+  }
+
+  if (unchanged.length > 0) {
+    html += '<div class="unchanged-section">\n<details>\n<summary>Unchanged pages</summary>\n<ul>\n';
+    for (const result of unchanged) {
+      html += `<li>${result.name}</li>\n`;
+    }
+    html += '</ul>\n</details>\n</div>\n';
+  }
+
+  html += '</div>\n</body>\n</html>';
+  return html;
+}
+
 // CLI usage
 if (process.argv[1]?.endsWith('compare.ts') || process.argv[1]?.endsWith('compare.js')) {
-  const [baseDir, prDir, outputDir, imageBaseUrl] = process.argv.slice(2);
+  const [baseDir, prDir, outputDir] = process.argv.slice(2);
 
   if (!baseDir || !prDir || !outputDir) {
-    console.log('Usage: compare.ts <base-dir> <pr-dir> <output-dir> [image-base-url]');
+    console.log('Usage: compare.ts <base-dir> <pr-dir> <output-dir>');
     process.exit(1);
   }
 
-  const results = compareScreenshots(
-    resolve(baseDir),
-    resolve(prDir),
-    resolve(outputDir),
-  );
+  const resolvedOutputDir = resolve(outputDir);
+  const results = compareScreenshots(resolve(baseDir), resolve(prDir), resolvedOutputDir);
 
   console.log('\nComparison Results:');
   console.log('==================');
@@ -245,13 +334,17 @@ if (process.argv[1]?.endsWith('compare.ts') || process.argv[1]?.endsWith('compar
     console.log(`  ${r.name}: ${status} (${r.changePercent.toFixed(1)}%)`);
   }
 
-  const report = generateMarkdownReport(results, imageBaseUrl || '.');
-  const reportPath = join(resolve(outputDir), 'report.md');
+  const report = generateMarkdownReport(results);
+  const reportPath = join(resolvedOutputDir, 'report.md');
   writeFileSync(reportPath, report);
-  console.log(`\nReport written to: ${reportPath}`);
+  console.log(`\nMarkdown report written to: ${reportPath}`);
 
-  // Also output results as JSON for CI
-  const jsonPath = join(resolve(outputDir), 'results.json');
+  const htmlReport = generateHtmlReport(results);
+  const htmlPath = join(resolvedOutputDir, 'visual-review.html');
+  writeFileSync(htmlPath, htmlReport);
+  console.log(`HTML report written to: ${htmlPath}`);
+
+  const jsonPath = join(resolvedOutputDir, 'results.json');
   writeFileSync(jsonPath, JSON.stringify(results, null, 2));
   console.log(`Results JSON written to: ${jsonPath}`);
 }

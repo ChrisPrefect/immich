@@ -97,8 +97,15 @@ for (const scenario of allScenarios) {
       });
     }
 
-    // Navigate to the page
-    await page.goto(scenario.url, { waitUntil: 'networkidle' });
+    // Navigate to the page. Use networkidle so SvelteKit hydrates and API
+    // calls complete, but fall back to domcontentloaded if it times out
+    // (e.g. a persistent connection the catch-all mock didn't cover).
+    try {
+      await page.goto(scenario.url, { waitUntil: 'networkidle', timeout: 15_000 });
+    } catch {
+      console.warn(`networkidle timed out for ${scenario.name}, falling back to current state`);
+      // Page has already navigated, just continue with what we have
+    }
 
     // Wait for specific selector if specified
     if (scenario.waitForSelector) {

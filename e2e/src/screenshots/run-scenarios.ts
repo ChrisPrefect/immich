@@ -82,12 +82,17 @@ for (const scenario of allScenarios) {
     if (scenario.mocks.includes('timeline')) {
       const testContext = new TimelineTestContext();
       testContext.adminId = adminUserId;
-      await setupTimelineMockApiRoutes(context, timelineData, {
-        albumAdditions: [],
-        assetDeletions: [],
-        assetArchivals: [],
-        assetFavorites: [],
-      }, testContext);
+      await setupTimelineMockApiRoutes(
+        context,
+        timelineData,
+        {
+          albumAdditions: [],
+          assetDeletions: [],
+          assetArchivals: [],
+          assetFavorites: [],
+        },
+        testContext,
+      );
     }
 
     if (scenario.mocks.includes('memory')) {
@@ -118,10 +123,9 @@ for (const scenario of allScenarios) {
 
     // Wait for loading spinners to disappear
     await page
-      .waitForFunction(
-        () => document.querySelectorAll('[data-testid="loading-spinner"]').length === 0,
-        { timeout: 10_000 },
-      )
+      .waitForFunction(() => document.querySelectorAll('[data-testid="loading-spinner"]').length === 0, {
+        timeout: 10_000,
+      })
       .catch(() => {});
 
     // Wait for animations/transitions to settle

@@ -15,13 +15,7 @@ import { PNG } from 'pngjs';
 // based on the approach from the pixelmatch library to avoid adding a new dependency.
 // The e2e package already has pngjs.
 
-function pixelMatch(
-  img1Data: Uint8Array,
-  img2Data: Uint8Array,
-  diffData: Uint8Array,
-  width: number,
-  height: number,
-): number {
+function pixelMatch(img1Data: Uint8Array, img2Data: Uint8Array, diffData: Uint8Array): number {
   let diffCount = 0;
 
   for (let i = 0; i < img1Data.length; i += 4) {
@@ -79,14 +73,12 @@ export function compareScreenshots(baseDir: string, prDir: string, outputDir: st
   const baseFiles = existsSync(baseDir)
     ? new Set(readdirSync(baseDir).filter((f) => f.endsWith('.png')))
     : new Set<string>();
-  const prFiles = existsSync(prDir)
-    ? new Set(readdirSync(prDir).filter((f) => f.endsWith('.png')))
-    : new Set<string>();
+  const prFiles = existsSync(prDir) ? new Set(readdirSync(prDir).filter((f) => f.endsWith('.png'))) : new Set<string>();
 
   const allNames = new Set([...baseFiles, ...prFiles]);
   const results: ComparisonResult[] = [];
 
-  for (const fileName of [...allNames].sort()) {
+  for (const fileName of [...allNames].toSorted()) {
     const name = basename(fileName, '.png');
     const basePath = join(baseDir, fileName);
     const prPath = join(prDir, fileName);
@@ -123,13 +115,7 @@ export function compareScreenshots(baseDir: string, prDir: string, outputDir: st
 
     const diffPng = new PNG({ width, height });
     const totalPixels = width * height;
-    const diffPixels = pixelMatch(
-      normalizedBase,
-      normalizedPr,
-      diffPng.data as unknown as Uint8Array,
-      width,
-      height,
-    );
+    const diffPixels = pixelMatch(normalizedBase, normalizedPr, diffPng.data as unknown as Uint8Array);
 
     const diffImagePath = join(outputDir, `${name}-diff.png`);
     writeFileSync(diffImagePath, PNG.sync.write(diffPng));
@@ -194,12 +180,12 @@ export function generateMarkdownReport(results: ComparisonResult[]): string {
   md += '|------|--------|--------|\n';
 
   for (const result of changed) {
-    if (!result.baseExists) {
-      md += `| ${result.name} | New | - |\n`;
-    } else if (!result.prExists) {
-      md += `| ${result.name} | Removed | - |\n`;
-    } else {
+    if (result.baseExists && result.prExists) {
       md += `| ${result.name} | Changed | ${result.changePercent.toFixed(1)}% |\n`;
+    } else if (result.prExists) {
+      md += `| ${result.name} | New | - |\n`;
+    } else {
+      md += `| ${result.name} | Removed | - |\n`;
     }
   }
 
@@ -216,18 +202,18 @@ export function generateMarkdownReport(results: ComparisonResult[]): string {
   return md;
 }
 
+function imgTag(filePath: string | null, alt: string): string {
+  if (!filePath || !existsSync(filePath)) {
+    return `<div class="no-image">${alt} not available</div>`;
+  }
+  const data = readFileSync(filePath);
+  return `<img src="data:image/png;base64,${data.toString('base64')}" alt="${alt}" loading="lazy" />`;
+}
+
 /** Generate an HTML report with embedded base64 images for the artifact. */
 export function generateHtmlReport(results: ComparisonResult[]): string {
   const changed = results.filter((r) => r.changePercent > 0.1);
   const unchanged = results.filter((r) => r.changePercent <= 0.1);
-
-  function imgTag(filePath: string | null, alt: string): string {
-    if (!filePath || !existsSync(filePath)) {
-      return `<div class="no-image">${alt} not available</div>`;
-    }
-    const data = readFileSync(filePath);
-    return `<img src="data:image/png;base64,${data.toString('base64')}" alt="${alt}" loading="lazy" />`;
-  }
 
   let html = `<!DOCTYPE html>
 <html lang="en">
@@ -320,8 +306,7 @@ if (process.argv[1]?.endsWith('compare.ts') || process.argv[1]?.endsWith('compar
   const [baseDir, prDir, outputDir] = process.argv.slice(2);
 
   if (!baseDir || !prDir || !outputDir) {
-    console.log('Usage: compare.ts <base-dir> <pr-dir> <output-dir>');
-    process.exit(1);
+    throw new Error('Usage: compare.ts <base-dir> <pr-dir> <output-dir>');
   }
 
   const resolvedOutputDir = resolve(outputDir);

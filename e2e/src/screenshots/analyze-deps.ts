@@ -222,8 +222,8 @@ export function analyzeAffectedRoutes(changedFiles: string[]): AnalysisResult {
 
   const pages = findAffectedPages(resolvedChanged, reverseGraph);
 
-  const affectedPages = [...pages].sort();
-  const affectedRoutes = [...new Set(affectedPages.map(pageFileToRoute))].sort();
+  const affectedPages = [...pages].toSorted();
+  const affectedRoutes = [...new Set(affectedPages.map((f) => pageFileToRoute(f)))].toSorted();
 
   return { affectedPages, affectedRoutes };
 }
@@ -234,7 +234,7 @@ if (process.argv[1]?.endsWith('analyze-deps.ts') || process.argv[1]?.endsWith('a
   if (files.length === 0) {
     console.log('Usage: analyze-deps.ts <changed-file1> <changed-file2> ...');
     console.log('Files should be relative to the repo root (e.g. web/src/lib/components/Button.svelte)');
-    process.exit(1);
+    throw new Error('No files provided');
   }
 
   const result = analyzeAffectedRoutes(files);

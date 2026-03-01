@@ -40,7 +40,13 @@ depends = [
 [tasks."codegen:translation"]
 alias = "translation"
 description = "Generate translations from i18n JSONs"
-run = [{ task = "//:i18n:format-fix" }, { tasks = ["i18n:loader", "i18n:keys"] }]
+run = [
+  { task = "//:i18n:format-fix" },
+  { tasks = [
+    "i18n:loader",
+    "i18n:keys",
+  ] },
+]
 
 [tasks."codegen:app-icon"]
 description = "Generate app icons"
@@ -144,6 +150,19 @@ outputs = [
 run = [
   "dart run pigeon --input pigeon/connectivity_api.dart",
   "dart format lib/platform/connectivity_api.g.dart",
+]
+
+[tasks."pigeon:permission"]
+description = "Generate permission API pigeon code"
+hide = true
+sources = ["pigeon/permission_api.dart"]
+outputs = [
+  "lib/platform/permission_api.g.dart",
+  "android/app/src/main/kotlin/app/alextran/immich/permission/PermissionApi.g.kt",
+]
+run = [
+  "dart run pigeon --input pigeon/permission_api.dart",
+  "dart format lib/platform/permission_api.g.dart",
 ]
 
 [tasks."i18n:loader"]

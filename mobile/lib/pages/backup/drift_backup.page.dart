@@ -8,18 +8,25 @@ import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
+import 'package:immich_mobile/platform/permission_api.g.dart';
 import 'package:immich_mobile/presentation/widgets/backup/backup_toggle_button.widget.dart';
 import 'package:immich_mobile/providers/background_sync.provider.dart';
 import 'package:immich_mobile/providers/backup/backup_album.provider.dart';
 import 'package:immich_mobile/providers/backup/drift_backup.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/store.provider.dart';
+import 'package:immich_mobile/providers/notification_permission.provider.dart';
 import 'package:immich_mobile/providers/sync_status.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/backup/backup_info_card.dart';
 import 'package:logging/logging.dart';
+import 'package:permission_handler/permission_handler.dart' as pm;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 @RoutePage()
@@ -161,17 +168,137 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
                       ),
                     ),
                   },
-                  TextButton.icon(
-                    icon: const Icon(Icons.info_outline_rounded),
-                    onPressed: () => context.pushRoute(const DriftUploadDetailRoute()),
-                    label: Text("view_details".t(context: context)),
-                  ),
+                  const _BackupFooter(),
                 ],
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _BackupFooter extends ConsumerStatefulWidget {
+  const _BackupFooter();
+
+  @override
+  ConsumerState<_BackupFooter> createState() => _BackupFooterState();
+}
+
+class _BackupFooterState extends ConsumerState<_BackupFooter> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (CurrentPlatform.isAndroid && state == AppLifecycleState.resumed && mounted) {
+      unawaited(ref.read(notificationPermissionProvider.notifier).getNotificationPermission());
+      unawaited(ref.read(_batteryOptimizationProvider.notifier).getBatteryOptimizationPermission());
+    }
+  }
+
+  void showPermissionsDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        content: Text(context.t.notification_permission_dialog_content),
+        actions: [
+          TextButton(child: Text(context.t.cancel), onPressed: () => ctx.pop()),
+          TextButton(
+            onPressed: () {
+              context.pop();
+              pm.openAppSettings();
+            },
+            child: Text(context.t.settings),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void showBatteryOptimizationInfo() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: Text(context.t.backup_controller_page_background_battery_info_title),
+          content: SingleChildScrollView(child: Text(context.t.backup_controller_page_background_battery_info_message)),
+          actions: [
+            ElevatedButton(
+              onPressed: () => launchUrl(Uri.parse('https://dontkillmyapp.com'), mode: LaunchMode.externalApplication),
+              child: Text(
+                context.t.backup_controller_page_background_battery_info_link,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+            ElevatedButton(
+              child: Text(
+                context.t.backup_controller_page_background_battery_info_ok,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+              onPressed: () => ctx.pop(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isBackupEnabled = ref.watch(_backupStatusProvider).valueOrNull ?? false;
+    final notificationStatus = ref.watch(notificationPermissionProvider);
+    final batteryOptimizationStatus = ref.watch(_batteryOptimizationProvider).valueOrNull;
+
+    return Column(
+      children: [
+        if (CurrentPlatform.isAndroid && isBackupEnabled) ...[
+          if (notificationStatus != pm.PermissionStatus.granted)
+            TextButton.icon(
+              icon: Icon(Icons.open_in_new_outlined, color: context.colorScheme.onSurfaceSecondary),
+              label: Text(
+                context.t.notification_backup_reliability,
+                textAlign: TextAlign.center,
+                style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurfaceSecondary),
+              ),
+              onPressed: () {
+                ref.read(notificationPermissionProvider.notifier).requestNotificationPermission().then((p) {
+                  if (p == pm.PermissionStatus.permanentlyDenied) {
+                    showPermissionsDialog();
+                  }
+                });
+              },
+            ),
+          // Show only after notification permission is granted
+          if (notificationStatus == pm.PermissionStatus.granted &&
+              batteryOptimizationStatus != pm.PermissionStatus.granted)
+            TextButton.icon(
+              icon: Icon(Icons.open_in_new_outlined, color: context.colorScheme.onSurfaceSecondary),
+              label: Text(
+                context.t.battery_optimization_backup_reliability,
+                textAlign: TextAlign.center,
+                style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurfaceSecondary),
+              ),
+              onPressed: showBatteryOptimizationInfo,
+            ),
+        ],
+        TextButton.icon(
+          icon: const Icon(Icons.info_outline_rounded),
+          onPressed: () => context.pushRoute(const DriftUploadDetailRoute()),
+          label: Text(context.t.view_details),
+        ),
+      ],
     );
   }
 }
@@ -520,4 +647,29 @@ class _PreparingStatusState extends ConsumerState {
       ],
     );
   }
+}
+
+final _backupStatusProvider = StreamProvider.autoDispose<bool?>((ref) async* {
+  yield* ref.watch(storeServiceProvider).watch(StoreKey.enableBackup);
+});
+
+final _batteryOptimizationProvider = AsyncNotifierProvider<_BatteryOptimizationNotifier, pm.PermissionStatus>(
+  _BatteryOptimizationNotifier.new,
+);
+
+class _BatteryOptimizationNotifier extends AsyncNotifier<pm.PermissionStatus> {
+  Future<pm.PermissionStatus> getBatteryOptimizationPermission() async {
+    final pm.PermissionStatus status;
+    final isIgnoring = await ref.read(permissionApiProvider).isIgnoringBatteryOptimizations();
+    if (isIgnoring == PermissionStatus.granted) {
+      status = pm.PermissionStatus.granted;
+    } else {
+      status = pm.PermissionStatus.denied;
+    }
+    state = AsyncValue.data(status);
+    return status;
+  }
+
+  @override
+  FutureOr<pm.PermissionStatus> build() => getBatteryOptimizationPermission();
 }

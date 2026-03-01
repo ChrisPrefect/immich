@@ -1,0 +1,134 @@
+[
+  {
+    "name": "admin-system-settings",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 186690,
+    "totalPixels": 2073600,
+    "changePercent": 9.00318287037037,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/admin-system-settings-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/admin-system-settings.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/admin-system-settings.png"
+  },
+  {
+    "name": "admin-users",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 79810,
+    "totalPixels": 2073600,
+    "changePercent": 3.8488618827160495,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/admin-users-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/admin-users.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/admin-users.png"
+  },
+  {
+    "name": "albums-list",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 126081,
+    "totalPixels": 2073600,
+    "changePercent": 6.080295138888888,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/albums-list-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/albums-list.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/albums-list.png"
+  },
+  {
+    "name": "archive",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 101086,
+    "totalPixels": 2073600,
+    "changePercent": 4.874903549382716,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/archive-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/archive.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/archive.png"
+  },
+  {
+    "name": "explore",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 100268,
+    "totalPixels": 2073600,
+    "changePercent": 4.83545524691358,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/explore-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/explore.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/explore.png"
+  },
+  {
+    "name": "favorites",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 657589,
+    "totalPixels": 2073600,
+    "changePercent": 31.712432484567906,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/favorites-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/favorites.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/favorites.png"
+  },
+  {
+    "name": "map",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 1293490,
+    "totalPixels": 2073600,
+    "changePercent": 62.378954475308646,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/map-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/map.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/map.png"
+  },
+  {
+    "name": "people",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 7907,
+    "totalPixels": 2073600,
+    "changePercent": 0.38131751543209874,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/people-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/people.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/people.png"
+  },
+  {
+    "name": "photos-timeline",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 1149491,
+    "totalPixels": 2073600,
+    "changePercent": 55.43455825617284,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/photos-timeline-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/photos-timeline.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/photos-timeline.png"
+  },
+  {
+    "name": "sharing",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 109526,
+    "totalPixels": 2073600,
+    "changePercent": 5.281925154320987,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/sharing-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/sharing.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/sharing.png"
+  },
+  {
+    "name": "trash",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 112470,
+    "totalPixels": 2073600,
+    "changePercent": 5.423900462962963,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/trash-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/trash.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/trash.png"
+  },
+  {
+    "name": "user-settings",
+    "baseExists": true,
+    "prExists": true,
+    "diffPixels": 126625,
+    "totalPixels": 2073600,
+    "changePercent": 6.106529706790123,
+    "diffImagePath": "/home/runner/work/immich/immich/screenshots/diff/user-settings-diff.png",
+    "baseImagePath": "/home/runner/work/immich/immich/screenshots/base/user-settings.png",
+    "prImagePath": "/home/runner/work/immich/immich/screenshots/pr/user-settings.png"
+  }
+]

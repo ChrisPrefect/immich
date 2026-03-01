@@ -205,14 +205,14 @@ jobs:
         if: steps.routes.outputs.has_routes == 'true'
         continue-on-error: true
         id: base-sdk
-        run: pnpm install && pnpm build
+        run: pnpm build
         working-directory: ./open-api/typescript-sdk
 
       - name: Build web (base)
         if: steps.routes.outputs.has_routes == 'true' && steps.base-sdk.outcome == 'success'
         continue-on-error: true
         id: base-web
-        run: pnpm install && pnpm build
+        run: pnpm build
         working-directory: ./web
 
       - name: Take screenshots (base)
@@ -250,6 +250,8 @@ jobs:
           WORKSPACE_DIR: ${{ github.workspace }}
           IMAGE_BASE_URL: https://raw.githubusercontent.com/${{ github.repository }}/visual-review/pr-${{ github.event.pull_request.number }}
         run: |
+          # Ensure directories exist even if base screenshots were skipped
+          mkdir -p "$WORKSPACE_DIR/screenshots/base" "$WORKSPACE_DIR/screenshots/pr" "$WORKSPACE_DIR/screenshots/diff"
           pnpm exec tsx src/screenshots/compare.ts \
             "$WORKSPACE_DIR/screenshots/base" \
             "$WORKSPACE_DIR/screenshots/pr" \

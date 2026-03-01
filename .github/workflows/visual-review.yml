@@ -192,6 +192,8 @@ jobs:
           kill $SERVER_PID 2>/dev/null || true
 
       # === Screenshot base version ===
+      # Disable pnpm's verifyDepsBeforeRun for all base steps since the base
+      # checkout changes package.json files, making them mismatch the lockfile.
       - name: Checkout base web directory
         if: steps.routes.outputs.has_routes == 'true'
         env:
@@ -205,6 +207,8 @@ jobs:
         if: steps.routes.outputs.has_routes == 'true'
         continue-on-error: true
         id: base-sdk
+        env:
+          PNPM_VERIFY_DEPS_BEFORE_RUN: 'false'
         run: pnpm build
         working-directory: ./open-api/typescript-sdk
 
@@ -212,6 +216,8 @@ jobs:
         if: steps.routes.outputs.has_routes == 'true' && steps.base-sdk.outcome == 'success'
         continue-on-error: true
         id: base-web
+        env:
+          PNPM_VERIFY_DEPS_BEFORE_RUN: 'false'
         run: pnpm build
         working-directory: ./web
 
@@ -222,6 +228,7 @@ jobs:
           SCREENSHOT_OUTPUT_DIR: ${{ github.workspace }}/screenshots/base
           SCREENSHOT_SCENARIOS: ${{ steps.routes.outputs.scenarios }}
           SCREENSHOT_BASE_URL: http://127.0.0.1:4173
+          PNPM_VERIFY_DEPS_BEFORE_RUN: 'false'
         run: |
           # Start the preview server in background
           cd ../web && pnpm preview --port 4173 --host 127.0.0.1 &
@@ -241,6 +248,14 @@ jobs:
 
           # Stop the preview server
           kill $SERVER_PID 2>/dev/null || true
+
+      - name: Restore PR source
+        if: steps.routes.outputs.has_routes == 'true'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git checkout "$HEAD_SHA" -- web/ open-api/typescript-sdk/ i18n/ || true
+        working-directory: .
 
       # === Compare and report ===
       - name: Compare screenshots

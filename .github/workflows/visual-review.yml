@@ -203,16 +203,20 @@ jobs:
 
       - name: Build SDK (base)
         if: steps.routes.outputs.has_routes == 'true'
-        run: pnpm install --frozen-lockfile && pnpm build
+        continue-on-error: true
+        id: base-sdk
+        run: pnpm install && pnpm build
         working-directory: ./open-api/typescript-sdk
 
       - name: Build web (base)
-        if: steps.routes.outputs.has_routes == 'true'
-        run: pnpm install --frozen-lockfile && pnpm build
+        if: steps.routes.outputs.has_routes == 'true' && steps.base-sdk.outcome == 'success'
+        continue-on-error: true
+        id: base-web
+        run: pnpm install && pnpm build
         working-directory: ./web
 
       - name: Take screenshots (base)
-        if: steps.routes.outputs.has_routes == 'true'
+        if: steps.routes.outputs.has_routes == 'true' && steps.base-web.outcome == 'success'
         env:
           PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS: '1'
           SCREENSHOT_OUTPUT_DIR: ${{ github.workspace }}/screenshots/base

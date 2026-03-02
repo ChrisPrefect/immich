@@ -7,6 +7,7 @@ import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/models/sync_event.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/services/api.service.dart';
+import 'package:immich_mobile/utils/semver.dart';
 import 'package:logging/logging.dart';
 import 'package:openapi/api.dart';
 
@@ -19,8 +20,13 @@ class SyncApiRepository {
     return _api.syncApi.sendSyncAck(SyncAckSetDto(acks: data));
   }
 
+  Future<void> deleteSyncAck(List<SyncEntityType> types) {
+    return _api.syncApi.deleteSyncAck(SyncAckDeleteDto(types: types));
+  }
+
   Future<void> streamChanges(
     Future<void> Function(List<SyncEvent>, Function() abort, Function() reset) onData, {
+    required SemVer serverVersion,
     Function()? onReset,
     int batchSize = kSyncEventBatchSize,
     http.Client? httpClient,
@@ -45,6 +51,7 @@ class SyncApiRepository {
           SyncRequestType.usersV1,
           SyncRequestType.assetsV1,
           SyncRequestType.assetExifsV1,
+          SyncRequestType.assetMetadataV1,
           SyncRequestType.partnersV1,
           SyncRequestType.partnerAssetsV1,
           SyncRequestType.partnerAssetExifsV1,
@@ -59,7 +66,8 @@ class SyncApiRepository {
           SyncRequestType.partnerStacksV1,
           SyncRequestType.userMetadataV1,
           SyncRequestType.peopleV1,
-          SyncRequestType.assetFacesV1,
+          if (serverVersion < const SemVer(major: 2, minor: 6, patch: 0)) SyncRequestType.assetFacesV1,
+          if (serverVersion >= const SemVer(major: 2, minor: 6, patch: 0)) SyncRequestType.assetFacesV2,
         ],
         reset: shouldReset,
       ).toJson(),
@@ -148,6 +156,8 @@ const _kResponseMap = <SyncEntityType, Function(Object)>{
   SyncEntityType.assetV1: SyncAssetV1.fromJson,
   SyncEntityType.assetDeleteV1: SyncAssetDeleteV1.fromJson,
   SyncEntityType.assetExifV1: SyncAssetExifV1.fromJson,
+  SyncEntityType.assetMetadataV1: SyncAssetMetadataV1.fromJson,
+  SyncEntityType.assetMetadataDeleteV1: SyncAssetMetadataDeleteV1.fromJson,
   SyncEntityType.partnerAssetV1: SyncAssetV1.fromJson,
   SyncEntityType.partnerAssetBackfillV1: SyncAssetV1.fromJson,
   SyncEntityType.partnerAssetDeleteV1: SyncAssetDeleteV1.fromJson,
@@ -183,6 +193,7 @@ const _kResponseMap = <SyncEntityType, Function(Object)>{
   SyncEntityType.personV1: SyncPersonV1.fromJson,
   SyncEntityType.personDeleteV1: SyncPersonDeleteV1.fromJson,
   SyncEntityType.assetFaceV1: SyncAssetFaceV1.fromJson,
+  SyncEntityType.assetFaceV2: SyncAssetFaceV2.fromJson,
   SyncEntityType.assetFaceDeleteV1: SyncAssetFaceDeleteV1.fromJson,
   SyncEntityType.syncCompleteV1: _SyncEmptyDto.fromJson,
 };

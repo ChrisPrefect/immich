@@ -1,8 +1,11 @@
 <script lang="ts">
   import { shortcuts } from '$lib/actions/shortcut';
+  import AssetViewerEvents from '$lib/components/AssetViewerEvents.svelte';
+  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
+  import { ocrManager, type OcrBoundingBox } from '$lib/stores/ocr.svelte';
   import { boundingBoxesArray, type Faces } from '$lib/stores/people.store';
   import { alwaysLoadOriginalFile } from '$lib/stores/preferences.store';
-  import { photoZoomState } from '$lib/stores/zoom-image.store';
+  import { calculateBoundingBoxMatrix, getOcrBoundingBoxesAtSize, type Point } from '$lib/utils/ocr-utils';
   import {
     EquirectangularAdapter,
     Viewer,
@@ -30,12 +33,21 @@
   const SHARED_VIEWER_CONFIG = {
     touchmoveTwoFingers: false,
     mousewheelCtrlKey: false,
-    navbar: false,
     minFov: 15,
     maxFov: 90,
     zoomSpeed: 0.5,
     fisheye: false,
   };
+  // Adapted as well as possible from classlist 'border-2 border-blue-500 bg-blue-500/10 hover:border-blue-600 hover:border-3'
+  const OCR_BOX_SVG_STYLE = {
+    fill: 'var(--color-blue-500)',
+    fillOpacity: '0.1',
+    stroke: 'var(--color-blue-500)',
+    strokeWidth: '2px',
+  };
+
+  const OCR_TOOLTIP_HTML_CLASS =
+    'flex items-center justify-center text-white bg-black/50 cursor-text pointer-events-auto whitespace-pre-wrap wrap-break-word select-text';
 
   type TileConfig = {
     width: number;
@@ -50,7 +62,7 @@
     originalPanorama?: string | { source: string };
     adapter?: AdapterConstructor | [AdapterConstructor, unknown];
     plugins?: (PluginConstructor | [PluginConstructor, unknown])[];
-    zoomToggle?: (() => void) | null;
+    navbar?: boolean;
   };
 
   let {
@@ -60,7 +72,7 @@
     originalPanorama,
     adapter = EquirectangularAdapter,
     plugins = [],
-    zoomToggle = $bindable(),
+    navbar = false,
   }: Props = $props();
 
   let container: HTMLDivElement | undefined = $state();
@@ -122,11 +134,61 @@
     }
   });
 
-  zoomToggle = () => {
-    if (!viewer) {
+  $effect(() => {
+    updateOcrBoxes(ocrManager.showOverlay, ocrManager.data);
+  });
+
+  /** Use updateOnly=true on zoom, pan, or resize. */
+  const updateOcrBoxes = (showOverlay: boolean, ocrData: OcrBoundingBox[], updateOnly = false) => {
+    if (!viewer || !viewer.state.textureData || !viewer.getPlugin(MarkersPlugin)) {
       return;
     }
-    viewer.animate({ zoom: $photoZoomState.currentZoom > 1 ? 50 : 83.3, speed: 250 });
+    const markersPlugin = viewer.getPlugin<MarkersPlugin>(MarkersPlugin);
+    if (!showOverlay) {
+      markersPlugin.clearMarkers();
+      return;
+    }
+    if (!updateOnly) {
+      markersPlugin.clearMarkers();
+    }
+
+    const boxes = getOcrBoundingBoxesAtSize(ocrData, {
+      width: viewer.state.textureData.panoData.croppedWidth,
+      height: viewer.state.textureData.panoData.croppedHeight,
+    });
+
+    for (const [index, box] of boxes.entries()) {
+      const points = box.points.map((p) => texturePointToViewerPoint(viewer, p));
+      const { matrix, width, height } = calculateBoundingBoxMatrix(points);
+
+      const fontSize = (1.4 * width) / box.text.length; // fits almost all strings within the box, depends on font family
+      const transform = `matrix3d(${matrix.join(',')})`;
+      const content = `<div class="${OCR_TOOLTIP_HTML_CLASS}" style="font-size: ${fontSize}px; width: ${width}px; height: ${height}px; transform: ${transform}; transform-origin: 0 0;">${box.text}</div>`;
+
+      if (updateOnly) {
+        markersPlugin.updateMarker({
+          id: `box_${index}`,
+          polygonPixels: box.points.map((b) => [b.x, b.y]),
+          tooltip: { content },
+        });
+      } else {
+        markersPlugin.addMarker({
+          id: `box_${index}`,
+          polygonPixels: box.points.map((b) => [b.x, b.y]),
+          svgStyle: OCR_BOX_SVG_STYLE,
+          tooltip: { content, trigger: 'click' },
+        });
+      }
+    }
+  };
+
+  const texturePointToViewerPoint = (viewer: Viewer, point: Point) => {
+    const spherical = viewer.dataHelper.textureCoordsToSphericalCoords({ textureX: point.x, textureY: point.y });
+    return viewer.dataHelper.sphericalCoordsToViewerCoords(spherical);
+  };
+
+  const onZoom = () => {
+    viewer?.animate({ zoom: assetViewerManager.zoom > 1 ? 50 : 83.3, speed: 250 });
   };
 
   let hasChangedResolution: boolean = false;
@@ -145,12 +207,12 @@
         },
         plugins: [MarkersPlugin, ...plugins],
         container,
+        navbar,
         ...SHARED_VIEWER_CONFIG,
       });
     } else {
       viewer = new Viewer({
         adapter,
-        panorama: baseUrl,
         plugins: [
           MarkersPlugin,
           SettingsPlugin,
@@ -176,30 +238,46 @@
           ...plugins,
         ],
         container,
+        navbar,
         ...SHARED_VIEWER_CONFIG,
       });
+    }
 
-      const resolutionPlugin = viewer.getPlugin<ResolutionPlugin>(ResolutionPlugin);
-      const zoomHandler = ({ zoomLevel }: events.ZoomUpdatedEvent) => {
-        // zoomLevel range: [0, 100]
-        photoZoomState.set({
-          ...$photoZoomState,
-          currentZoom: zoomLevel / 50,
-        });
+    const resolutionPlugin = viewer.getPlugin<ResolutionPlugin>(ResolutionPlugin);
+    const zoomHandler = ({ zoomLevel }: events.ZoomUpdatedEvent) => {
+      // zoomLevel is 0-100
+      assetViewerManager.zoom = zoomLevel / 50;
 
-        if (Math.round(zoomLevel) >= 75 && !hasChangedResolution) {
-          // Replace the preview with the original
-          void resolutionPlugin.setResolution('original');
-          hasChangedResolution = true;
-        }
-      };
-
-      if (originalPanorama && !$alwaysLoadOriginalFile) {
-        viewer.addEventListener(events.ZoomUpdatedEvent.type, zoomHandler, { passive: true });
+      if (!resolutionPlugin) {
+        hasChangedResolution = true;
+        return;
       }
 
-      return () => viewer.removeEventListener(events.ZoomUpdatedEvent.type, zoomHandler);
+      if (Math.round(zoomLevel) >= 75 && !hasChangedResolution) {
+        // Replace the preview with the original
+        void resolutionPlugin.setResolution('original');
+        hasChangedResolution = true;
+      }
+    };
+
+    if (originalPanorama && !$alwaysLoadOriginalFile) {
+      viewer.addEventListener(events.ZoomUpdatedEvent.type, zoomHandler, { passive: true });
     }
+
+    const onReadyHandler = () => updateOcrBoxes(ocrManager.showOverlay, ocrManager.data, false);
+    const updateHandler = () => updateOcrBoxes(ocrManager.showOverlay, ocrManager.data, true);
+    viewer.addEventListener(events.ReadyEvent.type, onReadyHandler);
+    viewer.addEventListener(events.PositionUpdatedEvent.type, updateHandler);
+    viewer.addEventListener(events.SizeUpdatedEvent.type, updateHandler);
+    viewer.addEventListener(events.ZoomUpdatedEvent.type, updateHandler, { passive: true });
+
+    return () => {
+      viewer.removeEventListener(events.ReadyEvent.type, onReadyHandler);
+      viewer.removeEventListener(events.PositionUpdatedEvent.type, updateHandler);
+      viewer.removeEventListener(events.SizeUpdatedEvent.type, updateHandler);
+      viewer.removeEventListener(events.ZoomUpdatedEvent.type, updateHandler);
+      viewer.removeEventListener(events.ZoomUpdatedEvent.type, zoomHandler);
+    };
   });
 
   onDestroy(() => {
@@ -207,13 +285,33 @@
       viewer.destroy();
     }
     boundingBoxesUnsubscribe();
-    // zoomHandler is not called on initial load. Viewer initial zoom is 1, but photoZoomState could be != 1.
-    photoZoomState.set({
-      ...$photoZoomState,
-      currentZoom: 1,
-    });
+    assetViewerManager.zoom = 1;
   });
 </script>
 
-<svelte:document use:shortcuts={[{ shortcut: { key: 'z' }, onShortcut: zoomToggle, preventDefault: true }]} />
+<AssetViewerEvents {onZoom} />
+
+<svelte:document use:shortcuts={[{ shortcut: { key: 'z' }, onShortcut: onZoom, preventDefault: true }]} />
 <div class="h-full w-full mb-0" bind:this={container}></div>
+
+<style>
+  /* Reset the default tooltip styling */
+  :global(.psv-tooltip) {
+    top: 0 !important;
+    left: 0 !important;
+    background: none;
+    box-shadow: none;
+    width: 0;
+    height: 0;
+  }
+
+  :global(.psv-tooltip-content) {
+    font: var(--font-normal);
+    padding: 0;
+    text-shadow: none;
+  }
+
+  :global(.psv-tooltip-arrow) {
+    display: none;
+  }
+</style>

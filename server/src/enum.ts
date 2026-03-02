@@ -108,6 +108,11 @@ export enum Permission {
   AssetUpload = 'asset.upload',
   AssetReplace = 'asset.replace',
   AssetCopy = 'asset.copy',
+  AssetDerive = 'asset.derive',
+
+  AssetEditGet = 'asset.edit.get',
+  AssetEditCreate = 'asset.edit.create',
+  AssetEditDelete = 'asset.edit.delete',
 
   AlbumCreate = 'album.create',
   AlbumRead = 'album.read',
@@ -130,6 +135,11 @@ export enum Permission {
 
   ArchiveRead = 'archive.read',
 
+  BackupList = 'backup.list',
+  BackupDownload = 'backup.download',
+  BackupUpload = 'backup.upload',
+  BackupDelete = 'backup.delete',
+
   DuplicateRead = 'duplicate.read',
   DuplicateDelete = 'duplicate.delete',
 
@@ -137,6 +147,8 @@ export enum Permission {
   FaceRead = 'face.read',
   FaceUpdate = 'face.update',
   FaceDelete = 'face.delete',
+
+  FolderRead = 'folder.read',
 
   JobCreate = 'job.create',
   JobRead = 'job.read',
@@ -151,6 +163,9 @@ export enum Permission {
   TimelineDownload = 'timeline.download',
 
   Maintenance = 'maintenance',
+
+  MapRead = 'map.read',
+  MapSearch = 'map.search',
 
   MemoryCreate = 'memory.create',
   MemoryRead = 'memory.read',
@@ -364,7 +379,6 @@ export enum AssetPathType {
   /** Folder structure containing tiles of the image */
   Tiles = 'tiles',
   EncodedVideo = 'encoded_video',
-  Sidecar = 'sidecar',
 }
 
 export enum PersonPathType {
@@ -375,7 +389,7 @@ export enum UserPathType {
   Profile = 'profile',
 }
 
-export type PathType = AssetPathType | PersonPathType | UserPathType;
+export type PathType = AssetFileType | AssetPathType | PersonPathType | UserPathType;
 
 export enum TranscodePolicy {
   All = 'all',
@@ -449,6 +463,10 @@ export enum RawExtractedFormat {
   Jxl = 'jxl',
 }
 
+export enum TilesFormat {
+  Dz = 'dz',
+}
+
 export enum LogLevel {
   Verbose = 'verbose',
   Debug = 'debug',
@@ -456,6 +474,11 @@ export enum LogLevel {
   Warn = 'warn',
   Error = 'error',
   Fatal = 'fatal',
+}
+
+export enum LogFormat {
+  Console = 'console',
+  Json = 'json',
 }
 
 export enum ApiCustomExtension {
@@ -554,6 +577,7 @@ export enum QueueName {
   BackupDatabase = 'backupDatabase',
   Ocr = 'ocr',
   Workflow = 'workflow',
+  Editor = 'editor',
 }
 
 export enum QueueJobStatus {
@@ -572,6 +596,7 @@ export enum JobName {
   AssetDetectFaces = 'AssetDetectFaces',
   AssetDetectDuplicatesQueueAll = 'AssetDetectDuplicatesQueueAll',
   AssetDetectDuplicates = 'AssetDetectDuplicates',
+  AssetEditThumbnailGeneration = 'AssetEditThumbnailGeneration',
   AssetEncodeVideoQueueAll = 'AssetEncodeVideoQueueAll',
   AssetEncodeVideo = 'AssetEncodeVideo',
   AssetEmptyTrash = 'AssetEmptyTrash',
@@ -683,12 +708,15 @@ export enum DatabaseLock {
   MediaLocation = 700,
   GetSystemConfig = 69,
   BackupDatabase = 42,
+  MaintenanceOperation = 621,
   MemoryCreation = 777,
 }
 
 export enum MaintenanceAction {
   Start = 'start',
   End = 'end',
+  SelectDatabaseRestore = 'select_database_restore',
+  RestoreDatabase = 'restore_database',
 }
 
 export enum ExitCode {
@@ -703,6 +731,7 @@ export enum SyncRequestType {
   AlbumAssetExifsV1 = 'AlbumAssetExifsV1',
   AssetsV1 = 'AssetsV1',
   AssetExifsV1 = 'AssetExifsV1',
+  AssetEditsV1 = 'AssetEditsV1',
   AssetMetadataV1 = 'AssetMetadataV1',
   AuthUsersV1 = 'AuthUsersV1',
   MemoriesV1 = 'MemoriesV1',
@@ -715,6 +744,7 @@ export enum SyncRequestType {
   UsersV1 = 'UsersV1',
   PeopleV1 = 'PeopleV1',
   AssetFacesV1 = 'AssetFacesV1',
+  AssetFacesV2 = 'AssetFacesV2',
   UserMetadataV1 = 'UserMetadataV1',
 }
 
@@ -727,6 +757,8 @@ export enum SyncEntityType {
   AssetV1 = 'AssetV1',
   AssetDeleteV1 = 'AssetDeleteV1',
   AssetExifV1 = 'AssetExifV1',
+  AssetEditV1 = 'AssetEditV1',
+  AssetEditDeleteV1 = 'AssetEditDeleteV1',
   AssetMetadataV1 = 'AssetMetadataV1',
   AssetMetadataDeleteV1 = 'AssetMetadataDeleteV1',
 
@@ -773,6 +805,7 @@ export enum SyncEntityType {
   PersonDeleteV1 = 'PersonDeleteV1',
 
   AssetFaceV1 = 'AssetFaceV1',
+  AssetFaceV2 = 'AssetFaceV2',
   AssetFaceDeleteV1 = 'AssetFaceDeleteV1',
 
   UserMetadataV1 = 'UserMetadataV1',
@@ -804,14 +837,6 @@ export enum OAuthTokenEndpointAuthMethod {
   ClientSecretBasic = 'client_secret_basic',
 }
 
-export enum DatabaseSslMode {
-  Disable = 'disable',
-  Allow = 'allow',
-  Prefer = 'prefer',
-  Require = 'require',
-  VerifyFull = 'verify-full',
-}
-
 export enum AssetVisibility {
   Archive = 'archive',
   Timeline = 'timeline',
@@ -835,6 +860,7 @@ export enum ApiTag {
   Authentication = 'Authentication',
   AuthenticationAdmin = 'Authentication (admin)',
   Assets = 'Assets',
+  DatabaseBackups = 'Database Backups (admin)',
   Deprecated = 'Deprecated',
   Download = 'Download',
   Duplicates = 'Duplicates',

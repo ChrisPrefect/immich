@@ -86,6 +86,13 @@ export class AssetMediaService extends BaseService {
         }
         break;
       }
+
+      case UploadFieldName.BACKUP_DATA: {
+        if (mimeTypes.isBackup(filename)) {
+          return true;
+        }
+        break;
+      }
     }
 
     this.logger.error(`Unsupported file type ${filename}`);
@@ -101,6 +108,7 @@ export class AssetMediaService extends BaseService {
       [UploadFieldName.ASSET_DATA]: extension,
       [UploadFieldName.SIDECAR_DATA]: '.xmp',
       [UploadFieldName.PROFILE_DATA]: extension,
+      [UploadFieldName.BACKUP_DATA]: extension === '.gz' ? '.sql.gz' : extension,
     };
 
     return sanitize(`${file.uuid}${lookup[fieldName]}`);
@@ -112,6 +120,9 @@ export class AssetMediaService extends BaseService {
     let folder = StorageCore.getNestedFolder(StorageFolder.Upload, auth.user.id, file.uuid);
     if (fieldName === UploadFieldName.PROFILE_DATA) {
       folder = StorageCore.getFolderLocation(StorageFolder.Profile, auth.user.id);
+    }
+    if (fieldName === UploadFieldName.BACKUP_DATA) {
+      folder = StorageCore.getFolderLocation(StorageFolder.Backups, `uploaded-${file.originalName}`);
     }
 
     this.storageRepository.mkdirSync(folder);

@@ -29,6 +29,7 @@ export enum UploadFieldName {
   ASSET_DATA = 'assetData',
   SIDECAR_DATA = 'sidecarData',
   PROFILE_DATA = 'file',
+  BACKUP_DATA = 'backup',
 }
 
 class AssetMediaBase {

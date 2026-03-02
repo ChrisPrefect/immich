@@ -1,17 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Next,
-  Param,
-  Post,
-  Req,
-  Res,
-  UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Body, Controller, Delete, Get, Next, Param, Post, Req, Res, UseInterceptors } from '@nestjs/common';
 import { NextFunction, Request, Response } from 'express';
 import {
   MaintenanceAuthDto,
@@ -34,6 +21,7 @@ import { FilenameParamDto } from 'src/validation';
 import type { DatabaseBackupController as _DatabaseBackupController } from 'src/controllers/database-backup.controller';
 import type { ServerController as _ServerController } from 'src/controllers/server.controller';
 import { DatabaseBackupDeleteDto, DatabaseBackupListResponseDto } from 'src/dtos/database-backup.dto';
+import { FileUploadInterceptor } from 'src/middleware/file-upload.interceptor';
 import { DatabaseBackupService } from 'src/services/database-backup.service';
 
 @Controller()
@@ -93,13 +81,8 @@ export class MaintenanceWorkerController {
    */
   @Post('admin/database-backups/upload')
   @MaintenanceRoute()
-  @UseInterceptors(FileInterceptor('file'))
-  uploadDatabaseBackup(
-    @UploadedFile()
-    file: Express.Multer.File,
-  ): Promise<void> {
-    return this.databaseBackupService.uploadBackup(file);
-  }
+  @UseInterceptors(FileUploadInterceptor)
+  uploadDatabaseBackup() {}
 
   @Get('admin/maintenance/status')
   maintenanceStatus(@Req() request: Request): Promise<MaintenanceStatusResponseDto> {

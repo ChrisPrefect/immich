@@ -1,5 +1,4 @@
-import { Body, Controller, Delete, Get, Next, Param, Post, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Body, Controller, Delete, Get, Next, Param, Post, Res, UseInterceptors } from '@nestjs/common';
 import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { NextFunction, Response } from 'express';
 import { Endpoint, HistoryBuilder } from 'src/decorators';
@@ -10,6 +9,7 @@ import {
 } from 'src/dtos/database-backup.dto';
 import { ApiTag, ImmichCookie, Permission } from 'src/enum';
 import { Authenticated, FileResponse, GetLoginDetails } from 'src/middleware/auth.guard';
+import { FileUploadInterceptor } from 'src/middleware/file-upload.interceptor';
 import { LoggingRepository } from 'src/repositories/logging.repository';
 import { LoginDetails } from 'src/services/auth.service';
 import { DatabaseBackupService } from 'src/services/database-backup.service';
@@ -91,11 +91,6 @@ export class DatabaseBackupController {
     description: 'Uploads .sql/.sql.gz file to restore backup from',
     history: new HistoryBuilder().added('v2.5.0').alpha('v2.5.0'),
   })
-  @UseInterceptors(FileInterceptor('file'))
-  uploadDatabaseBackup(
-    @UploadedFile()
-    file: Express.Multer.File,
-  ): Promise<void> {
-    return this.service.uploadBackup(file);
-  }
+  @UseInterceptors(FileUploadInterceptor)
+  uploadDatabaseBackup() {}
 }

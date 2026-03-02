@@ -102,7 +102,7 @@ export const handleUploadDatabaseBackup = async () => {
   try {
     const [file] = await openFilePicker({ multiple: false });
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('backup', file);
 
     await uploadRequest<DatabaseBackupUploadDto>({
       url: getBaseUrl() + '/admin/database-backups/upload',

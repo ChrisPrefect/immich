@@ -490,6 +490,7 @@ export enum MetadataKey {
 export enum RouteKey {
   Asset = 'assets',
   User = 'users',
+  DatabaseBackup = 'admin/database-backups',
 }
 
 export enum CacheControl {

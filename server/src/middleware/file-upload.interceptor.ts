@@ -48,6 +48,7 @@ export class FileUploadInterceptor implements NestInterceptor {
   private handlers: {
     userProfile: RequestHandler;
     assetUpload: RequestHandler;
+    databaseBackup: RequestHandler;
   };
   private defaultStorage: StorageEngine;
 
@@ -77,6 +78,7 @@ export class FileUploadInterceptor implements NestInterceptor {
         { name: UploadFieldName.ASSET_DATA, maxCount: 1 },
         { name: UploadFieldName.SIDECAR_DATA, maxCount: 1 },
       ]),
+      databaseBackup: instance.single(UploadFieldName.BACKUP_DATA),
     };
   }
 
@@ -163,6 +165,10 @@ export class FileUploadInterceptor implements NestInterceptor {
 
       case RouteKey.User: {
         return this.handlers.userProfile;
+      }
+
+      case RouteKey.DatabaseBackup: {
+        return this.handlers.databaseBackup;
       }
 
       default: {

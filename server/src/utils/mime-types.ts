@@ -149,6 +149,7 @@ export const mimeTypes = {
   isProfile: (filename: string) => isType(filename, profile),
   isSidecar: (filename: string) => isType(filename, sidecar),
   isVideo: (filename: string) => isType(filename, video),
+  isBackup: (filename: string) => filename.endsWith('.sql') || filename.endsWith('.sql.gz'),
   canBeTransparent: (filename: string) => transparentCapableExtensions.has(extname(filename).toLowerCase()),
   isRaw: (filename: string) => isType(filename, raw),
   lookup,

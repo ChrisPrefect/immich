@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { debounce } from 'lodash';
 import { DateTime } from 'luxon';
-import path, { basename } from 'node:path';
+import path from 'node:path';
 import { PassThrough, Readable, Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import semver from 'semver';
@@ -250,17 +250,6 @@ export class DatabaseBackupService {
 
     this.logger.log(`Database Backup Success`);
     return backupFilePath;
-  }
-
-  async uploadBackup(file: Express.Multer.File): Promise<void> {
-    const backupsFolder = StorageCore.getBaseFolder(StorageFolder.Backups);
-    const fn = basename(file.originalname);
-    if (!isValidDatabaseBackupName(fn)) {
-      throw new BadRequestException('Invalid backup name!');
-    }
-
-    const filePath = path.join(backupsFolder, `uploaded-${fn}`);
-    await this.storageRepository.createOrOverwriteFile(filePath, file.buffer);
   }
 
   downloadBackup(fileName: string): ImmichFileResponse {

@@ -14,16 +14,18 @@
 
   const assetId = $derived(asset.id);
 
-  const tileconfig = $derived(
-    asset.id === '6e899018-32fe-4fd5-b6ac-b3a525b8e61f'
-      ? {
-          width: 12_988,
-          // height: 35,
-          cols: 16,
-          rows: 8,
-        }
-      : undefined,
-  );
+  // TODO: get this via asset.tiles or whatever through the API
+  const tileconfig = $derived.by(() => {
+    // Get the number of tiles at the exact target size, rounded up (to at least 1 tile).
+    const numTilesExact = Math.ceil(asset.exifInfo?.exifImageWidth! / 1024);
+    // Then round up to the nearest power of 2 (photo-sphere-viewer requirement).
+    const numTiles = Math.pow(2, Math.ceil(Math.log2(numTilesExact)));
+    return {
+      width: asset.exifInfo?.exifImageWidth!,
+      cols: numTiles,
+      rows: numTiles / 2,
+    }
+  });
 
   const loadAssetData = async (id: string) => {
     const data = await viewAsset({ ...authManager.params, id, size: AssetMediaSize.Preview });

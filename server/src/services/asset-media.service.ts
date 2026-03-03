@@ -262,31 +262,22 @@ export class AssetMediaService extends BaseService {
     });
   }
 
-  async getAssetTile(auth: AuthDto, id: string, level: number, col: number, row: number): Promise<ImmichFileResponse> {
+  async viewAssetTile(auth: AuthDto, id: string, level: number, col: number, row: number): Promise<ImmichFileResponse> {
     await this.requireAccess({ auth, permission: Permission.AssetView, ids: [id] });
 
-    const asset = await this.assetRepository.getForThumbnail(id, AssetFileType.Tiles, false);
-    let tilesPath = undefined; // TODO
-    if (!tilesPath) {
-      // TODO: placeholder tiles.
-      return new ImmichFileResponse({
-        fileName: `${level}_${col}_${row}.jpg`,
-        path: `/data/sluis_files/0/${col}_${row}.jpg`,
-        contentType: 'image/jpg',
-        cacheControl: CacheControl.None,
-      });
+    // TODO: get tile info { width, height } and check against col, row to return NotFound instead of 500 when tile can't be found in sendFile.
+    const { path } = await this.assetRepository.getForTiles(id);
+
+    if (!path) {
       throw new NotFoundException('Asset tiles not found');
     }
 
-    tilesPath = { path: 'tmppath' }; 
-
-    const tileName = getFileNameWithoutExtension(asset.originalFileName) + `_${level}_${col}_${row}.jpg`;
-    const tilePath = tilesPath.path.replace('.dz', '_files') + `/${level}/${col}_${row}.jpg`;
+    // By definition of the tiles format, it's always .jpeg; should ImageFormat.Jpeg be used?
+    const tilePath = `${path}_files/${level}/${col}_${row}.jpeg`;
 
     return new ImmichFileResponse({
-      fileName: tileName,
       path: tilePath,
-      contentType: 'image/jpg',
+      contentType: mimeTypes.lookup(tilePath),
       cacheControl: CacheControl.PrivateWithCache,
     });
   }

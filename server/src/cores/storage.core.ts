@@ -9,7 +9,6 @@ import {
   PersonPathType,
   RawExtractedFormat,
   StorageFolder,
-  TilesFormat,
 } from 'src/enum';
 import { AssetRepository } from 'src/repositories/asset.repository';
 import { ConfigRepository } from 'src/repositories/config.repository';
@@ -33,16 +32,9 @@ export interface MoveRequest {
   };
 }
 
-export type GeneratedImageType =
-  | AssetPathType.Thumbnail
-  | AssetPathType.Preview
-  | AssetPathType.FullSize
-  | AssetPathType.Tiles;
-export type GeneratedAssetType = GeneratedImageType | AssetPathType.EncodedVideo;
-
 export type ThumbnailPathEntity = { id: string; ownerId: string };
 
-export type ImagePathOptions = { fileType: AssetFileType; format: ImageFormat | RawExtractedFormat | TilesFormat; isEdited: boolean };
+export type ImagePathOptions = { fileType: AssetFileType; format: ImageFormat | RawExtractedFormat; isEdited: boolean };
 
 let instance: StorageCore | null;
 
@@ -128,6 +120,10 @@ export class StorageCore {
     );
   }
 
+  static getTilesFolder(asset: ThumbnailPathEntity) {
+    return StorageCore.getNestedPath(StorageFolder.Thumbnails, asset.ownerId, `${asset.id}_tiles`);
+  }
+
   static getEncodedVideoPath(asset: ThumbnailPathEntity) {
     return StorageCore.getNestedPath(StorageFolder.EncodedVideo, asset.ownerId, `${asset.id}.mp4`);
   }
@@ -159,6 +155,16 @@ export class StorageCore {
       oldPath: oldFile?.path || null,
       newPath: StorageCore.getImagePath(asset, { fileType, format, isEdited: false }),
     });
+  }
+
+  async moveAssetTiles(asset: StorageAsset) {
+    const oldDir = getAssetFile(asset.files, AssetFileType.Tiles, { isEdited: false });
+    return this.moveFile({
+      entityId: asset.id,
+      pathType: AssetPathType.Tiles,
+      oldPath: oldDir?.path || null,
+      newPath: StorageCore.getTilesFolder(asset),
+    })
   }
 
   async moveAssetVideo(asset: StorageAsset) {

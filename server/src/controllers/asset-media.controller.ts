@@ -190,11 +190,11 @@ export class AssetMediaController {
   @FileResponse()
   @Authenticated({ permission: Permission.AssetView, sharedLink: true })
   @Endpoint({
-    summary: 'Get an image tile',
-    description: 'Download a specific tile from an image at the specified level and position',
-    history: new HistoryBuilder().added('v2.4.0').stable('v2.4.0'),
+    summary: 'View an asset tile',
+    description: 'Download a specific tile from an image at the specified level - must currently be 0 - and position',
+    history: new HistoryBuilder().added('v2.7.0').stable('v2.7.0'),
   })
-  async getAssetTile(
+  async viewAssetTile(
     @Auth() auth: AuthDto,
     @Param() { id }: UUIDParamDto,
     @Param('level', ParseIntPipe) level: number,
@@ -203,7 +203,10 @@ export class AssetMediaController {
     @Res() res: Response,
     @Next() next: NextFunction,
   ) {
-    await sendFile(res, next, () => this.service.getAssetTile(auth, id, level, col, row), this.logger);
+    if (level !== 0) {
+      throw new Error(`Invalid level ${level}`);
+    }
+    await sendFile(res, next, () => this.service.viewAssetTile(auth, id, level, col, row), this.logger);
   }
 
   @Get(':id/video/playback')

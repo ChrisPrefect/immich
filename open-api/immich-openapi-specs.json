@@ -4399,8 +4399,8 @@
     },
     "/assets/{id}/tiles/{level}/{col}/{row}": {
       "get": {
-        "description": "Download a specific tile from an image at the specified level and position",
-        "operationId": "getAssetTile",
+        "description": "Download a specific tile from an image at the specified level - must currently be 0 - and position",
+        "operationId": "viewAssetTile",
         "parameters": [
           {
             "name": "col",
@@ -4476,17 +4476,17 @@
             "api_key": []
           }
         ],
-        "summary": "Get an image tile",
+        "summary": "View an asset tile",
         "tags": [
           "Assets"
         ],
         "x-immich-history": [
           {
-            "version": "v2.4.0",
+            "version": "v2.7.0",
             "state": "Added"
           },
           {
-            "version": "v2.4.0",
+            "version": "v2.7.0",
             "state": "Stable"
           }
         ],

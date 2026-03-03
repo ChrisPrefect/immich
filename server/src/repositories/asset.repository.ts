@@ -1129,6 +1129,19 @@ export class AssetRepository {
   }
 
   @GenerateSql({ params: [DummyValue.UUID] })
+  async getForTiles(id: string) {
+    // TODO: we don't actually need original path and file name. Plain 'select asset_file.path from asset_file where type = tiles and assetId = id;'?
+    return this.db
+      .selectFrom('asset')
+      .where('asset.id', '=', id)
+      .leftJoin('asset_file', (join) =>
+        join.onRef('asset.id', '=', 'asset_file.assetId').on('asset_file.type', '=', AssetFileType.Tiles),
+      )
+      .select(['asset.originalPath', 'asset.originalFileName', 'asset_file.path as path'])
+      .executeTakeFirstOrThrow();
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID] })
   async getForVideo(id: string) {
     return this.db
       .selectFrom('asset')

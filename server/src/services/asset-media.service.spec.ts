@@ -720,6 +720,38 @@ describe(AssetMediaService.name, () => {
     });
   });
 
+  describe('getAssetTile', () => {
+    it('should require asset.view permissions', async () => {
+      await expect(sut.viewAssetTile(authStub.admin, 'id', 0, 0, 0)).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(mocks.access.asset.checkOwnerAccess).toHaveBeenCalledWith(userStub.admin.id, new Set(['id']), undefined);
+      expect(mocks.access.asset.checkAlbumAccess).toHaveBeenCalledWith(userStub.admin.id, new Set(['id']));
+      expect(mocks.access.asset.checkPartnerAccess).toHaveBeenCalledWith(userStub.admin.id, new Set(['id']));
+    });
+
+    it('should throw an error if the asset tiles dir could not be found', async () => {
+      const asset = AssetFactory.create();
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([asset.id]));
+      mocks.asset.getForTiles.mockResolvedValue({ ...asset, path: null });
+
+      await expect(sut.viewAssetTile(authStub.admin, asset.id, 0, 0, 0)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('should get tile file', async () => {
+      const asset = AssetFactory.from().file({ type: AssetFileType.Tiles, path: '/path/to/asset_tiles' }).build();
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([asset.id]));
+      mocks.asset.getForTiles.mockResolvedValue({ ...asset, path: asset.files[0].path });
+      await expect(sut.viewAssetTile(authStub.admin, asset.id, 0, 0, 0)).resolves.toEqual(
+        new ImmichFileResponse({
+          path: `${asset.files[0].path}_files/0/0_0.jpeg`,
+          cacheControl: CacheControl.PrivateWithCache,
+          contentType: 'image/jpeg',
+        }),
+      );
+      expect(mocks.asset.getForTiles).toHaveBeenCalledWith(asset.id);
+    });
+  });
+
   describe('playbackVideo', () => {
     it('should require asset.view permissions', async () => {
       await expect(sut.playbackVideo(authStub.admin, 'id')).rejects.toBeInstanceOf(BadRequestException);

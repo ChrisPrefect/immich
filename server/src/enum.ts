@@ -373,9 +373,6 @@ export enum ManualJobName {
 
 export enum AssetPathType {
   Original = 'original',
-  FullSize = 'fullsize',
-  Preview = 'preview',
-  Thumbnail = 'thumbnail',
   /** Folder structure containing tiles of the image */
   Tiles = 'tiles',
   EncodedVideo = 'encoded_video',
@@ -461,10 +458,6 @@ export enum ImageFormat {
 export enum RawExtractedFormat {
   Jpeg = 'jpeg',
   Jxl = 'jxl',
-}
-
-export enum TilesFormat {
-  Dz = 'dz',
 }
 
 export enum LogLevel {

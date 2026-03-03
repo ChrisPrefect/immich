@@ -4314,9 +4314,9 @@ export function viewAsset({ edited, id, key, size, slug }: {
     }));
 }
 /**
- * Get an image tile
+ * View an asset tile
  */
-export function getAssetTile({ col, id, key, level, row, slug }: {
+export function viewAssetTile({ col, id, key, level, row, slug }: {
     col: number;
     id: string;
     key?: string;

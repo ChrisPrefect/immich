@@ -1210,6 +1210,7 @@ describe(MediaService.name, () => {
       mocks.systemMetadata.get.mockResolvedValue({ image: { fullsize: { enabled: false } } });
       mocks.media.extract.mockResolvedValue({ buffer: extractedBuffer, format: RawExtractedFormat.Jpeg });
       mocks.media.getImageMetadata.mockResolvedValue({ width: 3840, height: 2160, isTransparent: false });
+      mocks.media.copyTagGroup.mockResolvedValue(true);
 
       const asset = AssetFactory.from({ originalFileName: 'panorama.tif' })
         .exif({
@@ -1244,6 +1245,8 @@ describe(MediaService.name, () => {
         },
         expect.any(String),
       );
+
+      expect(mocks.media.copyTagGroup).toHaveBeenCalledExactlyOnceWith('XMP-GPano', asset.originalPath, expect.any(String));
     });
 
     it('should respect encoding options when generating full-size preview', async () => {

@@ -123,6 +123,23 @@ export class MediaRepository {
     }
   }
 
+  async copyTagGroup(tagGroup: string, source: string, target: string): Promise<boolean> {
+    try {
+      await exiftool.write(
+        target,
+        {},
+        {
+          ignoreMinorErrors: true,
+          writeArgs: ['-TagsFromFile', source, `-${tagGroup}:all>${tagGroup}:all`, '-overwrite_original'],
+        },
+      );
+      return true;
+    } catch (error: any) {
+      this.logger.warn(`Could not copy tag data to image: ${error.message}`);
+      return false;
+    }
+  }
+
   async decodeImage(input: string | Buffer, options: DecodeToBufferOptions) {
     const pipeline = await this.getImageDecodingPipeline(input, options);
     return pipeline.raw().toBuffer({ resolveWithObject: true });
@@ -166,17 +183,21 @@ export class MediaRepository {
   }
 
   /**
-   * For output file path 'output.dz', this creates an 'output.dzi' file and 'output_files' directory containing tiles
+   * For output file path 'output.dz', this creates an 'output.dzi' file and 'output_files/0' directory containing tiles
    */
   async generateTiles(input: string | Buffer, options: GenerateThumbnailOptions, output: string): Promise<void> {
-    const pipeline = await this.getImageDecodingPipeline(input, options);
+    // size is intended tile size, don't resize input image.
+    const pipeline = await this.getImageDecodingPipeline(input,  { ...options, size: undefined });
     await pipeline
-      .toFormat(options.format)
+      .toFormat(options.format) // TODO: set quality and chroma ss?
       .tile({
         depth: 'one',
         size: options.size,
       })
       .toFile(output);
+    // TODO: move <uuid>_tiles_files/0 dir to <uuid>_tiles
+    // TODO: delete <uuid>_tiles_files/vips-properties.xml
+    // TODO: delete <uuid>_tiles.dzi
   }
 
   private async getImageDecodingPipeline(input: string | Buffer, options: DecodeToBufferOptions) {

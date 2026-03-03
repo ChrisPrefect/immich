@@ -110,7 +110,6 @@ Class | Method | HTTP request | Description
 *AssetsApi* | [**getAssetMetadataByKey**](doc//AssetsApi.md#getassetmetadatabykey) | **GET** /assets/{id}/metadata/{key} | Retrieve asset metadata by key
 *AssetsApi* | [**getAssetOcr**](doc//AssetsApi.md#getassetocr) | **GET** /assets/{id}/ocr | Retrieve asset OCR data
 *AssetsApi* | [**getAssetStatistics**](doc//AssetsApi.md#getassetstatistics) | **GET** /assets/statistics | Get asset statistics
-*AssetsApi* | [**getAssetTile**](doc//AssetsApi.md#getassettile) | **GET** /assets/{id}/tiles/{level}/{col}/{row} | Get an image tile
 *AssetsApi* | [**getRandom**](doc//AssetsApi.md#getrandom) | **GET** /assets/random | Get random assets
 *AssetsApi* | [**playAssetVideo**](doc//AssetsApi.md#playassetvideo) | **GET** /assets/{id}/video/playback | Play asset video
 *AssetsApi* | [**removeAssetEdits**](doc//AssetsApi.md#removeassetedits) | **DELETE** /assets/{id}/edits | Remove edits from an existing asset
@@ -122,6 +121,7 @@ Class | Method | HTTP request | Description
 *AssetsApi* | [**updateBulkAssetMetadata**](doc//AssetsApi.md#updatebulkassetmetadata) | **PUT** /assets/metadata | Upsert asset metadata
 *AssetsApi* | [**uploadAsset**](doc//AssetsApi.md#uploadasset) | **POST** /assets | Upload asset
 *AssetsApi* | [**viewAsset**](doc//AssetsApi.md#viewasset) | **GET** /assets/{id}/thumbnail | View asset thumbnail
+*AssetsApi* | [**viewAssetTile**](doc//AssetsApi.md#viewassettile) | **GET** /assets/{id}/tiles/{level}/{col}/{row} | View an asset tile
 *AuthenticationApi* | [**changePassword**](doc//AuthenticationApi.md#changepassword) | **POST** /auth/change-password | Change password
 *AuthenticationApi* | [**changePinCode**](doc//AuthenticationApi.md#changepincode) | **PUT** /auth/pin-code | Change pin code
 *AuthenticationApi* | [**finishOAuth**](doc//AuthenticationApi.md#finishoauth) | **POST** /oauth/callback | Finish OAuth

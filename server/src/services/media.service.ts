@@ -19,7 +19,6 @@ import {
   QueueName,
   RawExtractedFormat,
   StorageFolder,
-  TilesFormat,
   TranscodeHardwareAcceleration,
   TranscodePolicy,
   TranscodeTarget,
@@ -34,6 +33,7 @@ import {
   DecodeToBufferOptions,
   GenerateThumbnailOptions,
   ImageDimensions,
+  ImageOptions,
   JobItem,
   JobOf,
   VideoFormat,
@@ -54,15 +54,6 @@ interface UpsertFileOptions {
   isEdited: boolean;
   isProgressive: boolean;
   isTransparent: boolean;
-}
-
-interface TileInfo {
-  path: string;
-  info: {
-    width: number;
-    cols: number;
-    rows: number;
-  };
 }
 
 type ThumbnailAsset = NonNullable<Awaited<ReturnType<AssetJobRepository['getForGenerateThumbnailJob']>>>;
@@ -173,8 +164,7 @@ export class MediaService extends BaseService {
     await this.storageCore.moveAssetImage(asset, AssetFileType.FullSize, image.fullsize.format);
     await this.storageCore.moveAssetImage(asset, AssetFileType.Preview, image.preview.format);
     await this.storageCore.moveAssetImage(asset, AssetFileType.Thumbnail, image.thumbnail.format);
-    // TODO:
-    // await this.storageCore.moveAssetImage(asset, AssetFileType.Tiles, image.???.format);
+    await this.storageCore.moveAssetTiles(asset);
     await this.storageCore.moveAssetVideo(asset);
 
     return JobStatus.Success;
@@ -288,8 +278,8 @@ export class MediaService extends BaseService {
     const extractEmbedded = image.extractEmbedded && mimeTypes.isRaw(asset.originalFileName);
     const extracted = extractEmbedded ? await this.extractImage(asset.originalPath, image.preview.size) : null;
     const generateFullsize =
-      ((image.fullsize.enabled || asset.exifInfo.projectionType === 'EQUIRECTANGULAR') &&
-        !mimeTypes.isWebSupportedImage(asset.originalPath)) ||
+      (image.fullsize.enabled && !mimeTypes.isWebSupportedImage(asset.originalPath)) ||
+      asset.exifInfo.projectionType === 'EQUIRECTANGULAR' ||
       useEdits;
     const convertFullsize = generateFullsize && (!extracted || !mimeTypes.isWebSupportedImage(` .${extracted.format}`));
 
@@ -396,37 +386,46 @@ export class MediaService extends BaseService {
     }
 
     // TODO: probably extract to helper method
-    let tileInfo: TileInfo | undefined;
+    // TODO: handle cropped panoramas. Tile as normal but save some offset?
+    let tileInfo: UpsertFileOptions | undefined;
     if (asset.exifInfo.projectionType === 'EQUIRECTANGULAR') {
-      // TODO: get uncropped width from asset (FullPanoWidthPixels if present).
-      const originalSize = 12_988;
+      // TODO: get uncropped width from asset (FullPanoWidthPixels if present). -> TODO find out why i wrote this down as a todo
+      const originalSize = asset.exifInfo.exifImageWidth!;
+
       // Get the number of tiles at the exact target size, rounded up (to at least 1 tile).
       const numTilesExact = Math.ceil(originalSize / TILE_TARGET_SIZE);
       // Then round up to the nearest power of 2 (photo-sphere-viewer requirement).
       const numTiles = Math.pow(2, Math.ceil(Math.log2(numTilesExact)));
       const tileSize = Math.ceil(originalSize / numTiles);
 
-      const tileOptions = {
-        ...previewOptions,
+      tileInfo = {
+        assetId: asset.id,
+        type: AssetFileType.Tiles,
+        path: StorageCore.getTilesFolder(asset),
+        isEdited: false,
+        isProgressive: false,
+        isTransparent: false,
+      };
+      const tilesOptions = {
+        ...baseOptions,
+        quality: image.preview.quality,
+        format: ImageFormat.Jpeg,
         size: tileSize,
       };
+      promises.push(this.mediaRepository.generateTiles(data, tilesOptions, tileInfo.path));
 
-      tileInfo = {
-        path: StorageCore.getImagePath(asset, { fileType: AssetFileType.Tiles, format: TilesFormat.Dz, isEdited: useEdits }),
-        info: {
-          width: originalSize,
-          cols: numTiles,
-          rows: numTiles / 2,
-        }
-      };
-      // TODO: reverse comment state
-      // TODO: handle cropped panoramas here. Tile as normal but save some offset?
-      // promises.push(this.mediaRepository.generateTiles(data, tileOptions, tileInfo.path));
-      console.log(tileOptions, tileInfo);
-      tileInfo = undefined;
+      console.log('Tile info for DB:', {
+        width: originalSize,
+        cols: numTiles,
+        rows: numTiles / 2,
+      });
     }
 
     const outputs = await Promise.all(promises);
+
+    if (asset.exifInfo.projectionType === 'EQUIRECTANGULAR') {
+      await this.mediaRepository.copyTagGroup('XMP-GPano', asset.originalPath, previewFile.path);
+    }
 
     const decodedDimensions = { width: info.width, height: info.height };
     const fullsizeDimensions = useEdits ? getOutputDimensions(asset.edits, decodedDimensions) : decodedDimensions;
@@ -435,8 +434,7 @@ export class MediaService extends BaseService {
       files.push(fullsizeFile);
     }
     if (tileInfo) {
-      console.warn('TODO: should push tile info to files');
-      // files.push(tileInfo);
+      files.push(tileInfo);
     }
 
     return {

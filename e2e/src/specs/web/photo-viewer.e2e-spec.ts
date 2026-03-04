@@ -28,10 +28,9 @@ test.describe('Photo Viewer', () => {
     const original = page.getByTestId('original').filter({ visible: true });
 
     await expect(thumbnail).toHaveAttribute('src', /thumbnail/);
-    const box = await thumbnail.boundingBox();
-    expect(box).toBeTruthy();
-    const { x, y, width, height } = box!;
-    await page.mouse.move(x + width / 2, y + height / 2);
+
+    const { width, height } = page.viewportSize()!;
+    await page.mouse.move(width / 2, height / 2);
     await page.mouse.wheel(0, -1);
     await expect(original).toBeInViewport();
     await expect(original).toHaveAttribute('src', /original/);
@@ -44,10 +43,9 @@ test.describe('Photo Viewer', () => {
     const original = page.getByTestId('original').filter({ visible: true });
 
     await expect(thumbnail).toHaveAttribute('src', /thumbnail/);
-    const box = await thumbnail.boundingBox();
-    expect(box).toBeTruthy();
-    const { x, y, width, height } = box!;
-    await page.mouse.move(x + width / 2, y + height / 2);
+
+    const { width, height } = page.viewportSize()!;
+    await page.mouse.move(width / 2, height / 2);
     await page.mouse.wheel(0, -1);
     await expect(original).toHaveAttribute('src', /fullsize/);
   });

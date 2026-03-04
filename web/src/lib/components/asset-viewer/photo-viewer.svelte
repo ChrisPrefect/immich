@@ -11,10 +11,10 @@
   import { isFaceEditMode } from '$lib/stores/face-edit.svelte';
   import { ocrManager } from '$lib/stores/ocr.svelte';
   import { boundingBoxesArray, type Faces } from '$lib/stores/people.store';
-  import { SlideshowLook, SlideshowState, slideshowLookCssMapping, slideshowStore } from '$lib/stores/slideshow.store';
+  import { SlideshowLook, SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
   import { handlePromiseError } from '$lib/utils';
   import { canCopyImageToClipboard, copyImageToClipboard } from '$lib/utils/asset-utils';
-  import { type ContentMetrics, getNaturalSize, scaleToFit } from '$lib/utils/container-utils';
+  import { getNaturalSize, scaleToFit, type ContentMetrics } from '$lib/utils/container-utils';
   import { handleError } from '$lib/utils/handle-error';
   import { getOcrBoundingBoxes } from '$lib/utils/ocr-utils';
   import { getBoundingBox } from '$lib/utils/people-utils';
@@ -163,7 +163,6 @@
   });
 
   const faces = $derived(Array.from(faceToNameMap.keys()));
-
 </script>
 
 <AssetViewerEvents {onCopy} {onZoom} />
@@ -190,7 +189,7 @@
     {asset}
     {sharedLink}
     {container}
-    imageClass={`${$slideshowState === SlideshowState.None ? 'object-contain' : slideshowLookCssMapping[$slideshowLook]}`}
+    objectFit={$slideshowState !== SlideshowState.None && $slideshowLook === SlideshowLook.Cover ? 'cover' : 'contain'}
     {onUrlChange}
     onImageReady={() => {
       visibleImageReady = true;
@@ -207,20 +206,23 @@
       {#if blurredSlideshow}
         <canvas
           use:thumbhash={{ base64ThumbHash: asset.thumbhash! }}
-          class="-z-1 absolute top-0 left-0 start-0 h-dvh w-dvw"
+          class="absolute top-0 left-0 inset-s-0 h-dvh w-dvw"
         ></canvas>
       {/if}
     {/snippet}
     {#snippet overlays()}
       {#if !isFaceEditMode.value && !ocrManager.showOverlay}
         {#each getBoundingBox(faces, overlayMetrics) as boundingbox, index (boundingbox.id)}
-          <div
-            class="absolute pointer-events-auto"
+          <button
+            type="button"
+            class="absolute pointer-events-auto outline-none"
             style="top: {boundingbox.top}px; left: {boundingbox.left}px; height: {boundingbox.height}px; width: {boundingbox.width}px;"
-            role="presentation"
-            onmouseenter={() => { $boundingBoxesArray = [faces[index]]; }}
-            onmouseleave={() => { $boundingBoxesArray = []; }}
-          ></div>
+            aria-label="{$t('person')}: {faceToNameMap.get(faces[index]) || $t('unknown')}"
+            onmouseenter={() => ($boundingBoxesArray = [faces[index]])}
+            onmouseleave={() => ($boundingBoxesArray = [])}
+            onfocus={() => ($boundingBoxesArray = [faces[index]])}
+            onblur={() => ($boundingBoxesArray = [])}
+          ></button>
         {/each}
       {/if}
 
@@ -231,6 +233,7 @@
         ></div>
         {#if faceToNameMap.get($boundingBoxesArray[index])}
           <div
+            aria-hidden="true"
             class="absolute bg-white/90 text-black px-2 py-1 rounded text-sm font-medium whitespace-nowrap pointer-events-none shadow-lg"
             style="top: {boundingbox.top + boundingbox.height + 4}px; left: {boundingbox.left +
               boundingbox.width}px; transform: translateX(-100%);"

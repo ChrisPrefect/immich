@@ -1,290 +1,175 @@
 import type { LoadImageFunction } from '$lib/actions/image-loader.svelte';
-import { imageManager } from '$lib/managers/ImageManager.svelte';
-import { getAssetMediaUrl, getAssetUrl } from '$lib/utils';
-import { AssetMediaSize, type AssetResponseDto, type SharedLinkResponseDto } from '@immich/sdk';
+import { cancelImageUrl } from '$lib/utils/sw-messaging';
 
-/**
- * Quality levels for progressive image loading
- */
-type ImageQuality =
-  | 'basic'
-  | 'loading-thumbnail'
-  | 'thumbnail'
-  | 'loading-preview'
-  | 'preview'
-  | 'loading-original'
-  | 'original';
+export type ImageQuality = 'thumbnail' | 'preview' | 'original';
 
-const qualityOrder: Record<ImageQuality, number> = {
-  basic: 0,
-  'loading-thumbnail': 1,
-  thumbnail: 2,
-  'loading-preview': 3,
-  preview: 4,
-  'loading-original': 5,
-  original: 6,
+export type ImageStatus = 'unloaded' | 'success' | 'error';
+
+export type ImageLoaderStatus = {
+  urls: Record<ImageQuality, string | undefined>;
+  quality: Record<ImageQuality, ImageStatus>;
+  started: boolean;
+  hasError: boolean;
 };
 
-export interface ImageLoaderState {
-  previewUrl?: string;
-  thumbnailUrl?: string;
-  originalUrl?: string;
+type ImageLoaderCallbacks = {
+  onUrlChange?: (url: string) => void;
+  onImageReady?: () => void;
+  onError?: () => void;
+};
+
+export type QualityConfig = {
+  url: string;
   quality: ImageQuality;
-  hasError: boolean;
-  thumbnailImage: ImageStatus;
-  previewImage: ImageStatus;
-  originalImage: ImageStatus;
-}
+  checkCanceled: boolean;
+  onAfterLoad?: (loader: AdaptiveImageLoader) => void;
+  onAfterError?: (loader: AdaptiveImageLoader) => void;
+};
 
-export enum ImageStatus {
-  Unloaded = 'Unloaded',
-  Success = 'Success',
-  Error = 'Error',
-}
+const MAX_TRACKED_ASSETS = 10;
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
+const tracker = new Map<string, 'loading' | 'canceled'>();
 
-/**
- * Coordinates adaptive loading of a single asset image:
- * thumbhash → thumbnail → preview → original (on zoom)
- *
- */
-let nextLoaderId = 0;
+const updateTracker = (id: string, action: 'loading' | 'canceled') => {
+  tracker.delete(id);
+  tracker.set(id, action);
+
+  if (tracker.size > MAX_TRACKED_ASSETS) {
+    const firstKey = tracker.keys().next().value!;
+    tracker.delete(firstKey);
+  }
+};
+
+const isCanceled = (id: string) => 'canceled' === tracker.get(id);
+const setLoading = (id: string) => updateTracker(id, 'loading');
+const setCanceled = (id: string) => updateTracker(id, 'canceled');
+
+export type QualityList = [
+  QualityConfig & { quality: 'thumbnail' },
+  QualityConfig & { quality: 'preview' },
+  QualityConfig & { quality: 'original' },
+];
 
 export class AdaptiveImageLoader {
-  readonly id = nextLoaderId++;
+  private destroyFunctions: (() => void)[] = [];
+  private qualityConfigs: Record<ImageQuality, QualityConfig>;
+  private highestLoadedQualityIndex = -1;
+  private destroyed = false;
 
-  private internalState = $state<ImageLoaderState>({
-    quality: 'basic',
+  status = $state<ImageLoaderStatus>({
+    started: false,
     hasError: false,
-    thumbnailImage: ImageStatus.Unloaded,
-    previewImage: ImageStatus.Unloaded,
-    originalImage: ImageStatus.Unloaded,
+    urls: { thumbnail: undefined, preview: undefined, original: undefined },
+    quality: { thumbnail: 'unloaded', preview: 'unloaded', original: 'unloaded' },
   });
 
-  private readonly currentZoomFn?: () => number;
-  private readonly imageLoader?: LoadImageFunction;
-  private readonly destroyFunctions: (() => void)[] = [];
-  readonly thumbnailUrl: string;
-  readonly previewUrl: string;
-  readonly originalUrl: string;
-  readonly asset: AssetResponseDto;
-  readonly sharedLink?: SharedLinkResponseDto;
-  readonly callbacks?: {
-    currentZoomFn: () => number;
-    onUrlChange?: (url: string) => void;
-    onImageReady?: () => void;
-    onError?: () => void;
-  };
-  destroyed = false;
-
   constructor(
-    asset: AssetResponseDto,
-    sharedLink: SharedLinkResponseDto | undefined,
-    callbacks?: {
-      currentZoomFn: () => number;
-      onUrlChange?: (url: string) => void;
-      onImageReady?: () => void;
-      onError?: () => void;
-    },
-    imageLoader?: LoadImageFunction,
+    private readonly id: string,
+    private readonly qualityList: QualityList,
+    private readonly callbacks?: ImageLoaderCallbacks,
+    private readonly imageLoader?: LoadImageFunction,
   ) {
-    imageManager.trackLoad(asset);
-    this.asset = asset;
-    this.callbacks = callbacks;
-    this.imageLoader = imageLoader;
-    this.thumbnailUrl = getAssetMediaUrl({ id: asset.id, cacheKey: asset.thumbhash, size: AssetMediaSize.Thumbnail });
-    this.previewUrl = getAssetUrl({ asset, sharedLink })!;
-    this.originalUrl = getAssetUrl({ asset, sharedLink, forceOriginal: true })!;
-    this.internalState.thumbnailUrl = this.thumbnailUrl;
-    this.sharedLink = sharedLink;
+    this.qualityConfigs = {
+      thumbnail: qualityList[0],
+      preview: qualityList[1],
+      original: qualityList[2],
+    };
+    this.status.urls.thumbnail = qualityList[0].url;
+    setLoading(id);
   }
 
   start() {
     if (!this.imageLoader) {
       throw new Error('Start requires imageLoader to be specified');
     }
+
     this.destroyFunctions.push(
       this.imageLoader(
-        this.thumbnailUrl,
-        () => this.onThumbnailLoad(),
-        () => this.onThumbnailError(),
-        () => this.onThumbnailStart(),
+        this.qualityList[0].url,
+        () => this.onLoad('thumbnail'),
+        () => this.onError('thumbnail'),
+        () => this.onStart('thumbnail'),
       ),
     );
   }
 
-  get state(): ImageLoaderState {
-    return this.internalState;
+  onStart(quality: ImageQuality) {
+    const config = this.qualityConfigs[quality];
+    if (this.destroyed || (config.checkCanceled && isCanceled(this.id))) {
+      return;
+    }
+    this.status.started = true;
   }
 
-  private shouldUpdateQuality(newQuality: ImageQuality): boolean {
-    const currentLevel = qualityOrder[this.internalState.quality];
-    const newLevel = qualityOrder[newQuality];
-    return newLevel > currentLevel;
-  }
+  onLoad(quality: ImageQuality) {
+    const config = this.qualityConfigs[quality];
+    if (this.destroyed || (config.checkCanceled && isCanceled(this.id))) {
+      return;
+    }
 
-  onThumbnailStart() {
-    if (this.destroyed) {
+    if (!this.status.urls[quality]) {
       return;
     }
-    if (!this.shouldUpdateQuality('loading-thumbnail')) {
-      return;
-    }
-    this.internalState.quality = 'loading-thumbnail';
-  }
 
-  onThumbnailLoad() {
-    if (this.destroyed) {
+    const index = this.qualityList.indexOf(config);
+    if (index <= this.highestLoadedQualityIndex) {
       return;
     }
-    if (!this.shouldUpdateQuality('thumbnail')) {
-      return;
-    }
-    this.internalState.quality = 'thumbnail';
-    this.internalState.thumbnailImage = ImageStatus.Success;
-    this.callbacks?.onUrlChange?.(this.thumbnailUrl);
+
+    this.highestLoadedQualityIndex = index;
+    this.status.quality[quality] = 'success';
+    this.callbacks?.onUrlChange?.(this.qualityConfigs[quality].url);
     this.callbacks?.onImageReady?.();
-    this.triggerMainImage();
+
+    config.onAfterLoad?.(this);
   }
 
-  onThumbnailError() {
-    if (this.destroyed) {
+  onError(quality: ImageQuality) {
+    const config = this.qualityConfigs[quality];
+    if (this.destroyed || (config.checkCanceled && isCanceled(this.id))) {
       return;
     }
-    this.internalState.hasError = true;
-    this.internalState.thumbnailUrl = undefined;
-    this.internalState.thumbnailImage = ImageStatus.Error;
+
+    this.status.hasError = true;
+    this.status.quality[quality] = 'error';
+    this.status.urls[quality] = undefined;
     this.callbacks?.onError?.();
-    this.triggerMainImage();
+
+    config.onAfterError?.(this);
   }
 
-  triggerMainImage() {
-    const wantsOriginal = (this.currentZoomFn?.() ?? 1) > 1;
-    return wantsOriginal ? this.triggerOriginal() : this.triggerPreview();
-  }
-
-  triggerPreview() {
-    if (!this.previewUrl) {
-      // no preview, try original?
-      this.triggerOriginal();
+  trigger(quality: ImageQuality) {
+    if (this.destroyed) {
       return false;
     }
-    if (this.internalState.previewUrl) {
-      // Already triggered
+
+    const url = this.qualityConfigs[quality].url;
+    if (!url) {
+      this.qualityConfigs[quality].onAfterError?.(this);
+      return false;
+    }
+
+    if (this.status.urls[quality]) {
       return true;
     }
-    this.internalState.hasError = false;
-    this.internalState.previewUrl = this.previewUrl;
+
+    this.status.hasError = false;
+    this.status.urls[quality] = url;
     if (this.imageLoader) {
       this.destroyFunctions.push(
         this.imageLoader(
-          this.previewUrl,
-
-          () => this.onPreviewLoad(),
-          () => this.onPreviewError(),
-          () => this.onPreviewStart(),
+          url,
+          () => this.onLoad(quality),
+          () => this.onError(quality),
+          () => this.onStart(quality),
         ),
       );
     }
+    return false;
   }
 
-  onPreviewStart() {
-    if (this.destroyed) {
-      return;
-    }
-    if (!this.shouldUpdateQuality('loading-preview')) {
-      return;
-    }
-    this.internalState.quality = 'loading-preview';
-  }
-
-  onPreviewLoad() {
-    if (this.destroyed) {
-      return;
-    }
-    if (!this.internalState.previewUrl) {
-      return;
-    }
-    if (!this.shouldUpdateQuality('preview')) {
-      return;
-    }
-    this.internalState.quality = 'preview';
-    this.internalState.previewImage = ImageStatus.Success;
-    this.callbacks?.onUrlChange?.(this.previewUrl);
-    this.callbacks?.onImageReady?.();
-  }
-
-  onPreviewError() {
-    if (this.destroyed || imageManager.isCanceled(this.asset)) {
-      return;
-    }
-    this.internalState.hasError = true;
-    this.internalState.previewImage = ImageStatus.Error;
-    this.internalState.previewUrl = undefined;
-    this.callbacks?.onError?.();
-    this.triggerOriginal();
-  }
-
-  triggerOriginal() {
-    if (!this.originalUrl) {
-      return false;
-    }
-    if (this.internalState.originalUrl) {
-      // Already triggered
-      return true;
-    }
-    this.internalState.hasError = false;
-    this.internalState.originalUrl = this.originalUrl;
-
-    if (this.imageLoader) {
-      this.destroyFunctions.push(
-        this.imageLoader(
-          this.originalUrl,
-
-          () => this.onOriginalLoad(),
-          () => this.onOriginalError(),
-          () => this.onOriginalStart(),
-        ),
-      );
-    }
-  }
-
-  onOriginalStart() {
-    if (this.destroyed || imageManager.isCanceled(this.asset)) {
-      return;
-    }
-    if (!this.shouldUpdateQuality('loading-original')) {
-      return;
-    }
-    this.internalState.quality = 'loading-original';
-  }
-
-  onOriginalLoad() {
-    if (this.destroyed || imageManager.isCanceled(this.asset)) {
-      return;
-    }
-    if (!this.internalState.originalUrl) {
-      return;
-    }
-    if (!this.shouldUpdateQuality('original')) {
-      return;
-    }
-    this.internalState.quality = 'original';
-    this.internalState.originalImage = ImageStatus.Success;
-    this.callbacks?.onUrlChange?.(this.originalUrl);
-    this.callbacks?.onImageReady?.();
-  }
-
-  onOriginalError() {
-    if (this.destroyed || imageManager.isCanceled(this.asset)) {
-      return;
-    }
-    this.internalState.hasError = true;
-    this.internalState.originalImage = ImageStatus.Error;
-    this.internalState.originalUrl = undefined;
-    this.callbacks?.onError?.();
-  }
-
-  destroy(): void {
+  destroy() {
+    setCanceled(this.id);
     this.destroyed = true;
     if (this.imageLoader) {
       for (const destroy of this.destroyFunctions) {
@@ -292,9 +177,9 @@ export class AdaptiveImageLoader {
       }
       return;
     }
-    this.cancel(this.asset);
-  }
-  cancel(asset: AssetResponseDto | undefined) {
-    imageManager.cancel(asset);
+
+    for (const config of Object.values(this.qualityConfigs)) {
+      cancelImageUrl(config.url);
+    }
   }
 }

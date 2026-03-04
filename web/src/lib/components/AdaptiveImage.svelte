@@ -2,21 +2,21 @@
   import { thumbhash } from '$lib/actions/thumbhash';
   import AlphaBackground from '$lib/components/AlphaBackground.svelte';
   import BrokenAsset from '$lib/components/assets/broken-asset.svelte';
-  import Image from '$lib/components/Image.svelte';
+  import DelayedLoadingSpinner from '$lib/components/DelayedLoadingSpinner.svelte';
+  import ImageLayer from '$lib/components/ImageLayer.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { AdaptiveImageLoader, ImageStatus } from '$lib/utils/adaptive-image-loader.svelte';
-  import { getDimensions } from '$lib/utils/asset-utils';
-  import { scaleToFit } from '$lib/utils/container-utils';
+  import { getAssetUrls } from '$lib/utils';
+  import { AdaptiveImageLoader, type QualityList } from '$lib/utils/adaptive-image-loader.svelte';
+  import { scaleToCover, scaleToFit } from '$lib/utils/container-utils';
   import { getAltText } from '$lib/utils/thumbnail-util';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import type { AssetResponseDto, SharedLinkResponseDto } from '@immich/sdk';
-  import { LoadingSpinner } from '@immich/ui';
   import { untrack, type Snippet } from 'svelte';
 
-  interface Props {
+  type Props = {
     asset: AssetResponseDto;
     sharedLink?: SharedLinkResponseDto;
-    imageClass?: string;
+    objectFit?: 'contain' | 'cover';
     container: {
       width: number;
       height: number;
@@ -28,7 +28,7 @@
     imgRef?: HTMLImageElement;
     backdrop?: Snippet;
     overlays?: Snippet;
-  }
+  };
 
   let {
     ref = $bindable(),
@@ -36,7 +36,7 @@
     imgRef = $bindable(),
     asset,
     sharedLink,
-    imageClass = '',
+    objectFit = 'contain',
     container,
     onUrlChange,
     onImageReady,
@@ -45,6 +45,35 @@
     overlays,
   }: Props = $props();
 
+  const afterThumbnail = (loader: AdaptiveImageLoader) => {
+    if (assetViewerManager.zoom > 1) {
+      loader.trigger('original');
+    } else {
+      loader.trigger('preview');
+    }
+  };
+
+  const buildQualityList = () => {
+    const assetUrls = getAssetUrls(asset, sharedLink);
+    const qualityList: QualityList = [
+      {
+        quality: 'thumbnail',
+        url: assetUrls.thumbnail,
+        checkCanceled: false,
+        onAfterLoad: afterThumbnail,
+        onAfterError: afterThumbnail,
+      },
+      {
+        quality: 'preview',
+        url: assetUrls.preview,
+        checkCanceled: true,
+        onAfterError: (loader) => loader.trigger('original'),
+      },
+      { quality: 'original', url: assetUrls.original, checkCanceled: true },
+    ];
+    return qualityList;
+  };
+
   const loaderKey = $derived(`${asset.id}:${asset.thumbhash}:${sharedLink?.id}`);
 
   const adaptiveImageLoader = $derived.by(() => {
@@ -52,8 +81,7 @@
 
     return untrack(
       () =>
-        new AdaptiveImageLoader(asset, sharedLink, {
-          currentZoomFn: () => assetViewerManager.zoom,
+        new AdaptiveImageLoader(asset.id, buildQualityList(), {
           onImageReady,
           onError,
           onUrlChange,
@@ -64,27 +92,20 @@
   $effect.pre(() => {
     const loader = adaptiveImageLoader;
     untrack(() => assetViewerManager.resetZoomState());
-    return () => {
-      loader.destroy();
-    };
+    return () => loader.destroy();
   });
 
   const imageDimensions = $derived.by(() => {
-    if ((asset.width ?? 0) > 0 && (asset.height ?? 0) > 0) {
-      return { width: asset.width!, height: asset.height! };
+    const { width, height } = asset;
+    if (width && width > 0 && height && height > 0) {
+      return { width, height };
     }
-
-    if (asset.exifInfo?.exifImageHeight && asset.exifInfo.exifImageWidth) {
-      return getDimensions(asset.exifInfo) as { width: number; height: number };
-    }
-
     return { width: 1, height: 1 };
   });
 
-  const scaledDimensions = $derived(scaleToFit(imageDimensions, container));
-
-  const renderDimensions = $derived.by(() => {
-    const { width, height } = scaledDimensions;
+  const { width, height, left, top } = $derived.by(() => {
+    const scaleFn = objectFit === 'cover' ? scaleToCover : scaleToFit;
+    const { width, height } = scaleFn(imageDimensions, container);
     return {
       width: width + 'px',
       height: height + 'px',
@@ -93,146 +114,99 @@
     };
   });
 
-  const loaderState = $derived(adaptiveImageLoader.state);
-  const imageAltText = $derived(loaderState.previewUrl ? $getAltText(toTimelineAsset(asset)) : '');
+  const { status } = $derived(adaptiveImageLoader);
+  const alt = $derived(status.urls.preview ? $getAltText(toTimelineAsset(asset)) : '');
 
-  const showAlphaBackground = $derived(
-    !loaderState.hasError &&
-      ['thumbnail', 'loading-thumbnail', 'loading-preview', 'loading-original', 'preview', 'original'].includes(
-        loaderState.quality,
-      ),
-  );
-  const showSpinner = $derived(!asset.thumbhash && loaderState.quality === 'basic');
-  const showBrokenAsset = $derived(loaderState.hasError);
-  const showThumbhash = $derived(['basic', 'loading-thumbnail'].includes(loaderState.quality));
-  const showThumbnail = true;
-  const showPreview = true;
-  const showOriginal = true;
+  const show = $derived.by(() => {
+    const { quality, started, hasError, urls } = status;
+    return {
+      alphaBackground: !hasError && started,
+      spinner: !asset.thumbhash && !started,
+      brokenAsset: hasError,
+      thumbhash: quality.thumbnail !== 'success' && quality.preview !== 'success' && quality.original !== 'success',
+      thumbnail: quality.thumbnail !== 'error' && quality.preview !== 'success' && quality.original !== 'success',
+      preview: quality.preview !== 'error' && quality.original !== 'success',
+      original: quality.original !== 'error' && urls.original !== undefined,
+    };
+  });
 
-  // Effect: Upgrade to original when user zooms in
   $effect(() => {
-    if (assetViewerManager.zoom > 1 && loaderState.quality === 'preview') {
-      untrack(() => {
-        void adaptiveImageLoader.triggerOriginal();
-      });
+    if (assetViewerManager.zoom > 1 && status.quality.preview === 'success' && status.quality.original !== 'success') {
+      untrack(() => void adaptiveImageLoader.trigger('original'));
     }
   });
+
   let thumbnailElement = $state<HTMLImageElement>();
   let previewElement = $state<HTMLImageElement>();
   let originalElement = $state<HTMLImageElement>();
 
-  const loadedOriginalElement = $derived(
-    loaderState.originalImage === ImageStatus.Success ? originalElement : undefined,
-  );
-  const loadedPreviewElement = $derived(loaderState.previewImage === ImageStatus.Success ? previewElement : undefined);
-  const loadedThumbnailElement = $derived(
-    loaderState.thumbnailImage === ImageStatus.Success ? thumbnailElement : undefined,
-  );
-
   $effect(() => {
-    imgRef = loadedOriginalElement ?? loadedPreviewElement ?? loadedThumbnailElement;
+    const quality = status.quality;
+    imgRef =
+      (quality.original === 'success' ? originalElement : undefined) ??
+      (quality.preview === 'success' ? previewElement : undefined) ??
+      (quality.thumbnail === 'success' ? thumbnailElement : undefined);
   });
 </script>
 
-<div class="relative h-full w-full" bind:this={ref}>
+<div class="relative h-full w-full overflow-hidden" bind:this={ref}>
   {@render backdrop?.()}
 
-  <div
-    class="absolute"
-    style:left={renderDimensions.left}
-    style:top={renderDimensions.top}
-    style:width={renderDimensions.width}
-    style:height={renderDimensions.height}
-  >
-    {#if showAlphaBackground}
-      <AlphaBackground class="-z-3" />
+  <div class="absolute" style:left style:top style:width style:height>
+    {#if show.alphaBackground}
+      <AlphaBackground />
     {/if}
 
-    {#if showThumbhash}
+    {#if show.thumbhash}
       {#if asset.thumbhash}
         <!-- Thumbhash / spinner layer  -->
-        <canvas use:thumbhash={{ base64ThumbHash: asset.thumbhash }} class="h-full w-full absolute -z-2"></canvas>
-      {:else if showSpinner}
-        <div id="spinner" class="absolute flex h-full items-center justify-center">
-          <LoadingSpinner />
-        </div>
+        <canvas use:thumbhash={{ base64ThumbHash: asset.thumbhash }} class="h-full w-full absolute"></canvas>
+      {:else if show.spinner}
+        <DelayedLoadingSpinner />
       {/if}
     {/if}
 
-    {#if showThumbnail}
-      {#key adaptiveImageLoader}
-        {@const loader = adaptiveImageLoader}
-        <div class="absolute top-0 z-1" style:width={renderDimensions.width} style:height={renderDimensions.height}>
-          <Image
-            src={loaderState.thumbnailUrl}
-            onStart={() => loader.onThumbnailStart()}
-            onLoad={() => loader.onThumbnailLoad()}
-            onError={() => loader.onThumbnailError()}
-            bind:ref={thumbnailElement}
-            class={['absolute h-full', 'w-full']}
-            alt=""
-            role="presentation"
-            data-testid="thumbnail"
-          />
-        </div>
-      {/key}
+    {#if show.thumbnail}
+      <ImageLayer
+        {adaptiveImageLoader}
+        {width}
+        {height}
+        quality="thumbnail"
+        src={status.urls.thumbnail}
+        alt=""
+        role="presentation"
+        bind:ref={thumbnailElement}
+      />
     {/if}
 
-    {#if showBrokenAsset}
+    {#if show.brokenAsset}
       <BrokenAsset class="text-xl h-full w-full absolute" />
     {/if}
 
-    {#if showPreview}
-      {#key adaptiveImageLoader}
-        {@const loader = adaptiveImageLoader}
-        <div class="absolute top-0 z-2" style:width={renderDimensions.width} style:height={renderDimensions.height}>
-          <Image
-            src={loaderState.previewUrl}
-            onStart={() => loader.onPreviewStart()}
-            onLoad={() => loader.onPreviewLoad()}
-            onError={() => loader.onPreviewError()}
-            bind:ref={previewElement}
-            class={['h-full', 'w-full', imageClass]}
-            alt={imageAltText}
-            draggable={false}
-            data-testid="preview"
-          />
-          {@render overlays?.()}
-        </div>
-      {/key}
+    {#if show.preview}
+      <ImageLayer
+        {adaptiveImageLoader}
+        {alt}
+        {width}
+        {height}
+        {overlays}
+        quality="preview"
+        src={status.urls.preview}
+        bind:ref={previewElement}
+      />
     {/if}
 
-    {#if showOriginal}
-      {#key adaptiveImageLoader}
-        {@const loader = adaptiveImageLoader}
-        <div class="absolute top-0 z-3" style:width={renderDimensions.width} style:height={renderDimensions.height}>
-          <Image
-            src={loaderState.originalUrl}
-            onStart={() => loader.onOriginalStart()}
-            onLoad={() => loader.onOriginalLoad()}
-            onError={() => loader.onOriginalError()}
-            bind:ref={originalElement}
-            class={['h-full', 'w-full', imageClass]}
-            alt={imageAltText}
-            draggable={false}
-            data-testid="original"
-          />
-          {@render overlays?.()}
-        </div>
-      {/key}
+    {#if show.original}
+      <ImageLayer
+        {adaptiveImageLoader}
+        {alt}
+        {width}
+        {height}
+        {overlays}
+        quality="original"
+        src={status.urls.original}
+        bind:ref={originalElement}
+      />
     {/if}
   </div>
 </div>
-
-<style>
-  @keyframes delayedVisibility {
-    to {
-      visibility: visible;
-    }
-  }
-
-  #spinner {
-    visibility: hidden;
-    animation: 0s linear 0.4s forwards delayedVisibility;
-  }
-</style>

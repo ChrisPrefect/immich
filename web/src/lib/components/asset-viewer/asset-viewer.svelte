@@ -1,11 +1,11 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import { focusTrap } from '$lib/actions/focus-trap';
-  import { loadImage } from '$lib/actions/image-loader.svelte';
   import type { Action, OnAction, PreAction } from '$lib/components/asset-viewer/actions/action';
   import NextAssetAction from '$lib/components/asset-viewer/actions/next-asset-action.svelte';
   import PreviousAssetAction from '$lib/components/asset-viewer/actions/previous-asset-action.svelte';
   import AssetViewerNavBar from '$lib/components/asset-viewer/asset-viewer-nav-bar.svelte';
+  import { preloadManager } from '$lib/components/asset-viewer/PreloadManager.svelte';
   import { AssetAction, ProjectionType } from '$lib/constants';
   import { activityManager } from '$lib/managers/activity-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
@@ -21,7 +21,6 @@
   import { user } from '$lib/stores/user.store';
   import { getSharedLink, handlePromiseError } from '$lib/utils';
   import type { OnUndoDelete } from '$lib/utils/actions';
-  import { AdaptiveImageLoader } from '$lib/utils/adaptive-image-loader.svelte';
   import { navigateToAsset } from '$lib/utils/asset-utils';
   import { handleError } from '$lib/utils/handle-error';
   import { InvocationTracker } from '$lib/utils/invocationTracker';
@@ -171,8 +170,7 @@
     activityManager.reset();
     assetViewerManager.closeEditor();
     syncAssetViewerOpenClass(false);
-    destroyNextPreloader();
-    destroyPreviousPreloader();
+    preloadManager.destroy();
   });
 
   const closeViewer = () => {
@@ -188,62 +186,6 @@
     assetViewerManager.closeEditor();
   };
 
-  let nextPreloader: AdaptiveImageLoader | undefined;
-  let previousPreloader: AdaptiveImageLoader | undefined;
-
-  const startPreloader = (asset: AssetResponseDto | undefined) => {
-    if (!asset) {
-      return;
-    }
-    const loader = new AdaptiveImageLoader(asset, undefined, undefined, loadImage);
-    loader.start();
-    return loader;
-  };
-
-  const destroyPreviousPreloader = () => {
-    previousPreloader?.destroy();
-    previousPreloader = undefined;
-  };
-
-  const destroyNextPreloader = () => {
-    nextPreloader?.destroy();
-    nextPreloader = undefined;
-  };
-
-  const cancelPreloadsBeforeNavigation = (direction: 'previous' | 'next') => {
-    if (direction === 'next') {
-      destroyPreviousPreloader();
-      return;
-    }
-    destroyNextPreloader();
-  };
-
-  const updatePreloadsAfterNavigation = (oldCursor: AssetCursor, newCursor: AssetCursor) => {
-    const movedForward = newCursor.current.id === oldCursor.nextAsset?.id;
-    const movedBackward = newCursor.current.id === oldCursor.previousAsset?.id;
-
-    const shouldDestroyPrevious = !movedBackward;
-    const shouldDestroyNext = !movedForward;
-
-    if (shouldDestroyPrevious) {
-      destroyPreviousPreloader();
-    }
-
-    if (shouldDestroyNext) {
-      destroyNextPreloader();
-    }
-
-    if (movedForward) {
-      nextPreloader = startPreloader(newCursor.nextAsset);
-    } else if (movedBackward) {
-      previousPreloader = startPreloader(newCursor.previousAsset);
-    } else {
-      // Non-adjacent navigation (e.g., slideshow random)
-      previousPreloader = startPreloader(newCursor.previousAsset);
-      nextPreloader = startPreloader(newCursor.nextAsset);
-    }
-  };
-
   const tracker = new InvocationTracker();
   const navigateAsset = (order?: 'previous' | 'next') => {
     if (!order) {
@@ -254,7 +196,7 @@
       }
     }
 
-    cancelPreloadsBeforeNavigation(order);
+    preloadManager.cancelBeforeNavigation(order);
 
     if (tracker.isActive()) {
       return;
@@ -331,16 +273,6 @@
       $stopSlideshowProgress = true;
       $slideshowState = SlideshowState.None;
     }
-  };
-
-  const handleStackedAssetMouseEvent = (isMouseOver: boolean, stackedAsset: AssetResponseDto) => {
-    if (isMouseOver) {
-      previewStackedAsset = stackedAsset;
-    }
-  };
-
-  const handleStackedAssetsMouseLeave = () => {
-    previewStackedAsset = undefined;
   };
 
   const handlePreAction = (action: Action) => {
@@ -436,17 +368,10 @@
     if (lastCursor) {
       selectedStackAsset = undefined;
       previewStackedAsset = undefined;
-      // After navigation completes, reconcile preloads with full state information
-      updatePreloadsAfterNavigation(lastCursor, cursor);
+      preloadManager.updateAfterNavigation(lastCursor, cursor);
     }
     if (!lastCursor) {
-      // "first time" load, start preloads
-      if (cursor.nextAsset) {
-        nextPreloader = startPreloader(cursor.nextAsset);
-      }
-      if (cursor.previousAsset) {
-        previousPreloader = startPreloader(cursor.previousAsset);
-      }
+      preloadManager.initializePreloads(cursor);
     }
     lastCursor = cursor;
   });
@@ -661,7 +586,7 @@
       <div
         role="presentation"
         class="relative inline-flex flex-row no-wrap overflow-x-auto overflow-y-hidden horizontal-scrollbar pointer-events-auto"
-        onmouseleave={handleStackedAssetsMouseLeave}
+        onmouseleave={() => (previewStackedAsset = undefined)}
       >
         {#each stackedAssets as stackedAsset (stackedAsset.id)}
           <div
@@ -677,7 +602,7 @@
                 selectedStackAsset = stackedAsset;
                 previewStackedAsset = undefined;
               }}
-              onMouseEvent={({ isMouseOver }) => handleStackedAssetMouseEvent(isMouseOver, stackedAsset)}
+              onMouseEvent={({ isMouseOver }) => isMouseOver && (previewStackedAsset = stackedAsset)}
               readonly
               thumbnailSize={stackedAsset.id === asset.id ? stackSelectedThumbnailSize : stackThumbnailSize}
               showStackedIcon={false}

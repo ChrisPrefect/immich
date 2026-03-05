@@ -1,15 +1,28 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
-import { PluginAction, PluginFilter } from 'src/database';
-import { PluginContext as PluginContextType, PluginTriggerType } from 'src/enum';
-import type { JSONSchema } from 'src/types/plugin-schema.types';
-import { ValidateEnum } from 'src/validation';
+import { WorkflowTrigger, WorkflowType } from 'src/enum';
+import { JSONSchema } from 'src/types';
+import { asMethodString } from 'src/utils/workflow';
+import { ValidateBoolean, ValidateEnum, ValidateString, ValidateUUID } from 'src/validation';
 
-export class PluginTriggerResponseDto {
-  @ValidateEnum({ enum: PluginTriggerType, name: 'PluginTriggerType', description: 'Trigger type' })
-  type!: PluginTriggerType;
-  @ValidateEnum({ enum: PluginContextType, name: 'PluginContextType', description: 'Context type' })
-  contextType!: PluginContextType;
+export class PluginSearchDto {
+  @ValidateUUID({ optional: true, description: 'Plugin ID' })
+  id?: string;
+
+  @ValidateBoolean({ optional: true, description: 'Whether the plugin is enabled' })
+  enabled?: boolean;
+
+  @ValidateString({ optional: true })
+  name?: string;
+
+  @ValidateString({ optional: true })
+  version?: string;
+
+  @ValidateString({ optional: true })
+  title?: string;
+
+  @ValidateString({ optional: true })
+  description?: string;
 }
 
 export class PluginResponseDto {
@@ -29,45 +42,56 @@ export class PluginResponseDto {
   createdAt!: string;
   @ApiProperty({ description: 'Last update date' })
   updatedAt!: string;
-  @ApiProperty({ description: 'Plugin filters' })
-  filters!: PluginFilterResponseDto[];
-  @ApiProperty({ description: 'Plugin actions' })
-  actions!: PluginActionResponseDto[];
+  @ApiProperty({ description: 'Plugin methods' })
+  methods!: PluginMethodResponseDto[];
 }
 
-export class PluginFilterResponseDto {
-  @ApiProperty({ description: 'Filter ID' })
-  id!: string;
-  @ApiProperty({ description: 'Plugin ID' })
-  pluginId!: string;
-  @ApiProperty({ description: 'Method name' })
-  methodName!: string;
-  @ApiProperty({ description: 'Filter title' })
-  title!: string;
-  @ApiProperty({ description: 'Filter description' })
-  description!: string;
+export class PluginMethodSearchDto {
+  @ValidateUUID({ optional: true, description: 'Plugin method ID' })
+  id?: string;
 
-  @ValidateEnum({ enum: PluginContextType, name: 'PluginContextType', each: true, description: 'Supported contexts' })
-  supportedContexts!: PluginContextType[];
-  @ApiProperty({ description: 'Filter schema' })
-  schema!: JSONSchema | null;
+  @ValidateBoolean({ optional: true, description: 'Whether the plugin method is enabled' })
+  enabled?: boolean;
+
+  @ValidateString({ optional: true })
+  name?: string;
+
+  @ValidateString({ optional: true })
+  title?: string;
+
+  @ValidateString({ optional: true })
+  description?: string;
+
+  @ValidateEnum({ optional: true, enum: WorkflowType, name: 'WorkflowType' })
+  type?: WorkflowType;
+
+  @ValidateEnum({ optional: true, enum: WorkflowTrigger, name: 'WorkflowTrigger' })
+  trigger?: WorkflowTrigger;
+
+  @ValidateString({ optional: true })
+  pluginName?: string;
+
+  @ValidateString({ optional: true })
+  pluginVersion?: string;
 }
 
-export class PluginActionResponseDto {
-  @ApiProperty({ description: 'Action ID' })
-  id!: string;
-  @ApiProperty({ description: 'Plugin ID' })
-  pluginId!: string;
-  @ApiProperty({ description: 'Method name' })
-  methodName!: string;
-  @ApiProperty({ description: 'Action title' })
+export class PluginMethodResponseDto {
+  @ApiProperty({ description: 'Key' })
+  key!: string;
+
+  @ApiProperty({ description: 'Name' })
+  name!: string;
+
+  @ApiProperty({ description: 'Title' })
   title!: string;
-  @ApiProperty({ description: 'Action description' })
+
+  @ApiProperty({ description: 'Description' })
   description!: string;
 
-  @ValidateEnum({ enum: PluginContextType, name: 'PluginContextType', each: true, description: 'Supported contexts' })
-  supportedContexts!: PluginContextType[];
-  @ApiProperty({ description: 'Action schema' })
+  @ValidateEnum({ name: 'WorkflowType', enum: WorkflowType, each: true, description: 'Workflow types' })
+  types!: WorkflowType[];
+
+  @ApiProperty({ description: 'Schema' })
   schema!: JSONSchema | null;
 }
 
@@ -78,21 +102,28 @@ export class PluginInstallDto {
   manifestPath!: string;
 }
 
-export type MapPlugin = {
+type Plugin = {
   id: string;
   name: string;
   title: string;
   description: string;
   author: string;
   version: string;
-  wasmPath: string;
   createdAt: Date;
   updatedAt: Date;
-  filters: PluginFilter[];
-  actions: PluginAction[];
+  methods: PluginMethod[];
 };
 
-export function mapPlugin(plugin: MapPlugin): PluginResponseDto {
+type PluginMethod = {
+  pluginName: string;
+  name: string;
+  title: string;
+  description: string;
+  types: WorkflowType[];
+  schema: JSONSchema | null;
+};
+
+export function mapPlugin(plugin: Plugin): PluginResponseDto {
   return {
     id: plugin.id,
     name: plugin.name,
@@ -102,7 +133,17 @@ export function mapPlugin(plugin: MapPlugin): PluginResponseDto {
     version: plugin.version,
     createdAt: plugin.createdAt.toISOString(),
     updatedAt: plugin.updatedAt.toISOString(),
-    filters: plugin.filters,
-    actions: plugin.actions,
+    methods: plugin.methods.map((method) => mapMethod(method)),
   };
 }
+
+export const mapMethod = (method: PluginMethod): PluginMethodResponseDto => {
+  return {
+    key: asMethodString({ pluginName: method.pluginName, methodName: method.name }),
+    name: method.name,
+    title: method.title,
+    description: method.description,
+    types: method.types,
+    schema: method.schema,
+  };
+};

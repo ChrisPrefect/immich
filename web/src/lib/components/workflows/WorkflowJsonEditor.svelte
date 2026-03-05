@@ -1,14 +1,14 @@
 <script lang="ts">
   import { themeManager } from '$lib/managers/theme-manager.svelte';
-  import type { WorkflowPayload } from '$lib/services/workflow.service';
+  import type { WorkflowResponseDto } from '@immich/sdk';
   import { Button, Card, CardBody, CardDescription, CardHeader, CardTitle, Icon, VStack } from '@immich/ui';
   import { mdiCodeJson } from '@mdi/js';
   import { JSONEditor, Mode, type Content, type OnChangeStatus } from 'svelte-jsoneditor';
 
   type Props = {
-    jsonContent: WorkflowPayload;
+    jsonContent: WorkflowResponseDto;
     onApply: () => void;
-    onContentChange: (content: WorkflowPayload) => void;
+    onContentChange: (content: WorkflowResponseDto) => void;
   };
 
   let { jsonContent, onApply, onContentChange }: Props = $props();

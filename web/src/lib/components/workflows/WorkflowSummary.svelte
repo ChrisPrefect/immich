@@ -1,35 +1,16 @@
 <script lang="ts">
-  import {
-    PluginTriggerType,
-    type PluginActionResponseDto,
-    type PluginFilterResponseDto,
-    type PluginTriggerResponseDto,
-  } from '@immich/sdk';
+  import { getTriggerName } from '$lib/utils/workflow';
+  import type { WorkflowResponseDto } from '@immich/sdk';
   import { Icon, IconButton, Text } from '@immich/ui';
-  import { mdiClose, mdiFilterOutline, mdiFlashOutline, mdiPlayCircleOutline, mdiViewDashboardOutline } from '@mdi/js';
+  import { mdiClose, mdiFlashOutline, mdiPlayCircleOutline, mdiViewDashboardOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   type Props = {
-    trigger: PluginTriggerResponseDto;
-    filters: PluginFilterResponseDto[];
-    actions: PluginActionResponseDto[];
+    workflow: WorkflowResponseDto;
   };
 
-  let { trigger, filters, actions }: Props = $props();
-
-  const getTriggerName = (triggerType: PluginTriggerType) => {
-    switch (triggerType) {
-      case PluginTriggerType.AssetCreate: {
-        return $t('trigger_asset_uploaded');
-      }
-      case PluginTriggerType.PersonRecognized: {
-        return $t('trigger_person_recognized');
-      }
-      default: {
-        return triggerType;
-      }
-    }
-  };
+  let { workflow }: Props = $props();
+  const { name, description, trigger, steps } = $derived(workflow);
 
   let isOpen = $state(false);
   let position = $state({ x: 0, y: 0 });
@@ -115,7 +96,7 @@
             <Icon icon={mdiFlashOutline} size="18" class="text-primary" />
             <Text size="tiny" fontWeight="semi-bold">{$t('trigger')}</Text>
           </div>
-          <p class="text-sm truncate pl-5">{getTriggerName(trigger.type)}</p>
+          <p class="text-sm truncate pl-5">{getTriggerName($t, trigger)}</p>
         </div>
 
         <!-- Connector -->
@@ -123,47 +104,21 @@
           <div class="w-0.5 h-3 bg-light-400"></div>
         </div>
 
-        <!-- Filters -->
-        {#if filters.length > 0}
-          <div class="rounded-lg bg-light-100 border p-3">
-            <div class="flex items-center gap-2 mb-2">
-              <Icon icon={mdiFilterOutline} size="18" class="text-warning" />
-              <Text size="tiny" fontWeight="semi-bold">{$t('filters')}</Text>
-            </div>
-            <div class="space-y-1 pl-5">
-              {#each filters as filter, index (index)}
-                <div class="flex items-center gap-2">
-                  <span
-                    class="shrink-0 h-4 w-4 rounded-full bg-light-200 text-[10px] font-medium flex items-center justify-center"
-                    >{index + 1}</span
-                  >
-                  <p class="text-sm truncate">{filter.title}</p>
-                </div>
-              {/each}
-            </div>
-          </div>
-
-          <!-- Connector -->
-          <div class="flex justify-center">
-            <div class="w-0.5 h-3 bg-light-400"></div>
-          </div>
-        {/if}
-
-        <!-- Actions -->
-        {#if actions.length > 0}
+        <!-- Steps -->
+        {#if steps.length > 0}
           <div class="rounded-lg bg-light-100 border p-3">
             <div class="flex items-center gap-2 mb-2">
               <Icon icon={mdiPlayCircleOutline} size="18" class="text-success" />
               <Text size="tiny" fontWeight="semi-bold">{$t('actions')}</Text>
             </div>
             <div class="space-y-1 pl-5">
-              {#each actions as action, index (index)}
+              {#each steps as step, index (index)}
                 <div class="flex items-center gap-2">
                   <span
                     class="shrink-0 h-4 w-4 rounded-full bg-light-200 text-[10px] font-medium flex items-center justify-center"
                     >{index + 1}</span
                   >
-                  <p class="text-sm truncate">{action.title}</p>
+                  <p class="text-sm truncate">{step.method}</p>
                 </div>
               {/each}
             </div>

@@ -1561,51 +1561,31 @@ export type PersonStatisticsResponseDto = {
     /** Number of assets */
     assets: number;
 };
-export type PluginActionResponseDto = {
-    /** Action description */
+export type PluginMethodResponseDto = {
+    /** Description */
     description: string;
-    /** Action ID */
-    id: string;
-    /** Method name */
-    methodName: string;
-    /** Plugin ID */
-    pluginId: string;
-    /** Action schema */
+    /** Key */
+    key: string;
+    /** Name */
+    name: string;
+    /** Schema */
     schema: object | null;
-    /** Supported contexts */
-    supportedContexts: PluginContextType[];
-    /** Action title */
+    /** Title */
     title: string;
-};
-export type PluginFilterResponseDto = {
-    /** Filter description */
-    description: string;
-    /** Filter ID */
-    id: string;
-    /** Method name */
-    methodName: string;
-    /** Plugin ID */
-    pluginId: string;
-    /** Filter schema */
-    schema: object | null;
-    /** Supported contexts */
-    supportedContexts: PluginContextType[];
-    /** Filter title */
-    title: string;
+    /** Workflow types */
+    types: WorkflowType[];
 };
 export type PluginResponseDto = {
-    /** Plugin actions */
-    actions: PluginActionResponseDto[];
     /** Plugin author */
     author: string;
     /** Creation date */
     createdAt: string;
     /** Plugin description */
     description: string;
-    /** Plugin filters */
-    filters: PluginFilterResponseDto[];
     /** Plugin ID */
     id: string;
+    /** Plugin methods */
+    methods: PluginMethodResponseDto[];
     /** Plugin name */
     name: string;
     /** Plugin title */
@@ -1614,12 +1594,6 @@ export type PluginResponseDto = {
     updatedAt: string;
     /** Plugin version */
     version: string;
-};
-export type PluginTriggerResponseDto = {
-    /** Context type */
-    contextType: PluginContextType;
-    /** Trigger type */
-    "type": PluginTriggerType;
 };
 export type QueueResponseDto = {
     /** Whether the queue is paused */
@@ -2829,89 +2803,79 @@ export type CreateProfileImageResponseDto = {
     /** User ID */
     userId: string;
 };
-export type WorkflowActionResponseDto = {
-    /** Action configuration */
-    actionConfig: object | null;
-    /** Action ID */
-    id: string;
-    /** Action order */
-    order: number;
-    /** Plugin action ID */
-    pluginActionId: string;
-    /** Workflow ID */
-    workflowId: string;
-};
-export type WorkflowFilterResponseDto = {
-    /** Filter configuration */
-    filterConfig: object | null;
-    /** Filter ID */
-    id: string;
-    /** Filter order */
-    order: number;
-    /** Plugin filter ID */
-    pluginFilterId: string;
-    /** Workflow ID */
-    workflowId: string;
+export type WorkflowStepDto = {
+    /** Step configuration */
+    config?: object | null;
+    /** Step is enabled */
+    enabled: boolean;
+    /** Step plugin method */
+    method: string;
 };
 export type WorkflowResponseDto = {
-    /** Workflow actions */
-    actions: WorkflowActionResponseDto[];
     /** Creation date */
     createdAt: string;
     /** Workflow description */
-    description: string;
+    description: string | null;
     /** Workflow enabled */
     enabled: boolean;
-    /** Workflow filters */
-    filters: WorkflowFilterResponseDto[];
     /** Workflow ID */
     id: string;
     /** Workflow name */
     name: string | null;
-    /** Owner user ID */
-    ownerId: string;
+    /** Workflow steps */
+    steps: WorkflowStepDto[];
     /** Workflow trigger type */
-    triggerType: PluginTriggerType;
-};
-export type WorkflowActionItemDto = {
-    /** Action configuration */
-    actionConfig?: object;
-    /** Plugin action ID */
-    pluginActionId: string;
-};
-export type WorkflowFilterItemDto = {
-    /** Filter configuration */
-    filterConfig?: object;
-    /** Plugin filter ID */
-    pluginFilterId: string;
+    trigger: WorkflowTrigger;
+    /** Update date */
+    updatedAt: string;
 };
 export type WorkflowCreateDto = {
-    /** Workflow actions */
-    actions: WorkflowActionItemDto[];
     /** Workflow description */
-    description?: string;
+    description?: string | null;
     /** Workflow enabled */
     enabled?: boolean;
-    /** Workflow filters */
-    filters: WorkflowFilterItemDto[];
     /** Workflow name */
-    name: string;
+    name?: string | null;
+    steps?: WorkflowStepDto[];
     /** Workflow trigger type */
-    triggerType: PluginTriggerType;
+    trigger: WorkflowTrigger;
+};
+export type WorkflowTriggerResponseDto = {
+    /** Trigger type */
+    trigger: WorkflowTrigger;
+    /** Workflow types */
+    types: WorkflowType[];
 };
 export type WorkflowUpdateDto = {
-    /** Workflow actions */
-    actions?: WorkflowActionItemDto[];
     /** Workflow description */
-    description?: string;
+    description?: string | null;
     /** Workflow enabled */
     enabled?: boolean;
-    /** Workflow filters */
-    filters?: WorkflowFilterItemDto[];
     /** Workflow name */
-    name?: string;
+    name?: string | null;
+    steps?: WorkflowStepDto[];
     /** Workflow trigger type */
-    triggerType?: PluginTriggerType;
+    trigger?: WorkflowTrigger;
+};
+export type WorkflowShareStepDto = {
+    /** Step configuration */
+    config?: object | null;
+    /** Step is enabled */
+    enabled?: boolean;
+    /** Step plugin method */
+    method: string;
+};
+export type WorkflowShareResponseDto = {
+    /** Workflow description */
+    description: string | null;
+    /** Workflow enabled */
+    enabled?: boolean;
+    /** Workflow name */
+    name: string | null;
+    /** Workflow steps */
+    steps: WorkflowShareStepDto[];
+    /** Workflow trigger type */
+    trigger: WorkflowTrigger;
 };
 export type SyncAckV1 = {};
 export type SyncAlbumDeleteV1 = {
@@ -5309,22 +5273,56 @@ export function getPersonThumbnail({ id }: {
 /**
  * List all plugins
  */
-export function getPlugins(opts?: Oazapfts.RequestOpts) {
+export function searchPlugins({ description, enabled, id, name, title, version }: {
+    description?: string;
+    enabled?: boolean;
+    id?: string;
+    name?: string;
+    title?: string;
+    version?: string;
+}, opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
         data: PluginResponseDto[];
-    }>("/plugins", {
+    }>(`/plugins${QS.query(QS.explode({
+        description,
+        enabled,
+        id,
+        name,
+        title,
+        version
+    }))}`, {
         ...opts
     }));
 }
 /**
- * List all plugin triggers
+ * Retrieve plugin methods
  */
-export function getPluginTriggers(opts?: Oazapfts.RequestOpts) {
+export function searchPluginMethods({ description, enabled, id, name, pluginName, pluginVersion, title, trigger, $type }: {
+    description?: string;
+    enabled?: boolean;
+    id?: string;
+    name?: string;
+    pluginName?: string;
+    pluginVersion?: string;
+    title?: string;
+    trigger?: WorkflowTrigger;
+    $type?: WorkflowType;
+}, opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
-        data: PluginTriggerResponseDto[];
-    }>("/plugins/triggers", {
+        data: PluginMethodResponseDto[];
+    }>(`/plugins/methods${QS.query(QS.explode({
+        description,
+        enabled,
+        id,
+        name,
+        pluginName,
+        pluginVersion,
+        title,
+        trigger,
+        "type": $type
+    }))}`, {
         ...opts
     }));
 }
@@ -6753,11 +6751,23 @@ export function getUniqueOriginalPaths(opts?: Oazapfts.RequestOpts) {
 /**
  * List all workflows
  */
-export function getWorkflows(opts?: Oazapfts.RequestOpts) {
+export function searchWorkflows({ description, enabled, id, name, trigger }: {
+    description?: string;
+    enabled?: boolean;
+    id?: string;
+    name?: string;
+    trigger?: WorkflowTrigger;
+}, opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
         data: WorkflowResponseDto[];
-    }>("/workflows", {
+    }>(`/workflows${QS.query(QS.explode({
+        description,
+        enabled,
+        id,
+        name,
+        trigger
+    }))}`, {
         ...opts
     }));
 }
@@ -6775,6 +6785,17 @@ export function createWorkflow({ workflowCreateDto }: {
         method: "POST",
         body: workflowCreateDto
     })));
+}
+/**
+ * List all workflow triggers
+ */
+export function getWorkflowTriggers(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: WorkflowTriggerResponseDto[];
+    }>("/workflows/triggers", {
+        ...opts
+    }));
 }
 /**
  * Delete a workflow
@@ -6815,6 +6836,19 @@ export function updateWorkflow({ id, workflowUpdateDto }: {
         method: "PUT",
         body: workflowUpdateDto
     })));
+}
+/**
+ * Retrieve a workflow
+ */
+export function getWorkflowForShare({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: WorkflowShareResponseDto;
+    }>(`/workflows/${encodeURIComponent(id)}/share`, {
+        ...opts
+    }));
 }
 export enum ReactionLevel {
     Album = "album",
@@ -7145,12 +7179,11 @@ export enum PartnerDirection {
     SharedBy = "shared-by",
     SharedWith = "shared-with"
 }
-export enum PluginContextType {
-    Asset = "asset",
-    Album = "album",
-    Person = "person"
+export enum WorkflowType {
+    AssetV1 = "AssetV1",
+    AssetPersonV1 = "AssetPersonV1"
 }
-export enum PluginTriggerType {
+export enum WorkflowTrigger {
     AssetCreate = "AssetCreate",
     PersonRecognized = "PersonRecognized"
 }
@@ -7218,7 +7251,7 @@ export enum JobName {
     VersionCheck = "VersionCheck",
     OcrQueueAll = "OcrQueueAll",
     Ocr = "Ocr",
-    WorkflowRun = "WorkflowRun"
+    WorkflowAssetCreate = "WorkflowAssetCreate"
 }
 export enum SearchSuggestionType {
     Country = "country",

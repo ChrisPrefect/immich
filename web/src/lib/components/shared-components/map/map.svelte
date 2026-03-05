@@ -412,7 +412,7 @@
     {/snippet}
   </MapLibre>
 
-  {#snippet failed(_error)}
+  {#snippet failed(_)}
     <div
       class={[
         'flex place-content-center place-items-center text-warning',
@@ -427,7 +427,7 @@
           {$t('errors.enable_webgl_for_map', { values: { isAdmin: $user.isAdmin } })}
         </Text>
         {#if $user.isAdmin}
-          <Link href={Route.systemSettings({ isOpen: OpenQueryParam.MAP })}>{$t('go_to_settings')}</Link>
+          <Link href={Route.systemSettings({ isOpen: OpenQueryParam.LOCATION })}>{$t('go_to_settings')}</Link>
         {/if}
       </div>
     </div>

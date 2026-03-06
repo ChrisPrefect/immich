@@ -59,17 +59,15 @@
       {
         quality: 'thumbnail',
         url: assetUrls.thumbnail,
-        checkCanceled: false,
         onAfterLoad: afterThumbnail,
         onAfterError: afterThumbnail,
       },
       {
         quality: 'preview',
         url: assetUrls.preview,
-        checkCanceled: true,
         onAfterError: (loader) => loader.trigger('original'),
       },
-      { quality: 'original', url: assetUrls.original, checkCanceled: true },
+      { quality: 'original', url: assetUrls.original },
     ];
     return qualityList;
   };
@@ -81,7 +79,7 @@
 
     return untrack(
       () =>
-        new AdaptiveImageLoader(asset.id, buildQualityList(), {
+        new AdaptiveImageLoader(buildQualityList(), {
           onImageReady,
           onError,
           onUrlChange,
@@ -131,7 +129,7 @@
   });
 
   $effect(() => {
-    if (assetViewerManager.zoom > 1 && status.quality.preview === 'success' && status.quality.original !== 'success') {
+    if (assetViewerManager.zoom > 1 && status.quality.original !== 'success') {
       untrack(() => void adaptiveImageLoader.trigger('original'));
     }
   });

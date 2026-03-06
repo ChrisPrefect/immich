@@ -3,7 +3,6 @@
   import { thumbhash } from '$lib/actions/thumbhash';
   import { zoomImageAction } from '$lib/actions/zoom-image';
   import AdaptiveImage from '$lib/components/AdaptiveImage.svelte';
-  import FaceEditor from '$lib/components/asset-viewer/face-editor/face-editor.svelte';
   import OcrBoundingBox from '$lib/components/asset-viewer/ocr-bounding-box.svelte';
   import AssetViewerEvents from '$lib/components/AssetViewerEvents.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
@@ -217,10 +216,8 @@
           {@const face = faces[index]}
           {@const name = faceToNameMap.get(face)}
           {@const isActive = $boundingBoxesArray.includes(face)}
-          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
-            tabindex="0"
-            role="region"
             class={[
               'absolute pointer-events-auto outline-none rounded-lg',
               isActive && 'border-solid border-white border-3',
@@ -229,8 +226,6 @@
             aria-label="{$t('person')}: {name || $t('unknown')}"
             onmouseenter={() => ($boundingBoxesArray = [face])}
             onmouseleave={() => ($boundingBoxesArray = [])}
-            onfocus={() => ($boundingBoxesArray = [face])}
-            onblur={() => ($boundingBoxesArray = [])}
           >
             {#if isActive && name}
               <div
@@ -250,8 +245,4 @@
       {/each}
     {/snippet}
   </AdaptiveImage>
-
-  {#if isFaceEditMode.value && assetViewerManager.imgRef}
-    <FaceEditor htmlElement={assetViewerManager.imgRef} {containerWidth} {containerHeight} assetId={asset.id} />
-  {/if}
 </div>

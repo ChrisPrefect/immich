@@ -9,6 +9,7 @@
   import { AssetAction, ProjectionType } from '$lib/constants';
   import { activityManager } from '$lib/managers/activity-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
+  import { assetCacheManager } from '$lib/managers/AssetCacheManager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { editManager, EditToolType } from '$lib/managers/edit/edit-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
@@ -46,6 +47,7 @@
   import DetailPanel from './detail-panel.svelte';
   import EditorPanel from './editor/editor-panel.svelte';
   import CropArea from './editor/transform-tool/crop-area.svelte';
+  import FaceEditor from './face-editor/face-editor.svelte';
   import ImagePanoramaViewer from './image-panorama-viewer.svelte';
   import OcrButton from './ocr-button.svelte';
   import PhotoViewer from './photo-viewer.svelte';
@@ -116,6 +118,10 @@
     playOriginalVideo = value;
   };
 
+  const selectStackedAsset = async (id: string) => {
+    selectedStackAsset = await assetCacheManager.getAsset({ id });
+  };
+
   const refreshStack = async () => {
     if (authManager.isSharedLink || !withStacked) {
       return;
@@ -128,7 +134,10 @@
     }
 
     stack = await getStack({ id: cursor.current.stack.id });
-    selectedStackAsset = stack?.assets.find(({ id }) => id === stack?.primaryAssetId);
+    const primaryAsset = stack?.assets.find(({ id }) => id === stack?.primaryAssetId);
+    if (primaryAsset) {
+      await selectStackedAsset(primaryAsset.id);
+    }
   };
 
   const handleFavorite = async () => {
@@ -179,11 +188,21 @@
     onClose?.(asset);
   };
 
+  const refreshPreservingSelection = async () => {
+    const id = asset.id;
+    assetCacheManager.invalidateAsset(id);
+    if (selectedStackAsset) {
+      await selectStackedAsset(id);
+    } else {
+      const asset = await assetCacheManager.getAsset({ id });
+      assetViewingStore.setAsset(asset);
+    }
+    onAssetChange?.(asset);
+  };
+
   const closeEditor = async () => {
     if (editManager.hasAppliedEdits) {
-      const refreshedAsset = await getAssetInfo({ id: asset.id });
-      onAssetChange?.(refreshedAsset);
-      assetViewingStore.setAsset(refreshedAsset);
+      await refreshPreservingSelection();
     }
     assetViewerManager.closeEditor();
   };
@@ -454,6 +473,9 @@
       navigateAsset('previous');
     }
   };
+
+  let containerWidth = $state(0);
+  let containerHeight = $state(0);
 </script>
 
 <CommandPaletteDefaultProvider name={$t('assets')} actions={[Tag]} />
@@ -465,6 +487,8 @@
   class="fixed start-0 top-0 grid size-full grid-cols-4 grid-rows-[64px_1fr] overflow-hidden bg-black"
   use:focusTrap
   bind:this={assetViewerHtmlElement}
+  bind:clientWidth={containerWidth}
+  bind:clientHeight={containerHeight}
 >
   <!-- Top navigation bar -->
   {#if $slideshowState === SlideshowState.None && !assetViewerManager.isShowEditor}
@@ -570,6 +594,62 @@
         <OcrButton />
       </div>
     {/if}
+
+    {#if stack && withStacked && !assetViewerManager.isShowEditor}
+      {@const stackedAssets = stack.assets}
+      <div
+        id="stack-slideshow"
+        class="absolute bottom-0 max-w-[calc(100%-5rem)] col-span-4 col-start-1 pointer-events-none"
+      >
+        <div
+          role="presentation"
+          class="relative inline-flex flex-row flex-nowrap max-w-full overflow-x-auto overflow-y-hidden horizontal-scrollbar pointer-events-auto"
+          onmouseleave={() => (previewStackedAsset = undefined)}
+        >
+          {#each stackedAssets as stackedAsset (stackedAsset.id)}
+            <div
+              class={['inline-block px-1 relative transition-all pb-2']}
+              style:bottom={stackedAsset.id === asset.id ? '0' : '-10px'}
+            >
+              <Thumbnail
+                imageClass={{ 'border-2 border-white': stackedAsset.id === asset.id }}
+                brokenAssetClass="text-xs"
+                dimmed={stackedAsset.id !== asset.id}
+                asset={toTimelineAsset(stackedAsset)}
+                onClick={async () => {
+                  await selectStackedAsset(stackedAsset.id);
+                  previewStackedAsset = undefined;
+                }}
+                onMouseEvent={async ({ isMouseOver }) => {
+                  if (isMouseOver) {
+                    previewStackedAsset = stackedAsset;
+                    previewStackedAsset = await assetCacheManager.getAsset({ id: stackedAsset.id });
+                  }
+                }}
+                readonly
+                thumbnailSize={stackedAsset.id === asset.id ? stackSelectedThumbnailSize : stackThumbnailSize}
+                showStackedIcon={false}
+                disableLinkMouseOver
+              />
+
+              <div class="w-full flex place-items-center place-content-center">
+                <div class={['w-2 h-2 rounded-full flex mt-0.5', { 'bg-white': stackedAsset.id === asset.id }]}></div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
+    {#if isFaceEditMode.value && assetViewerManager.imgRef}
+      <FaceEditor
+        htmlElement={assetViewerManager.imgRef}
+        {containerWidth}
+        {containerHeight}
+        assetId={asset.id}
+        onTagFace={refreshPreservingSelection}
+      />
+    {/if}
   </div>
 
   {#if $slideshowState === SlideshowState.None && showNavigation && !assetViewerManager.isShowEditor && !isFaceEditMode.value && nextAsset}
@@ -587,51 +667,13 @@
     >
       {#if showDetailPanel}
         <div class="w-90 h-full">
-          <DetailPanel {asset} currentAlbum={album} />
+          <DetailPanel {asset} currentAlbum={album} onRefreshPeople={refreshPreservingSelection} />
         </div>
       {:else if assetViewerManager.isShowEditor}
         <div class="w-100 h-full">
           <EditorPanel {asset} onClose={closeEditor} />
         </div>
       {/if}
-    </div>
-  {/if}
-
-  {#if stack && withStacked && !assetViewerManager.isShowEditor}
-    {@const stackedAssets = stack.assets}
-    <div id="stack-slideshow" class="absolute bottom-0 w-full col-span-4 col-start-1 pointer-events-none">
-      <div
-        role="presentation"
-        class="relative inline-flex flex-row no-wrap overflow-x-auto overflow-y-hidden horizontal-scrollbar pointer-events-auto"
-        onmouseleave={() => (previewStackedAsset = undefined)}
-      >
-        {#each stackedAssets as stackedAsset (stackedAsset.id)}
-          <div
-            class={['inline-block px-1 relative transition-all pb-2']}
-            style:bottom={stackedAsset.id === asset.id ? '0' : '-10px'}
-          >
-            <Thumbnail
-              imageClass={{ 'border-2 border-white': stackedAsset.id === asset.id }}
-              brokenAssetClass="text-xs"
-              dimmed={stackedAsset.id !== asset.id}
-              asset={toTimelineAsset(stackedAsset)}
-              onClick={() => {
-                selectedStackAsset = stackedAsset;
-                previewStackedAsset = undefined;
-              }}
-              onMouseEvent={({ isMouseOver }) => isMouseOver && (previewStackedAsset = stackedAsset)}
-              readonly
-              thumbnailSize={stackedAsset.id === asset.id ? stackSelectedThumbnailSize : stackThumbnailSize}
-              showStackedIcon={false}
-              disableLinkMouseOver
-            />
-
-            <div class="w-full flex place-items-center place-content-center">
-              <div class={['w-2 h-2 rounded-full flex mt-0.5', { 'bg-white': stackedAsset.id === asset.id }]}></div>
-            </div>
-          </div>
-        {/each}
-      </div>
     </div>
   {/if}
 

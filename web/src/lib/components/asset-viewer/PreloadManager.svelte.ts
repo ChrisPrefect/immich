@@ -23,19 +23,17 @@ export class PreloadManager {
       {
         quality: 'thumbnail',
         url: urls.thumbnail,
-        checkCanceled: false,
         onAfterLoad: afterThumbnail,
         onAfterError: afterThumbnail,
       },
       {
         quality: 'preview',
         url: urls.preview,
-        checkCanceled: true,
         onAfterError: (loader) => loader.trigger('original'),
       },
-      { quality: 'original', url: urls.original, checkCanceled: true },
+      { quality: 'original', url: urls.original },
     ];
-    const loader = new AdaptiveImageLoader(asset.id, qualityList, undefined, loadImage);
+    const loader = new AdaptiveImageLoader(qualityList, undefined, loadImage);
     loader.start();
     return loader;
   }

@@ -31,8 +31,8 @@ test.describe('Photo Viewer', () => {
   test('loads original photo when zoomed', async ({ page }) => {
     await page.goto(`/photos/${asset.id}`);
 
-    const thumbnail = page.getByTestId('thumbnail').filter({ visible: true });
-    await expect(thumbnail).toHaveAttribute('src', /thumbnail/);
+    const preview = page.getByTestId('preview').filter({ visible: true });
+    await expect(preview).toHaveAttribute('src', /.+/);
 
     const originalResponse = page.waitForResponse((response) => response.url().includes('/original'));
 
@@ -49,8 +49,8 @@ test.describe('Photo Viewer', () => {
   test('loads fullsize image when zoomed and original is web-incompatible', async ({ page }) => {
     await page.goto(`/photos/${rawAsset.id}`);
 
-    const thumbnail = page.getByTestId('thumbnail').filter({ visible: true });
-    await expect(thumbnail).toHaveAttribute('src', /thumbnail/);
+    const preview = page.getByTestId('preview').filter({ visible: true });
+    await expect(preview).toHaveAttribute('src', /.+/);
 
     const fullsizeResponse = page.waitForResponse((response) => response.url().includes('fullsize'));
 
@@ -67,15 +67,14 @@ test.describe('Photo Viewer', () => {
   test('reloads photo when checksum changes', async ({ page }) => {
     await page.goto(`/photos/${asset.id}`);
 
-    const thumbnail = page.getByTestId('thumbnail').filter({ visible: true });
-    await expect(thumbnail).toHaveAttribute('src', /thumbnail/);
-    const initialSrc = await thumbnail.getAttribute('src');
+    const preview = page.getByTestId('preview').filter({ visible: true });
+    await expect(preview).toHaveAttribute('src', /.+/);
+    const initialSrc = await preview.getAttribute('src');
 
     const websocketEvent = utils.waitForWebsocketEvent({ event: 'assetUpdate', id: asset.id });
     await utils.replaceAsset(admin.accessToken, asset.id);
     await websocketEvent;
 
-    const preview = page.getByTestId('preview').filter({ visible: true });
     await expect(preview).not.toHaveAttribute('src', initialSrc!);
   });
 });

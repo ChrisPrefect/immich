@@ -21,28 +21,9 @@ type ImageLoaderCallbacks = {
 export type QualityConfig = {
   url: string;
   quality: ImageQuality;
-  checkCanceled: boolean;
   onAfterLoad?: (loader: AdaptiveImageLoader) => void;
   onAfterError?: (loader: AdaptiveImageLoader) => void;
 };
-
-const MAX_TRACKED_ASSETS = 10;
-// eslint-disable-next-line svelte/prefer-svelte-reactivity
-const tracker = new Map<string, 'loading' | 'canceled'>();
-
-const updateTracker = (id: string, action: 'loading' | 'canceled') => {
-  tracker.delete(id);
-  tracker.set(id, action);
-
-  if (tracker.size > MAX_TRACKED_ASSETS) {
-    const firstKey = tracker.keys().next().value!;
-    tracker.delete(firstKey);
-  }
-};
-
-const isCanceled = (id: string) => 'canceled' === tracker.get(id);
-const setLoading = (id: string) => updateTracker(id, 'loading');
-const setCanceled = (id: string) => updateTracker(id, 'canceled');
 
 export type QualityList = [
   QualityConfig & { quality: 'thumbnail' },
@@ -64,7 +45,6 @@ export class AdaptiveImageLoader {
   });
 
   constructor(
-    private readonly id: string,
     private readonly qualityList: QualityList,
     private readonly callbacks?: ImageLoaderCallbacks,
     private readonly imageLoader?: LoadImageFunction,
@@ -75,7 +55,6 @@ export class AdaptiveImageLoader {
       original: qualityList[2],
     };
     this.status.urls.thumbnail = qualityList[0].url;
-    setLoading(id);
   }
 
   start() {
@@ -93,19 +72,19 @@ export class AdaptiveImageLoader {
     );
   }
 
-  onStart(quality: ImageQuality) {
-    const config = this.qualityConfigs[quality];
-    if (this.destroyed || (config.checkCanceled && isCanceled(this.id))) {
+  onStart(_: ImageQuality) {
+    if (this.destroyed) {
       return;
     }
     this.status.started = true;
   }
 
   onLoad(quality: ImageQuality) {
-    const config = this.qualityConfigs[quality];
-    if (this.destroyed || (config.checkCanceled && isCanceled(this.id))) {
+    if (this.destroyed) {
       return;
     }
+
+    const config = this.qualityConfigs[quality];
 
     if (!this.status.urls[quality]) {
       return;
@@ -125,10 +104,11 @@ export class AdaptiveImageLoader {
   }
 
   onError(quality: ImageQuality) {
-    const config = this.qualityConfigs[quality];
-    if (this.destroyed || (config.checkCanceled && isCanceled(this.id))) {
+    if (this.destroyed) {
       return;
     }
+
+    const config = this.qualityConfigs[quality];
 
     this.status.hasError = true;
     this.status.quality[quality] = 'error';
@@ -169,7 +149,6 @@ export class AdaptiveImageLoader {
   }
 
   destroy() {
-    setCanceled(this.id);
     this.destroyed = true;
     if (this.imageLoader) {
       for (const destroy of this.destroyFunctions) {

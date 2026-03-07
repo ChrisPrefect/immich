@@ -726,4 +726,15 @@
     background: #adcbfa;
     border-radius: 16px;
   }
+
+  #stack-slideshow .horizontal-scrollbar {
+    mask-image:
+      linear-gradient(to right, transparent, black 2rem, black calc(100% - 2rem), transparent),
+      linear-gradient(black, black);
+    mask-size:
+      100% calc(100% - 10px),
+      100% 10px;
+    mask-position: top, bottom;
+    mask-repeat: no-repeat;
+  }
 </style>

@@ -232,8 +232,8 @@
               tabindex={index}
               class="absolute start-0 top-0 h-22.5 w-22.5 cursor-default"
               onfocus={() => ($boundingBoxesArray = [peopleWithFaces[index]])}
-              onmouseover={() => ($boundingBoxesArray = [peopleWithFaces[index]])}
-              onmouseleave={() => ($boundingBoxesArray = [])}
+              onpointerover={() => ($boundingBoxesArray = [peopleWithFaces[index]])}
+              onpointerleave={() => ($boundingBoxesArray = [])}
             >
               <div class="relative">
                 {#if selectedPersonToCreate[face.id]}

@@ -1,10 +1,12 @@
 <script lang="ts">
   import ImageThumbnail from '$lib/components/assets/thumbnail/image-thumbnail.svelte';
+  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { assetViewingStore } from '$lib/stores/asset-viewing.store';
   import { isFaceEditMode } from '$lib/stores/face-edit.svelte';
   import { getPeopleThumbnailUrl } from '$lib/utils';
   import { getNaturalSize, scaleToFit } from '$lib/utils/container-utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { scaleFaceRectOnResize } from '$lib/utils/people-utils';
   import { createFace, getAllPeople, type PersonResponseDto } from '@immich/sdk';
   import { Button, Input, modalManager, toastManager } from '@immich/ui';
   import { Canvas, InteractiveFabricObject, Rect } from 'fabric';
@@ -22,6 +24,7 @@
   let { htmlElement, containerWidth, containerHeight, assetId }: Props = $props();
 
   let canvasEl: HTMLCanvasElement | undefined = $state();
+  let containerEl: HTMLDivElement | undefined = $state();
   let canvas: Canvas | undefined = $state();
   let faceRect: Rect | undefined = $state();
   let faceSelectorEl: HTMLDivElement | undefined = $state();
@@ -31,6 +34,8 @@
 
   let searchTerm = $state('');
   let faceBoxPosition = $state({ left: 0, top: 0, width: 0, height: 0 });
+  let userMovedRect = false;
+  let previousMetrics = { contentWidth: 0, offsetX: 0, offsetY: 0 };
 
   let filteredCandidates = $derived(
     searchTerm
@@ -56,7 +61,8 @@
       return;
     }
 
-    canvas = new Canvas(canvasEl);
+    canvas = new Canvas(canvasEl, { width: containerWidth, height: containerHeight });
+    canvas.selection = false;
     configureControlStyle();
 
     // eslint-disable-next-line tscompat/tscompat
@@ -74,12 +80,49 @@
 
     canvas.add(faceRect);
     canvas.setActiveObject(faceRect);
-    setDefaultFaceRectanglePosition(faceRect);
   };
 
-  onMount(async () => {
-    setupCanvas();
-    await getPeople();
+  onMount(() => {
+    void getPeople();
+  });
+
+  $effect(() => {
+    if (!canvas) {
+      return;
+    }
+
+    const upperCanvas = canvas.upperCanvasEl;
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    const handlePointerOnCanvas = (event: PointerEvent) => {
+      if (!canvas) {
+        return;
+      }
+      const { target } = canvas.findTarget(event);
+      if (target) {
+        event.stopPropagation();
+        return;
+      }
+
+      if (event.type === 'pointerdown' && faceRect) {
+        event.stopPropagation();
+        const pointer = canvas.getScenePoint(event);
+        faceRect.set({ left: pointer.x, top: pointer.y });
+        faceRect.setCoords();
+        userMovedRect = true;
+        canvas.renderAll();
+        positionFaceSelector();
+      }
+    };
+
+    for (const type of ['pointerdown', 'pointermove', 'pointerup'] as const) {
+      upperCanvas.addEventListener(type, handlePointerOnCanvas, { signal });
+    }
+
+    return () => {
+      controller.abort();
+    };
   });
 
   const imageContentMetrics = $derived.by(() => {
@@ -95,45 +138,46 @@
   });
 
   const setDefaultFaceRectanglePosition = (faceRect: Rect) => {
-    const { offsetX, offsetY } = imageContentMetrics;
+    const { offsetX, offsetY, contentWidth, contentHeight } = imageContentMetrics;
 
     faceRect.set({
-      top: offsetY + 200,
-      left: offsetX + 200,
+      top: offsetY + contentHeight / 2 - 56,
+      left: offsetX + contentWidth / 2 - 56,
     });
-
-    faceRect.setCoords();
-    positionFaceSelector();
   };
 
   $effect(() => {
-    if (!canvas) {
+    const { offsetX, offsetY, contentWidth } = imageContentMetrics;
+
+    if (contentWidth === 0) {
       return;
     }
 
-    canvas.setDimensions({
-      width: containerWidth,
-      height: containerHeight,
-    });
+    const isFirstRun = previousMetrics.contentWidth === 0;
 
-    if (!faceRect) {
+    if (isFirstRun && !canvas) {
+      setupCanvas();
+    }
+
+    if (!canvas || !faceRect) {
       return;
     }
 
-    if (!isFaceRectIntersectingCanvas(faceRect, canvas)) {
+    if (!isFirstRun) {
+      canvas.setDimensions({ width: containerWidth, height: containerHeight });
+    }
+
+    if (!isFirstRun && userMovedRect) {
+      faceRect.set(scaleFaceRectOnResize(faceRect, previousMetrics, offsetX, offsetY, contentWidth));
+    } else {
       setDefaultFaceRectanglePosition(faceRect);
     }
-  });
 
-  const isFaceRectIntersectingCanvas = (faceRect: Rect, canvas: Canvas) => {
-    const faceBox = faceRect.getBoundingRect();
-    return !(
-      0 > faceBox.left + faceBox.width ||
-      0 > faceBox.top + faceBox.height ||
-      canvas.width < faceBox.left ||
-      canvas.height < faceBox.top
-    );
-  };
+    faceRect.setCoords();
+    previousMetrics = { contentWidth, offsetX, offsetY };
+    canvas.renderAll();
+    positionFaceSelector();
+  });
 
   const cancel = () => {
     isFaceEditMode.value = false;
@@ -163,11 +207,12 @@
     const gap = 15;
     const padding = faceRect.padding ?? 0;
     const rawBox = faceRect.getBoundingRect();
+    const { currentZoom, currentPositionX, currentPositionY } = assetViewerManager.zoomState;
     const faceBox = {
-      left: rawBox.left - padding,
-      top: rawBox.top - padding,
-      width: rawBox.width + padding * 2,
-      height: rawBox.height + padding * 2,
+      left: (rawBox.left - padding) * currentZoom + currentPositionX,
+      top: (rawBox.top - padding) * currentZoom + currentPositionY,
+      width: (rawBox.width + padding * 2) * currentZoom,
+      height: (rawBox.height + padding * 2) * currentZoom,
     };
     const selectorWidth = faceSelectorEl.offsetWidth;
     const chromeHeight = faceSelectorEl.offsetHeight - scrollableListEl.offsetHeight;
@@ -177,19 +222,20 @@
     const clampTop = (top: number) => clamp(top, gap, containerHeight - selectorHeight - gap);
     const clampLeft = (left: number) => clamp(left, gap, containerWidth - selectorWidth - gap);
 
-    const overlapArea = (position: { top: number; left: number }) => {
-      const selectorRight = position.left + selectorWidth;
-      const selectorBottom = position.top + selectorHeight;
-      const faceRight = faceBox.left + faceBox.width;
-      const faceBottom = faceBox.top + faceBox.height;
+    const faceRight = faceBox.left + faceBox.width;
+    const faceBottom = faceBox.top + faceBox.height;
 
-      const overlapX = Math.max(0, Math.min(selectorRight, faceRight) - Math.max(position.left, faceBox.left));
-      const overlapY = Math.max(0, Math.min(selectorBottom, faceBottom) - Math.max(position.top, faceBox.top));
+    const overlapArea = (position: { top: number; left: number }) => {
+      const overlapX = Math.max(
+        0,
+        Math.min(position.left + selectorWidth, faceRight) - Math.max(position.left, faceBox.left),
+      );
+      const overlapY = Math.max(
+        0,
+        Math.min(position.top + selectorHeight, faceBottom) - Math.max(position.top, faceBox.top),
+      );
       return overlapX * overlapY;
     };
-
-    const faceBottom = faceBox.top + faceBox.height;
-    const faceRight = faceBox.left + faceBox.width;
 
     const positions = [
       { top: clampTop(faceBottom + gap), left: clampLeft(faceBox.left) },
@@ -212,30 +258,71 @@
       }
     }
 
-    faceSelectorEl.style.top = `${bestPosition.top}px`;
-    faceSelectorEl.style.left = `${bestPosition.left}px`;
+    const containerRect = containerEl?.getBoundingClientRect();
+    const offsetTop = containerRect?.top ?? 0;
+    const offsetLeft = containerRect?.left ?? 0;
+    faceSelectorEl.style.top = `${bestPosition.top + offsetTop}px`;
+    faceSelectorEl.style.left = `${bestPosition.left + offsetLeft}px`;
     scrollableListEl.style.height = `${listHeight}px`;
-    faceBoxPosition = { left: faceBox.left, top: faceBox.top, width: faceBox.width, height: faceBox.height };
+    faceBoxPosition = faceBox;
   };
+
+  $effect(() => {
+    if (!canvas) {
+      return;
+    }
+
+    const { currentZoom, currentPositionX, currentPositionY } = assetViewerManager.zoomState;
+    canvas.setViewportTransform([currentZoom, 0, 0, currentZoom, currentPositionX, currentPositionY]);
+    canvas.renderAll();
+    positionFaceSelector();
+  });
 
   $effect(() => {
     const rect = faceRect;
     if (rect) {
-      rect.on('moving', positionFaceSelector);
-      rect.on('scaling', positionFaceSelector);
+      const onUserMove = () => {
+        userMovedRect = true;
+        positionFaceSelector();
+      };
+      rect.on('moving', onUserMove);
+      rect.on('scaling', onUserMove);
       return () => {
-        rect.off('moving', positionFaceSelector);
-        rect.off('scaling', positionFaceSelector);
+        rect.off('moving', onUserMove);
+        rect.off('scaling', onUserMove);
       };
     }
   });
+
+  const trapEvents = (node: HTMLElement) => {
+    const stop = (e: Event) => e.stopPropagation();
+    const eventTypes = ['keydown', 'pointerdown', 'pointermove', 'pointerup'] as const;
+    for (const type of eventTypes) {
+      node.addEventListener(type, stop);
+    }
+
+    // Move to body so the selector isn't affected by the zoom transform on the container
+    document.body.append(node);
+
+    return {
+      destroy() {
+        for (const type of eventTypes) {
+          node.removeEventListener(type, stop);
+        }
+        node.remove();
+      },
+    };
+  };
 
   const getFaceCroppedCoordinates = () => {
     if (!faceRect || !htmlElement) {
       return;
     }
 
-    const { left, top, width, height } = faceRect.getBoundingRect();
+    const scaledWidth = faceRect.getScaledWidth();
+    const scaledHeight = faceRect.getScaledHeight();
+    const left = faceRect.left - scaledWidth / 2;
+    const top = faceRect.top - scaledHeight / 2;
     const { offsetX, offsetY, contentWidth, contentHeight } = imageContentMetrics;
     const natural = getNaturalSize(htmlElement);
 
@@ -249,8 +336,8 @@
       imageHeight: natural.height,
       x: Math.floor(imageX),
       y: Math.floor(imageY),
-      width: Math.floor(width * scaleX),
-      height: Math.floor(height * scaleY),
+      width: Math.floor(scaledWidth * scaleX),
+      height: Math.floor(scaledHeight * scaleY),
     };
   };
 
@@ -281,16 +368,16 @@
       });
 
       await assetViewingStore.setAssetId(assetId);
+      isFaceEditMode.value = false;
     } catch (error) {
       handleError(error, 'Error tagging face');
-    } finally {
-      isFaceEditMode.value = false;
     }
   };
 </script>
 
 <div
   id="face-editor-data"
+  bind:this={containerEl}
   class="absolute start-0 top-0 z-5 h-full w-full overflow-hidden"
   data-face-left={faceBoxPosition.left}
   data-face-top={faceBoxPosition.top}
@@ -302,7 +389,9 @@
   <div
     id="face-selector"
     bind:this={faceSelectorEl}
-    class="absolute top-[calc(50%-250px)] start-[calc(50%-125px)] max-w-[250px] w-[250px] bg-white dark:bg-immich-dark-gray dark:text-immich-dark-fg backdrop-blur-sm px-2 py-4 rounded-xl border border-gray-200 dark:border-gray-800 transition-[top,left] duration-200 ease-out"
+    class="fixed w-[min(200px,45vw)] min-w-48 bg-white dark:bg-immich-dark-gray dark:text-immich-dark-fg backdrop-blur-sm px-2 py-4 rounded-xl border border-gray-200 dark:border-gray-800 transition-[top,left] duration-200 ease-out"
+    use:trapEvents
+    onwheel={(e) => e.stopPropagation()}
   >
     <p class="text-center text-sm">{$t('select_person_to_tag')}</p>
 

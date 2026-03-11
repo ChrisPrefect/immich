@@ -335,6 +335,7 @@ export class AssetJobRepository {
       .selectFrom('asset')
       .select(['asset.id', 'asset.ownerId', 'asset.originalPath'])
       .select(withFiles)
+      .select(withEdits)
       .where('asset.id', '=', id)
       .where('asset.type', '=', sql.lit(AssetType.Video))
       .executeTakeFirst();

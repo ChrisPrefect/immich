@@ -130,6 +130,7 @@ export interface TranscodeCommand {
   progress: {
     frameCount: number;
     percentInterval: number;
+    callback: (percent: number, frame: number) => void;
   };
 }
 
@@ -151,6 +152,7 @@ export interface VideoCodecSWConfig {
     videoStream: VideoStreamInfo,
     audioStream: AudioStreamInfo,
     format?: VideoFormat,
+    edits?: AssetEditActionItem[],
   ): TranscodeCommand;
 }
 
@@ -389,7 +391,8 @@ export type JobItem =
   | { name: JobName.WorkflowRun; data: IWorkflowJob }
 
   // Editor
-  | { name: JobName.AssetEditThumbnailGeneration; data: IEntityJob };
+  | { name: JobName.AssetEditThumbnailGeneration; data: IEntityJob }
+  | { name: JobName.AssetEditTranscodeGeneration; data: IEntityJob };
 
 export type VectorExtension = (typeof VECTOR_EXTENSIONS)[number];
 

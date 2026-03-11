@@ -18145,6 +18145,7 @@
           "AssetDetectDuplicatesQueueAll",
           "AssetDetectDuplicates",
           "AssetEditThumbnailGeneration",
+          "AssetEditTranscodeGeneration",
           "AssetEncodeVideoQueueAll",
           "AssetEncodeVideo",
           "AssetEmptyTrash",

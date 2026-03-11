@@ -677,7 +677,7 @@ class TransformManager implements EditToolManager {
     const { x, y, width, height } = this.region;
     const sensitivity = 10;
     const cornerSensitivity = 15;
-    const { width: imgWidth, height: imgHeight } = this.cropImageSize;
+    const { width: imgWidth, height: imgHeight } = this.previewImageSize;
 
     const outOfBound = mouseX > imgWidth || mouseY > imgHeight || mouseX < 0 || mouseY < 0;
     if (outOfBound) {
@@ -1004,7 +1004,7 @@ class TransformManager implements EditToolManager {
       ];
     }
 
-    let cursorName = '';
+    let cursorName: string;
     if (onTopLeftCorner || onBottomRightCorner) {
       cursorName = 'nwse-resize';
     } else if (onTopRightCorner || onBottomLeftCorner) {

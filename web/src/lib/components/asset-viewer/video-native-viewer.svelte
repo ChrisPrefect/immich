@@ -74,6 +74,7 @@
   let duration = $derived(timeToSeconds(asset.duration));
   let showSeekButtons = $derived(duration > 10);
   let showVideo = $state(false);
+  let hasFocused = $state(false);
 
   onMount(() => {
     showVideo = true;
@@ -82,6 +83,7 @@
   $effect(() => {
     // reactive on `assetFileUrl` changes
     if (assetFileUrl) {
+      hasFocused = false;
       videoPlayer?.load();
     }
   });
@@ -172,7 +174,12 @@
           class="h-full object-contain"
           oncanplay={(e) => handleCanPlay(e.currentTarget)}
           onended={onVideoEnded}
-          onplaying={(e) => e.currentTarget.focus()}
+          onplaying={(e) => {
+            if (!hasFocused) {
+              e.currentTarget.focus();
+              hasFocused = true;
+            }
+          }}
           onclose={onClose}
           poster={getAssetMediaUrl({ id: asset.id, size: AssetMediaSize.Preview, cacheKey })}
           src={assetFileUrl}

@@ -14,8 +14,6 @@
     mdiFullscreenExit,
     mdiPause,
     mdiPlay,
-    mdiSkipBackward,
-    mdiSkipForward,
     mdiVolumeHigh,
     mdiVolumeLow,
     mdiVolumeMedium,
@@ -27,8 +25,6 @@
   import 'media-chrome/media-mute-button';
   import 'media-chrome/media-play-button';
   import 'media-chrome/media-playback-rate-button';
-  import 'media-chrome/media-seek-backward-button';
-  import 'media-chrome/media-seek-forward-button';
   import 'media-chrome/media-time-display';
   import 'media-chrome/media-time-range';
   import 'media-chrome/media-volume-range';
@@ -72,7 +68,6 @@
       : getAssetPlaybackUrl({ id: assetId, cacheKey }),
   );
   let duration = $derived(timeToSeconds(asset.duration));
-  let showSeekButtons = $derived(duration > 10);
   let showVideo = $state(false);
   let hasFocused = $state(false);
 
@@ -184,38 +179,16 @@
           poster={getAssetMediaUrl({ id: asset.id, size: AssetMediaSize.Preview, cacheKey })}
           src={assetFileUrl}
         ></video>
-        <div part="center" slot="centered-chrome">
-          {#if extendedControls && showSeekButtons}
-            <media-seek-backward-button seekoffset="10" class="rounded-full p-2 outline-none">
-              <Icon slot="icon" icon={mdiSkipBackward} />
-            </media-seek-backward-button>
-          {/if}
-          <media-play-button class="rounded-full h-12 p-3 outline-none bg-light-100/60 hover:bg-light-100">
-            <Icon slot="play" icon={mdiPlay} />
-            <Icon slot="pause" icon={mdiPause} />
-          </media-play-button>
-          {#if extendedControls && showSeekButtons}
-            <media-seek-forward-button seekoffset="10" class="rounded-full p-2 outline-none">
-              <Icon slot="icon" icon={mdiSkipForward} />
-            </media-seek-forward-button>
-          {/if}
-        </div>
-        <div class="flex h-16 w-full place-items-center bg-linear-to-b to-black/40 px-3">
-          <media-control-bar part="bottom" class="flex justify-end gap-2 h-10 w-full">
+
+        <div class="flex flex-col h-26 w-full bg-linear-to-b to-black/40 p-3">
+          <media-time-range class="w-full h-10 rounded-lg p-2 outline-none"></media-time-range>
+          <media-control-bar part="bottom" class="flex gap-2 h-10 w-full">
             <media-play-button class="rounded-full p-2 outline-none">
               <Icon slot="play" icon={mdiPlay} />
               <Icon slot="pause" icon={mdiPause} />
             </media-play-button>
-            {#if extendedControls && showSeekButtons}
-              <media-seek-backward-button seekoffset="10" class="rounded-full p-2 outline-none">
-                <Icon slot="icon" icon={mdiSkipBackward} />
-              </media-seek-backward-button>
-              <media-seek-forward-button seekoffset="10" class="rounded-full p-2 outline-none">
-                <Icon slot="icon" icon={mdiSkipForward} />
-              </media-seek-forward-button>
-            {/if}
 
-            <media-time-range class="rounded-lg p-2 outline-none"></media-time-range>
+            <span class="flex-grow"></span>
             <media-time-display showduration class="rounded-lg p-2 outline-none"></media-time-display>
             {#if extendedControls}
               <media-playback-rate-button rates="0.5 1 1.5 2" class="rounded-full p-2 outline-none"
@@ -278,37 +251,6 @@
   /* Needs special handling for some reason */
   media-time-display:focus-visible {
     box-shadow: var(--media-focus-box-shadow);
-  }
-
-  /* Small screens */
-  media-controller {
-    --bottom-play-button-display: none;
-    --bottom-seek-buttons-display: none;
-    --center-buttons-display: inline-flex;
-    --media-playback-rate-button-display: none;
-  }
-
-  /* Larger screens */
-  *[breakpointsm] {
-    --bottom-play-button-display: flex;
-    --center-buttons-display: none;
-  }
-
-  *[breakpointmd] {
-    --bottom-seek-buttons-display: flex;
-    --media-playback-rate-button-display: inline-flex;
-  }
-
-  *::part(bottom) {
-    --media-play-button-display: var(--bottom-play-button-display);
-    --media-seek-backward-button-display: var(--bottom-seek-buttons-display);
-    --media-seek-forward-button-display: var(--bottom-seek-buttons-display);
-  }
-
-  *::part(center) {
-    --media-play-button-display: var(--center-buttons-display);
-    --media-seek-backward-button-display: var(--center-buttons-display);
-    --media-seek-forward-button-display: var(--center-buttons-display);
   }
 
   *::part(tooltip) {

@@ -10,6 +10,9 @@
   import { AssetMediaSize, type AssetResponseDto } from '@immich/sdk';
   import { Icon, LoadingSpinner } from '@immich/ui';
   import {
+    mdiCheck,
+    mdiChevronLeft,
+    mdiChevronRight,
     mdiFullscreen,
     mdiFullscreenExit,
     mdiPause,
@@ -28,8 +31,13 @@
   import 'media-chrome/media-time-display';
   import 'media-chrome/media-time-range';
   import 'media-chrome/media-volume-range';
+  import 'media-chrome/menu/media-playback-rate-menu';
+  import 'media-chrome/menu/media-settings-menu';
+  import 'media-chrome/menu/media-settings-menu-button';
+  import 'media-chrome/menu/media-settings-menu-item';
   import { onDestroy, onMount } from 'svelte';
   import { useSwipe, type SwipeCustomEvent } from 'svelte-gestures';
+  import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
 
   interface Props {
@@ -180,31 +188,36 @@
           src={assetFileUrl}
         ></video>
 
-        <div class="flex flex-col h-26 w-full bg-linear-to-b to-black/40 p-3">
-          <media-time-range class="w-full h-10 rounded-lg p-2 outline-none"></media-time-range>
-          <media-control-bar part="bottom" class="flex gap-2 h-10 w-full">
+        <media-settings-menu hidden anchor="auto" class="border-light-300 rounded-xl border shadow-sm w-3xs">
+          <Icon slot="checked-indicator" icon={mdiCheck} class="m-2" />
+          <media-settings-menu-item class="rounded-lg p-1 ps-2 mx-1">
+            {$t('playback_speed')}
+            <Icon slot="suffix" icon={mdiChevronRight} class="m-2" />
+            <media-playback-rate-menu slot="submenu" hidden rates="0.5 1 1.5 2">
+              <Icon slot="back-icon" icon={mdiChevronLeft} class="m-2" />
+              <span slot="title">{$t('playback_speed')}</span>
+            </media-playback-rate-menu>
+          </media-settings-menu-item>
+        </media-settings-menu>
+
+        <div class="flex flex-col justify-end w-full h-32 px-4 bg-linear-to-b to-black/80">
+          <media-control-bar part="bottom" class="flex w-full h-10 gap-2">
             <media-play-button class="rounded-full p-2 outline-none">
               <Icon slot="play" icon={mdiPlay} />
               <Icon slot="pause" icon={mdiPause} />
             </media-play-button>
+            <media-time-display showduration class="rounded-lg p-2 outline-none"></media-time-display>
 
             <span class="flex-grow"></span>
-            <media-time-display showduration class="rounded-lg p-2 outline-none"></media-time-display>
-            {#if extendedControls}
-              <media-playback-rate-button rates="0.5 1 1.5 2" class="rounded-full p-2 outline-none"
-              ></media-playback-rate-button>
-            {/if}
 
-            <div class="media-volume-wrapper" style:position="relative">
-              <media-mute-button class="rounded-full p-2 outline-none">
+            <div class="volume-wrapper rounded-full bg-light-100/0 hover:bg-light-100 transition-colors duration-400">
+              <media-volume-range class="h-full bg-none outline-none"></media-volume-range>
+              <media-mute-button class="p-2 bg-none outline-none">
                 <Icon slot="off" icon={mdiVolumeMute} />
                 <Icon slot="low" icon={mdiVolumeLow} />
                 <Icon slot="medium" icon={mdiVolumeMedium} />
                 <Icon slot="high" icon={mdiVolumeHigh} />
               </media-mute-button>
-              <div class="media-volume-range-wrapper">
-                <media-volume-range class="rounded-lg h-10 p-2 outline-none bg-light-100"></media-volume-range>
-              </div>
             </div>
 
             {#if extendedControls}
@@ -212,8 +225,10 @@
                 <Icon slot="enter" icon={mdiFullscreen} />
                 <Icon slot="exit" icon={mdiFullscreenExit} />
               </media-fullscreen-button>
+              <media-settings-menu-button class="rounded-full p-2 outline-none"></media-settings-menu-button>
             {/if}
           </media-control-bar>
+          <media-time-range class="w-full h-8 px-2 pb-3 rounded-lg outline-none"></media-time-range>
         </div>
       </media-controller>
 
@@ -224,28 +239,42 @@
       {/if}
 
       {#if isFaceEditMode.value}
-        <FaceEditor htmlElement={videoPlayer!} {containerWidth} {containerHeight} {assetId} />
+        <FaceEditor htmlElement={videoPlayer} {containerWidth} {containerHeight} {assetId} />
       {/if}
     {/if}
   </div>
 {/if}
 
 <style>
-  /* Always */
   media-controller {
     --media-control-background: none;
     --media-control-hover-background: var(--immich-ui-light-100);
     --media-focus-box-shadow: 0 0 0 2px var(--immich-ui-dark);
-    --media-font: none;
+    --media-font-family: var(--font-sans);
+    --media-font-size: var(--text-base);
+    --media-font-weight: var(--font-weight-medium);
+    --media-menu-border-radius: var(--radius-xl);
+    --media-menu-gap: var(--spacing);
+    --media-menu-item-hover-background: var(--immich-ui-light-200);
+    --media-menu-item-icon-height: 1em;
+    --media-menu-item-indicator-height: 1em;
     --media-primary-color: var(--immich-ui-dark);
     --media-time-range-buffered-color: var(--immich-ui-dark-400);
+    --media-time-range-hover-bottom: 0;
+    --media-time-range-hover-height: 100%;
+    --media-range-thumb-box-shadow: none;
+    --media-range-thumb-opacity: 0;
+    --media-range-thumb-transition: opacity 0.15s ease;
     --media-range-track-border-radius: 2px;
-    --media-range-padding: calc(var(--spacing) * 1);
+    --media-range-track-height: 3.5px;
+    --media-range-padding: 0;
+    --media-settings-menu-background: var(--immich-ui-light-100);
+    --media-text-content-height: var(--text-base--line-height);
     --media-tooltip-arrow-display: none;
     --media-tooltip-border-radius: var(--radius-lg);
     --media-tooltip-background-color: var(--immich-ui-light-200);
     --media-tooltip-distance: 8px;
-    --media-tooltip-padding: calc(var(--spacing) * 4) calc(var(--spacing) * 3.5);
+    --media-tooltip-padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3.5);
   }
 
   /* Needs special handling for some reason */
@@ -253,8 +282,19 @@
     box-shadow: var(--media-focus-box-shadow);
   }
 
+  media-time-range,
+  media-volume-range {
+    --media-control-hover-background: none;
+  }
+
+  media-time-range:hover,
+  media-volume-range:hover {
+    --media-range-thumb-opacity: 1;
+  }
+
   *::part(tooltip) {
-    font-size: var(--text-xs);
+    --media-font-size: var(--text-xs);
+    --media-text-content-height: var(--text-xs--line-height);
     color: white;
   }
 
@@ -262,25 +302,28 @@
     --media-volume-range-display: none;
   }
 
-  .media-volume-wrapper {
-    --media-tooltip-display: none;
+  .volume-wrapper {
+    --media-control-hover-background: none;
   }
 
-  .media-volume-range-wrapper {
-    transform: rotate(-90deg);
-    position: absolute;
-    top: -70px;
-    left: -30px;
-    opacity: 0;
-    --media-control-background: var(--media-control-hover-background);
+  media-volume-range:has(+ media-mute-button) {
+    padding: 0;
+    margin: 0;
+    width: 0;
+    overflow: hidden;
+    transition: width 0.4s ease-out;
   }
 
-  media-mute-button:hover + .media-volume-range-wrapper,
-  media-mute-button:focus + .media-volume-range-wrapper,
-  media-mute-button:focus-within + .media-volume-range-wrapper,
-  .media-volume-range-wrapper:hover,
-  .media-volume-range-wrapper:focus,
-  .media-volume-range-wrapper:focus-within {
-    opacity: 1;
+  /* Expand volume control in all relevant states */
+  .volume-wrapper:hover > media-volume-range,
+  media-volume-range:has(+ media-mute-button:hover),
+  media-volume-range:has(+ media-mute-button:focus),
+  media-volume-range:has(+ media-mute-button:focus-within),
+  media-volume-range:hover,
+  media-volume-range:focus,
+  media-volume-range:focus-within {
+    padding: 0 calc(var(--spacing) * 2);
+    margin-left: calc(var(--spacing) * 2);
+    width: 70px;
   }
 </style>

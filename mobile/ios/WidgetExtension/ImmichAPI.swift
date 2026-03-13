@@ -107,7 +107,8 @@ class ImmichAPI {
   let serverEndpoint: String
 
   init() async throws {
-    guard let serverURL = UserDefaults.group.string(forKey: SERVER_URL_KEY),
+    guard let serverURLs = UserDefaults.group.stringArray(forKey: SERVER_URLS_KEY),
+      let serverURL = serverURLs.first,
       !serverURL.isEmpty
     else {
       throw WidgetError.noLogin

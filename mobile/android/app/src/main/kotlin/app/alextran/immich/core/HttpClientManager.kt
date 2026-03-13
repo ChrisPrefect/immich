@@ -81,7 +81,8 @@ object HttpClientManager {
 
   val isMtls: Boolean get() = keyChainAlias != null || keyStore.containsAlias(CERT_ALIAS)
 
-  val serverUrl: String? get() = if (initialized) prefs.getString(PREFS_SERVER_URL, null) else null
+  val serverUrl: String? get() = if (initialized) prefs.getString(PREFS_SERVER_URLS, null)
+    ?.let { Json.decodeFromString<List<String>>(it).firstOrNull() } else null
 
   fun initialize(context: Context) {
     if (initialized) return

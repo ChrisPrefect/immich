@@ -120,9 +120,9 @@ class ImmichAPI {
   private func buildRequestURL(
     endpoint: String,
     params: [URLQueryItem] = []
-  ) -> URL? {
+  ) throws(FetchError) -> URL? {
     guard let baseURL = URL(string: serverEndpoint) else {
-      fatalError("Invalid base URL")
+      throw FetchError.invalidURL
     }
 
     let fullPath = baseURL.appendingPathComponent(
@@ -145,7 +145,7 @@ class ImmichAPI {
     -> [Asset]
   {
     guard
-      let searchURL = buildRequestURL(endpoint: "/search/random")
+      let searchURL = try buildRequestURL(endpoint: "/search/random")
     else {
       throw URLError(.badURL)
     }
@@ -162,7 +162,7 @@ class ImmichAPI {
   func fetchMemory(for date: Date) async throws -> [MemoryResult] {
     let memoryParams = [URLQueryItem(name: "for", value: date.ISO8601Format())]
     guard
-      let searchURL = buildRequestURL(
+      let searchURL = try buildRequestURL(
         endpoint: "/memories",
         params: memoryParams
       )
@@ -182,7 +182,7 @@ class ImmichAPI {
     let assetEndpoint = "/assets/" + asset.id + "/thumbnail"
 
     guard
-      let fetchURL = buildRequestURL(
+      let fetchURL = try buildRequestURL(
         endpoint: assetEndpoint,
         params: thumbnailParams
       )
@@ -220,7 +220,7 @@ class ImmichAPI {
 
   func fetchAlbums() async throws -> [Album] {
     guard
-      let searchURL = buildRequestURL(endpoint: "/albums")
+      let searchURL = try buildRequestURL(endpoint: "/albums")
     else {
       throw URLError(.badURL)
     }

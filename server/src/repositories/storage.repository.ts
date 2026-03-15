@@ -54,6 +54,15 @@ export class StorageRepository {
     return fs.copyFile(source, target);
   }
 
+  async datasync(filepath: string) {
+    const handle = await fs.open(filepath, 'r');
+    try {
+      await handle.datasync();
+    } finally {
+      await handle.close();
+    }
+  }
+
   stat(filepath: string) {
     return fs.stat(filepath);
   }

@@ -7,8 +7,8 @@ import {
   Table,
 } from '@immich/sql-tools';
 import { UpdateIdColumn } from 'src/decorators';
+import { asset_ocr_delete_audit } from 'src/schema/functions';
 import { AssetTable } from 'src/schema/tables/asset.table';
-import { asset_ocr_delete_audit } from '../functions';
 
 @Table('asset_ocr')
 @AfterDeleteTrigger({

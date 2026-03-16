@@ -39,6 +39,7 @@ import { AssetFileTable } from 'src/schema/tables/asset-file.table';
 import { AssetJobStatusTable } from 'src/schema/tables/asset-job-status.table';
 import { AssetMetadataAuditTable } from 'src/schema/tables/asset-metadata-audit.table';
 import { AssetMetadataTable } from 'src/schema/tables/asset-metadata.table';
+import { AssetOcrAuditTable } from 'src/schema/tables/asset-ocr-audit.table';
 import { AssetOcrTable } from 'src/schema/tables/asset-ocr.table';
 import { AssetTable } from 'src/schema/tables/asset.table';
 import { AuditTable } from 'src/schema/tables/audit.table';
@@ -75,7 +76,6 @@ import { UserMetadataTable } from 'src/schema/tables/user-metadata.table';
 import { UserTable } from 'src/schema/tables/user.table';
 import { VersionHistoryTable } from 'src/schema/tables/version-history.table';
 import { WorkflowActionTable, WorkflowFilterTable, WorkflowTable } from 'src/schema/tables/workflow.table';
-import { AssetOcrAuditTable } from './tables/asset-ocr-audit.table';
 
 @Extensions(['uuid-ossp', 'unaccent', 'cube', 'earthdistance', 'pg_trgm', 'plpgsql'])
 @Database({ name: 'immich' })

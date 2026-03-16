@@ -175,7 +175,6 @@ where
 select
   "asset"."id",
   "asset"."ownerId",
-  "asset"."encodedVideoPath",
   (
     select
       coalesce(json_agg(agg), '[]')
@@ -463,7 +462,6 @@ select
   "asset"."libraryId",
   "asset"."ownerId",
   "asset"."livePhotoVideoId",
-  "asset"."encodedVideoPath",
   "asset"."originalPath",
   "asset"."isOffline",
   to_json("asset_exif") as "exifInfo",
@@ -521,12 +519,17 @@ select
 from
   "asset"
 where
-  "asset"."type" = $1
-  and (
-    "asset"."encodedVideoPath" is null
-    or "asset"."encodedVideoPath" = $2
+  "asset"."type" = 'VIDEO'
+  and not exists (
+    select
+      "asset_file"."id"
+    from
+      "asset_file"
+    where
+      "asset_file"."assetId" = "asset"."id"
+      and "asset_file"."type" = 'encoded_video'
   )
-  and "asset"."visibility" != $3
+  and "asset"."visibility" != 'hidden'
   and "asset"."deletedAt" is null
 
 -- AssetJobRepository.getForVideoConversion
@@ -534,12 +537,27 @@ select
   "asset"."id",
   "asset"."ownerId",
   "asset"."originalPath",
-  "asset"."encodedVideoPath"
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type",
+          "asset_file"."isEdited"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+      ) as agg
+  ) as "files"
 from
   "asset"
 where
   "asset"."id" = $1
-  and "asset"."type" = $2
+  and "asset"."type" = 'VIDEO'
 
 -- AssetJobRepository.streamForMetadataExtraction
 select
@@ -562,6 +580,7 @@ select
   "asset"."checksum",
   "asset"."originalPath",
   "asset"."isExternal",
+  "asset"."visibility",
   "asset"."originalFileName",
   "asset"."livePhotoVideoId",
   "asset"."fileCreatedAt",
@@ -593,6 +612,7 @@ from
 where
   "asset"."deletedAt" is null
   and "asset"."id" = $2
+  and "asset"."visibility" != $3
 
 -- AssetJobRepository.streamForStorageTemplateJob
 select
@@ -602,6 +622,7 @@ select
   "asset"."checksum",
   "asset"."originalPath",
   "asset"."isExternal",
+  "asset"."visibility",
   "asset"."originalFileName",
   "asset"."livePhotoVideoId",
   "asset"."fileCreatedAt",
@@ -632,6 +653,7 @@ from
   inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
 where
   "asset"."deletedAt" is null
+  and "asset"."visibility" != $2
 
 -- AssetJobRepository.streamForDeletedJob
 select

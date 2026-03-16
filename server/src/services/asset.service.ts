@@ -370,7 +370,7 @@ export class AssetService extends BaseService {
       assetFiles.editedFullsizeFile?.path,
       assetFiles.editedPreviewFile?.path,
       assetFiles.editedThumbnailFile?.path,
-      asset.encodedVideoPath,
+      assetFiles.encodedVideoFile?.path,
     ];
 
     if (deleteOnDisk && !asset.isOffline) {
@@ -516,7 +516,7 @@ export class AssetService extends BaseService {
     dateTimeOriginal?: string;
     latitude?: number;
     longitude?: number;
-    rating?: number;
+    rating?: number | null;
   }) {
     const { id, description, dateTimeOriginal, latitude, longitude, rating } = dto;
     const writes = _.omitBy(

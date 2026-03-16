@@ -1553,6 +1553,14 @@ class LocalAssetEntity extends Table
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  late final GeneratedColumn<int> playbackStyle = GeneratedColumn<int>(
+    'playback_style',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const CustomExpression('0'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     name,
@@ -1570,6 +1578,7 @@ class LocalAssetEntity extends Table
     adjustmentTime,
     latitude,
     longitude,
+    playbackStyle,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1642,6 +1651,10 @@ class LocalAssetEntity extends Table
         DriftSqlType.double,
         data['${effectivePrefix}longitude'],
       ),
+      playbackStyle: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}playback_style'],
+      )!,
     );
   }
 
@@ -1673,6 +1686,7 @@ class LocalAssetEntityData extends DataClass
   final DateTime? adjustmentTime;
   final double? latitude;
   final double? longitude;
+  final int playbackStyle;
   const LocalAssetEntityData({
     required this.name,
     required this.type,
@@ -1689,6 +1703,7 @@ class LocalAssetEntityData extends DataClass
     this.adjustmentTime,
     this.latitude,
     this.longitude,
+    required this.playbackStyle,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1724,6 +1739,7 @@ class LocalAssetEntityData extends DataClass
     if (!nullToAbsent || longitude != null) {
       map['longitude'] = Variable<double>(longitude);
     }
+    map['playback_style'] = Variable<int>(playbackStyle);
     return map;
   }
 
@@ -1748,6 +1764,7 @@ class LocalAssetEntityData extends DataClass
       adjustmentTime: serializer.fromJson<DateTime?>(json['adjustmentTime']),
       latitude: serializer.fromJson<double?>(json['latitude']),
       longitude: serializer.fromJson<double?>(json['longitude']),
+      playbackStyle: serializer.fromJson<int>(json['playbackStyle']),
     );
   }
   @override
@@ -1769,6 +1786,7 @@ class LocalAssetEntityData extends DataClass
       'adjustmentTime': serializer.toJson<DateTime?>(adjustmentTime),
       'latitude': serializer.toJson<double?>(latitude),
       'longitude': serializer.toJson<double?>(longitude),
+      'playbackStyle': serializer.toJson<int>(playbackStyle),
     };
   }
 
@@ -1788,6 +1806,7 @@ class LocalAssetEntityData extends DataClass
     Value<DateTime?> adjustmentTime = const Value.absent(),
     Value<double?> latitude = const Value.absent(),
     Value<double?> longitude = const Value.absent(),
+    int? playbackStyle,
   }) => LocalAssetEntityData(
     name: name ?? this.name,
     type: type ?? this.type,
@@ -1808,6 +1827,7 @@ class LocalAssetEntityData extends DataClass
         : this.adjustmentTime,
     latitude: latitude.present ? latitude.value : this.latitude,
     longitude: longitude.present ? longitude.value : this.longitude,
+    playbackStyle: playbackStyle ?? this.playbackStyle,
   );
   LocalAssetEntityData copyWithCompanion(LocalAssetEntityCompanion data) {
     return LocalAssetEntityData(
@@ -1834,6 +1854,9 @@ class LocalAssetEntityData extends DataClass
           : this.adjustmentTime,
       latitude: data.latitude.present ? data.latitude.value : this.latitude,
       longitude: data.longitude.present ? data.longitude.value : this.longitude,
+      playbackStyle: data.playbackStyle.present
+          ? data.playbackStyle.value
+          : this.playbackStyle,
     );
   }
 
@@ -1854,7 +1877,8 @@ class LocalAssetEntityData extends DataClass
           ..write('iCloudId: $iCloudId, ')
           ..write('adjustmentTime: $adjustmentTime, ')
           ..write('latitude: $latitude, ')
-          ..write('longitude: $longitude')
+          ..write('longitude: $longitude, ')
+          ..write('playbackStyle: $playbackStyle')
           ..write(')'))
         .toString();
   }
@@ -1876,6 +1900,7 @@ class LocalAssetEntityData extends DataClass
     adjustmentTime,
     latitude,
     longitude,
+    playbackStyle,
   );
   @override
   bool operator ==(Object other) =>
@@ -1895,7 +1920,8 @@ class LocalAssetEntityData extends DataClass
           other.iCloudId == this.iCloudId &&
           other.adjustmentTime == this.adjustmentTime &&
           other.latitude == this.latitude &&
-          other.longitude == this.longitude);
+          other.longitude == this.longitude &&
+          other.playbackStyle == this.playbackStyle);
 }
 
 class LocalAssetEntityCompanion extends UpdateCompanion<LocalAssetEntityData> {
@@ -1914,6 +1940,7 @@ class LocalAssetEntityCompanion extends UpdateCompanion<LocalAssetEntityData> {
   final Value<DateTime?> adjustmentTime;
   final Value<double?> latitude;
   final Value<double?> longitude;
+  final Value<int> playbackStyle;
   const LocalAssetEntityCompanion({
     this.name = const Value.absent(),
     this.type = const Value.absent(),
@@ -1930,6 +1957,7 @@ class LocalAssetEntityCompanion extends UpdateCompanion<LocalAssetEntityData> {
     this.adjustmentTime = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
+    this.playbackStyle = const Value.absent(),
   });
   LocalAssetEntityCompanion.insert({
     required String name,
@@ -1947,6 +1975,7 @@ class LocalAssetEntityCompanion extends UpdateCompanion<LocalAssetEntityData> {
     this.adjustmentTime = const Value.absent(),
     this.latitude = const Value.absent(),
     this.longitude = const Value.absent(),
+    this.playbackStyle = const Value.absent(),
   }) : name = Value(name),
        type = Value(type),
        id = Value(id);
@@ -1966,6 +1995,7 @@ class LocalAssetEntityCompanion extends UpdateCompanion<LocalAssetEntityData> {
     Expression<DateTime>? adjustmentTime,
     Expression<double>? latitude,
     Expression<double>? longitude,
+    Expression<int>? playbackStyle,
   }) {
     return RawValuesInsertable({
       if (name != null) 'name': name,
@@ -1983,6 +2013,7 @@ class LocalAssetEntityCompanion extends UpdateCompanion<LocalAssetEntityData> {
       if (adjustmentTime != null) 'adjustment_time': adjustmentTime,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (playbackStyle != null) 'playback_style': playbackStyle,
     });
   }
 
@@ -2002,6 +2033,7 @@ class LocalAssetEntityCompanion extends UpdateCompanion<LocalAssetEntityData> {
     Value<DateTime?>? adjustmentTime,
     Value<double?>? latitude,
     Value<double?>? longitude,
+    Value<int>? playbackStyle,
   }) {
     return LocalAssetEntityCompanion(
       name: name ?? this.name,
@@ -2019,6 +2051,7 @@ class LocalAssetEntityCompanion extends UpdateCompanion<LocalAssetEntityData> {
       adjustmentTime: adjustmentTime ?? this.adjustmentTime,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      playbackStyle: playbackStyle ?? this.playbackStyle,
     );
   }
 
@@ -2070,6 +2103,9 @@ class LocalAssetEntityCompanion extends UpdateCompanion<LocalAssetEntityData> {
     if (longitude.present) {
       map['longitude'] = Variable<double>(longitude.value);
     }
+    if (playbackStyle.present) {
+      map['playback_style'] = Variable<int>(playbackStyle.value);
+    }
     return map;
   }
 
@@ -2090,7 +2126,8 @@ class LocalAssetEntityCompanion extends UpdateCompanion<LocalAssetEntityData> {
           ..write('iCloudId: $iCloudId, ')
           ..write('adjustmentTime: $adjustmentTime, ')
           ..write('latitude: $latitude, ')
-          ..write('longitude: $longitude')
+          ..write('longitude: $longitude, ')
+          ..write('playbackStyle: $playbackStyle')
           ..write(')'))
         .toString();
   }
@@ -7820,6 +7857,14 @@ class TrashedLocalAssetEntity extends Table
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  late final GeneratedColumn<int> playbackStyle = GeneratedColumn<int>(
+    'playback_style',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const CustomExpression('0'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     name,
@@ -7835,6 +7880,7 @@ class TrashedLocalAssetEntity extends Table
     isFavorite,
     orientation,
     source,
+    playbackStyle,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -7902,6 +7948,10 @@ class TrashedLocalAssetEntity extends Table
         DriftSqlType.int,
         data['${effectivePrefix}source'],
       )!,
+      playbackStyle: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}playback_style'],
+      )!,
     );
   }
 
@@ -7931,6 +7981,7 @@ class TrashedLocalAssetEntityData extends DataClass
   final bool isFavorite;
   final int orientation;
   final int source;
+  final int playbackStyle;
   const TrashedLocalAssetEntityData({
     required this.name,
     required this.type,
@@ -7945,6 +7996,7 @@ class TrashedLocalAssetEntityData extends DataClass
     required this.isFavorite,
     required this.orientation,
     required this.source,
+    required this.playbackStyle,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7970,6 +8022,7 @@ class TrashedLocalAssetEntityData extends DataClass
     map['is_favorite'] = Variable<bool>(isFavorite);
     map['orientation'] = Variable<int>(orientation);
     map['source'] = Variable<int>(source);
+    map['playback_style'] = Variable<int>(playbackStyle);
     return map;
   }
 
@@ -7992,6 +8045,7 @@ class TrashedLocalAssetEntityData extends DataClass
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       orientation: serializer.fromJson<int>(json['orientation']),
       source: serializer.fromJson<int>(json['source']),
+      playbackStyle: serializer.fromJson<int>(json['playbackStyle']),
     );
   }
   @override
@@ -8011,6 +8065,7 @@ class TrashedLocalAssetEntityData extends DataClass
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'orientation': serializer.toJson<int>(orientation),
       'source': serializer.toJson<int>(source),
+      'playbackStyle': serializer.toJson<int>(playbackStyle),
     };
   }
 
@@ -8028,6 +8083,7 @@ class TrashedLocalAssetEntityData extends DataClass
     bool? isFavorite,
     int? orientation,
     int? source,
+    int? playbackStyle,
   }) => TrashedLocalAssetEntityData(
     name: name ?? this.name,
     type: type ?? this.type,
@@ -8044,6 +8100,7 @@ class TrashedLocalAssetEntityData extends DataClass
     isFavorite: isFavorite ?? this.isFavorite,
     orientation: orientation ?? this.orientation,
     source: source ?? this.source,
+    playbackStyle: playbackStyle ?? this.playbackStyle,
   );
   TrashedLocalAssetEntityData copyWithCompanion(
     TrashedLocalAssetEntityCompanion data,
@@ -8068,6 +8125,9 @@ class TrashedLocalAssetEntityData extends DataClass
           ? data.orientation.value
           : this.orientation,
       source: data.source.present ? data.source.value : this.source,
+      playbackStyle: data.playbackStyle.present
+          ? data.playbackStyle.value
+          : this.playbackStyle,
     );
   }
 
@@ -8086,7 +8146,8 @@ class TrashedLocalAssetEntityData extends DataClass
           ..write('checksum: $checksum, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('orientation: $orientation, ')
-          ..write('source: $source')
+          ..write('source: $source, ')
+          ..write('playbackStyle: $playbackStyle')
           ..write(')'))
         .toString();
   }
@@ -8106,6 +8167,7 @@ class TrashedLocalAssetEntityData extends DataClass
     isFavorite,
     orientation,
     source,
+    playbackStyle,
   );
   @override
   bool operator ==(Object other) =>
@@ -8123,7 +8185,8 @@ class TrashedLocalAssetEntityData extends DataClass
           other.checksum == this.checksum &&
           other.isFavorite == this.isFavorite &&
           other.orientation == this.orientation &&
-          other.source == this.source);
+          other.source == this.source &&
+          other.playbackStyle == this.playbackStyle);
 }
 
 class TrashedLocalAssetEntityCompanion
@@ -8141,6 +8204,7 @@ class TrashedLocalAssetEntityCompanion
   final Value<bool> isFavorite;
   final Value<int> orientation;
   final Value<int> source;
+  final Value<int> playbackStyle;
   const TrashedLocalAssetEntityCompanion({
     this.name = const Value.absent(),
     this.type = const Value.absent(),
@@ -8155,6 +8219,7 @@ class TrashedLocalAssetEntityCompanion
     this.isFavorite = const Value.absent(),
     this.orientation = const Value.absent(),
     this.source = const Value.absent(),
+    this.playbackStyle = const Value.absent(),
   });
   TrashedLocalAssetEntityCompanion.insert({
     required String name,
@@ -8170,6 +8235,7 @@ class TrashedLocalAssetEntityCompanion
     this.isFavorite = const Value.absent(),
     this.orientation = const Value.absent(),
     required int source,
+    this.playbackStyle = const Value.absent(),
   }) : name = Value(name),
        type = Value(type),
        id = Value(id),
@@ -8189,6 +8255,7 @@ class TrashedLocalAssetEntityCompanion
     Expression<bool>? isFavorite,
     Expression<int>? orientation,
     Expression<int>? source,
+    Expression<int>? playbackStyle,
   }) {
     return RawValuesInsertable({
       if (name != null) 'name': name,
@@ -8204,6 +8271,7 @@ class TrashedLocalAssetEntityCompanion
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (orientation != null) 'orientation': orientation,
       if (source != null) 'source': source,
+      if (playbackStyle != null) 'playback_style': playbackStyle,
     });
   }
 
@@ -8221,6 +8289,7 @@ class TrashedLocalAssetEntityCompanion
     Value<bool>? isFavorite,
     Value<int>? orientation,
     Value<int>? source,
+    Value<int>? playbackStyle,
   }) {
     return TrashedLocalAssetEntityCompanion(
       name: name ?? this.name,
@@ -8236,6 +8305,7 @@ class TrashedLocalAssetEntityCompanion
       isFavorite: isFavorite ?? this.isFavorite,
       orientation: orientation ?? this.orientation,
       source: source ?? this.source,
+      playbackStyle: playbackStyle ?? this.playbackStyle,
     );
   }
 
@@ -8281,6 +8351,9 @@ class TrashedLocalAssetEntityCompanion
     if (source.present) {
       map['source'] = Variable<int>(source.value);
     }
+    if (playbackStyle.present) {
+      map['playback_style'] = Variable<int>(playbackStyle.value);
+    }
     return map;
   }
 
@@ -8299,618 +8372,8 @@ class TrashedLocalAssetEntityCompanion
           ..write('checksum: $checksum, ')
           ..write('isFavorite: $isFavorite, ')
           ..write('orientation: $orientation, ')
-          ..write('source: $source')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class AssetOcrEntity extends Table
-    with TableInfo<AssetOcrEntity, AssetOcrEntityData> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  AssetOcrEntity(this.attachedDatabase, [this._alias]);
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-    'id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<String> assetId = GeneratedColumn<String>(
-    'asset_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES remote_asset_entity (id) ON DELETE CASCADE',
-    ),
-  );
-  late final GeneratedColumn<double> x1 = GeneratedColumn<double>(
-    'x1',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<double> y1 = GeneratedColumn<double>(
-    'y1',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<double> x2 = GeneratedColumn<double>(
-    'x2',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<double> y2 = GeneratedColumn<double>(
-    'y2',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<double> x3 = GeneratedColumn<double>(
-    'x3',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<double> y3 = GeneratedColumn<double>(
-    'y3',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<double> x4 = GeneratedColumn<double>(
-    'x4',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<double> y4 = GeneratedColumn<double>(
-    'y4',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<double> boxScore = GeneratedColumn<double>(
-    'box_score',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<double> textScore = GeneratedColumn<double>(
-    'text_score',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<String> recognizedText = GeneratedColumn<String>(
-    'text',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  late final GeneratedColumn<bool> isVisible = GeneratedColumn<bool>(
-    'is_visible',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_visible" IN (0, 1))',
-    ),
-    defaultValue: const CustomExpression('1'),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    assetId,
-    x1,
-    y1,
-    x2,
-    y2,
-    x3,
-    y3,
-    x4,
-    y4,
-    boxScore,
-    textScore,
-    recognizedText,
-    isVisible,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'asset_ocr_entity';
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  AssetOcrEntityData map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return AssetOcrEntityData(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}id'],
-      )!,
-      assetId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}asset_id'],
-      )!,
-      x1: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}x1'],
-      )!,
-      y1: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}y1'],
-      )!,
-      x2: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}x2'],
-      )!,
-      y2: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}y2'],
-      )!,
-      x3: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}x3'],
-      )!,
-      y3: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}y3'],
-      )!,
-      x4: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}x4'],
-      )!,
-      y4: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}y4'],
-      )!,
-      boxScore: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}box_score'],
-      )!,
-      textScore: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}text_score'],
-      )!,
-      recognizedText: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}text'],
-      )!,
-      isVisible: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_visible'],
-      )!,
-    );
-  }
-
-  @override
-  AssetOcrEntity createAlias(String alias) {
-    return AssetOcrEntity(attachedDatabase, alias);
-  }
-
-  @override
-  bool get withoutRowId => true;
-  @override
-  bool get isStrict => true;
-}
-
-class AssetOcrEntityData extends DataClass
-    implements Insertable<AssetOcrEntityData> {
-  final String id;
-  final String assetId;
-  final double x1;
-  final double y1;
-  final double x2;
-  final double y2;
-  final double x3;
-  final double y3;
-  final double x4;
-  final double y4;
-  final double boxScore;
-  final double textScore;
-  final String recognizedText;
-  final bool isVisible;
-  const AssetOcrEntityData({
-    required this.id,
-    required this.assetId,
-    required this.x1,
-    required this.y1,
-    required this.x2,
-    required this.y2,
-    required this.x3,
-    required this.y3,
-    required this.x4,
-    required this.y4,
-    required this.boxScore,
-    required this.textScore,
-    required this.recognizedText,
-    required this.isVisible,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['asset_id'] = Variable<String>(assetId);
-    map['x1'] = Variable<double>(x1);
-    map['y1'] = Variable<double>(y1);
-    map['x2'] = Variable<double>(x2);
-    map['y2'] = Variable<double>(y2);
-    map['x3'] = Variable<double>(x3);
-    map['y3'] = Variable<double>(y3);
-    map['x4'] = Variable<double>(x4);
-    map['y4'] = Variable<double>(y4);
-    map['box_score'] = Variable<double>(boxScore);
-    map['text_score'] = Variable<double>(textScore);
-    map['text'] = Variable<String>(recognizedText);
-    map['is_visible'] = Variable<bool>(isVisible);
-    return map;
-  }
-
-  factory AssetOcrEntityData.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return AssetOcrEntityData(
-      id: serializer.fromJson<String>(json['id']),
-      assetId: serializer.fromJson<String>(json['assetId']),
-      x1: serializer.fromJson<double>(json['x1']),
-      y1: serializer.fromJson<double>(json['y1']),
-      x2: serializer.fromJson<double>(json['x2']),
-      y2: serializer.fromJson<double>(json['y2']),
-      x3: serializer.fromJson<double>(json['x3']),
-      y3: serializer.fromJson<double>(json['y3']),
-      x4: serializer.fromJson<double>(json['x4']),
-      y4: serializer.fromJson<double>(json['y4']),
-      boxScore: serializer.fromJson<double>(json['boxScore']),
-      textScore: serializer.fromJson<double>(json['textScore']),
-      recognizedText: serializer.fromJson<String>(json['recognizedText']),
-      isVisible: serializer.fromJson<bool>(json['isVisible']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'assetId': serializer.toJson<String>(assetId),
-      'x1': serializer.toJson<double>(x1),
-      'y1': serializer.toJson<double>(y1),
-      'x2': serializer.toJson<double>(x2),
-      'y2': serializer.toJson<double>(y2),
-      'x3': serializer.toJson<double>(x3),
-      'y3': serializer.toJson<double>(y3),
-      'x4': serializer.toJson<double>(x4),
-      'y4': serializer.toJson<double>(y4),
-      'boxScore': serializer.toJson<double>(boxScore),
-      'textScore': serializer.toJson<double>(textScore),
-      'recognizedText': serializer.toJson<String>(recognizedText),
-      'isVisible': serializer.toJson<bool>(isVisible),
-    };
-  }
-
-  AssetOcrEntityData copyWith({
-    String? id,
-    String? assetId,
-    double? x1,
-    double? y1,
-    double? x2,
-    double? y2,
-    double? x3,
-    double? y3,
-    double? x4,
-    double? y4,
-    double? boxScore,
-    double? textScore,
-    String? recognizedText,
-    bool? isVisible,
-  }) => AssetOcrEntityData(
-    id: id ?? this.id,
-    assetId: assetId ?? this.assetId,
-    x1: x1 ?? this.x1,
-    y1: y1 ?? this.y1,
-    x2: x2 ?? this.x2,
-    y2: y2 ?? this.y2,
-    x3: x3 ?? this.x3,
-    y3: y3 ?? this.y3,
-    x4: x4 ?? this.x4,
-    y4: y4 ?? this.y4,
-    boxScore: boxScore ?? this.boxScore,
-    textScore: textScore ?? this.textScore,
-    recognizedText: recognizedText ?? this.recognizedText,
-    isVisible: isVisible ?? this.isVisible,
-  );
-  AssetOcrEntityData copyWithCompanion(AssetOcrEntityCompanion data) {
-    return AssetOcrEntityData(
-      id: data.id.present ? data.id.value : this.id,
-      assetId: data.assetId.present ? data.assetId.value : this.assetId,
-      x1: data.x1.present ? data.x1.value : this.x1,
-      y1: data.y1.present ? data.y1.value : this.y1,
-      x2: data.x2.present ? data.x2.value : this.x2,
-      y2: data.y2.present ? data.y2.value : this.y2,
-      x3: data.x3.present ? data.x3.value : this.x3,
-      y3: data.y3.present ? data.y3.value : this.y3,
-      x4: data.x4.present ? data.x4.value : this.x4,
-      y4: data.y4.present ? data.y4.value : this.y4,
-      boxScore: data.boxScore.present ? data.boxScore.value : this.boxScore,
-      textScore: data.textScore.present ? data.textScore.value : this.textScore,
-      recognizedText: data.recognizedText.present
-          ? data.recognizedText.value
-          : this.recognizedText,
-      isVisible: data.isVisible.present ? data.isVisible.value : this.isVisible,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('AssetOcrEntityData(')
-          ..write('id: $id, ')
-          ..write('assetId: $assetId, ')
-          ..write('x1: $x1, ')
-          ..write('y1: $y1, ')
-          ..write('x2: $x2, ')
-          ..write('y2: $y2, ')
-          ..write('x3: $x3, ')
-          ..write('y3: $y3, ')
-          ..write('x4: $x4, ')
-          ..write('y4: $y4, ')
-          ..write('boxScore: $boxScore, ')
-          ..write('textScore: $textScore, ')
-          ..write('recognizedText: $recognizedText, ')
-          ..write('isVisible: $isVisible')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    assetId,
-    x1,
-    y1,
-    x2,
-    y2,
-    x3,
-    y3,
-    x4,
-    y4,
-    boxScore,
-    textScore,
-    recognizedText,
-    isVisible,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is AssetOcrEntityData &&
-          other.id == this.id &&
-          other.assetId == this.assetId &&
-          other.x1 == this.x1 &&
-          other.y1 == this.y1 &&
-          other.x2 == this.x2 &&
-          other.y2 == this.y2 &&
-          other.x3 == this.x3 &&
-          other.y3 == this.y3 &&
-          other.x4 == this.x4 &&
-          other.y4 == this.y4 &&
-          other.boxScore == this.boxScore &&
-          other.textScore == this.textScore &&
-          other.recognizedText == this.recognizedText &&
-          other.isVisible == this.isVisible);
-}
-
-class AssetOcrEntityCompanion extends UpdateCompanion<AssetOcrEntityData> {
-  final Value<String> id;
-  final Value<String> assetId;
-  final Value<double> x1;
-  final Value<double> y1;
-  final Value<double> x2;
-  final Value<double> y2;
-  final Value<double> x3;
-  final Value<double> y3;
-  final Value<double> x4;
-  final Value<double> y4;
-  final Value<double> boxScore;
-  final Value<double> textScore;
-  final Value<String> recognizedText;
-  final Value<bool> isVisible;
-  const AssetOcrEntityCompanion({
-    this.id = const Value.absent(),
-    this.assetId = const Value.absent(),
-    this.x1 = const Value.absent(),
-    this.y1 = const Value.absent(),
-    this.x2 = const Value.absent(),
-    this.y2 = const Value.absent(),
-    this.x3 = const Value.absent(),
-    this.y3 = const Value.absent(),
-    this.x4 = const Value.absent(),
-    this.y4 = const Value.absent(),
-    this.boxScore = const Value.absent(),
-    this.textScore = const Value.absent(),
-    this.recognizedText = const Value.absent(),
-    this.isVisible = const Value.absent(),
-  });
-  AssetOcrEntityCompanion.insert({
-    required String id,
-    required String assetId,
-    required double x1,
-    required double y1,
-    required double x2,
-    required double y2,
-    required double x3,
-    required double y3,
-    required double x4,
-    required double y4,
-    required double boxScore,
-    required double textScore,
-    required String recognizedText,
-    this.isVisible = const Value.absent(),
-  }) : id = Value(id),
-       assetId = Value(assetId),
-       x1 = Value(x1),
-       y1 = Value(y1),
-       x2 = Value(x2),
-       y2 = Value(y2),
-       x3 = Value(x3),
-       y3 = Value(y3),
-       x4 = Value(x4),
-       y4 = Value(y4),
-       boxScore = Value(boxScore),
-       textScore = Value(textScore),
-       recognizedText = Value(recognizedText);
-  static Insertable<AssetOcrEntityData> custom({
-    Expression<String>? id,
-    Expression<String>? assetId,
-    Expression<double>? x1,
-    Expression<double>? y1,
-    Expression<double>? x2,
-    Expression<double>? y2,
-    Expression<double>? x3,
-    Expression<double>? y3,
-    Expression<double>? x4,
-    Expression<double>? y4,
-    Expression<double>? boxScore,
-    Expression<double>? textScore,
-    Expression<String>? recognizedText,
-    Expression<bool>? isVisible,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (assetId != null) 'asset_id': assetId,
-      if (x1 != null) 'x1': x1,
-      if (y1 != null) 'y1': y1,
-      if (x2 != null) 'x2': x2,
-      if (y2 != null) 'y2': y2,
-      if (x3 != null) 'x3': x3,
-      if (y3 != null) 'y3': y3,
-      if (x4 != null) 'x4': x4,
-      if (y4 != null) 'y4': y4,
-      if (boxScore != null) 'box_score': boxScore,
-      if (textScore != null) 'text_score': textScore,
-      if (recognizedText != null) 'text': recognizedText,
-      if (isVisible != null) 'is_visible': isVisible,
-    });
-  }
-
-  AssetOcrEntityCompanion copyWith({
-    Value<String>? id,
-    Value<String>? assetId,
-    Value<double>? x1,
-    Value<double>? y1,
-    Value<double>? x2,
-    Value<double>? y2,
-    Value<double>? x3,
-    Value<double>? y3,
-    Value<double>? x4,
-    Value<double>? y4,
-    Value<double>? boxScore,
-    Value<double>? textScore,
-    Value<String>? recognizedText,
-    Value<bool>? isVisible,
-  }) {
-    return AssetOcrEntityCompanion(
-      id: id ?? this.id,
-      assetId: assetId ?? this.assetId,
-      x1: x1 ?? this.x1,
-      y1: y1 ?? this.y1,
-      x2: x2 ?? this.x2,
-      y2: y2 ?? this.y2,
-      x3: x3 ?? this.x3,
-      y3: y3 ?? this.y3,
-      x4: x4 ?? this.x4,
-      y4: y4 ?? this.y4,
-      boxScore: boxScore ?? this.boxScore,
-      textScore: textScore ?? this.textScore,
-      recognizedText: recognizedText ?? this.recognizedText,
-      isVisible: isVisible ?? this.isVisible,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (assetId.present) {
-      map['asset_id'] = Variable<String>(assetId.value);
-    }
-    if (x1.present) {
-      map['x1'] = Variable<double>(x1.value);
-    }
-    if (y1.present) {
-      map['y1'] = Variable<double>(y1.value);
-    }
-    if (x2.present) {
-      map['x2'] = Variable<double>(x2.value);
-    }
-    if (y2.present) {
-      map['y2'] = Variable<double>(y2.value);
-    }
-    if (x3.present) {
-      map['x3'] = Variable<double>(x3.value);
-    }
-    if (y3.present) {
-      map['y3'] = Variable<double>(y3.value);
-    }
-    if (x4.present) {
-      map['x4'] = Variable<double>(x4.value);
-    }
-    if (y4.present) {
-      map['y4'] = Variable<double>(y4.value);
-    }
-    if (boxScore.present) {
-      map['box_score'] = Variable<double>(boxScore.value);
-    }
-    if (textScore.present) {
-      map['text_score'] = Variable<double>(textScore.value);
-    }
-    if (recognizedText.present) {
-      map['text'] = Variable<String>(recognizedText.value);
-    }
-    if (isVisible.present) {
-      map['is_visible'] = Variable<bool>(isVisible.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('AssetOcrEntityCompanion(')
-          ..write('id: $id, ')
-          ..write('assetId: $assetId, ')
-          ..write('x1: $x1, ')
-          ..write('y1: $y1, ')
-          ..write('x2: $x2, ')
-          ..write('y2: $y2, ')
-          ..write('x3: $x3, ')
-          ..write('y3: $y3, ')
-          ..write('x4: $x4, ')
-          ..write('y4: $y4, ')
-          ..write('boxScore: $boxScore, ')
-          ..write('textScore: $textScore, ')
-          ..write('recognizedText: $recognizedText, ')
-          ..write('isVisible: $isVisible')
+          ..write('source: $source, ')
+          ..write('playbackStyle: $playbackStyle')
           ..write(')'))
         .toString();
   }
@@ -8991,7 +8454,6 @@ class DatabaseAtV21 extends GeneratedDatabase {
   late final StoreEntity storeEntity = StoreEntity(this);
   late final TrashedLocalAssetEntity trashedLocalAssetEntity =
       TrashedLocalAssetEntity(this);
-  late final AssetOcrEntity assetOcrEntity = AssetOcrEntity(this);
   late final Index idxPartnerSharedWithId = Index(
     'idx_partner_shared_with_id',
     'CREATE INDEX IF NOT EXISTS idx_partner_shared_with_id ON partner_entity (shared_with_id)',
@@ -9065,7 +8527,6 @@ class DatabaseAtV21 extends GeneratedDatabase {
     assetFaceEntity,
     storeEntity,
     trashedLocalAssetEntity,
-    assetOcrEntity,
     idxPartnerSharedWithId,
     idxLatLng,
     idxRemoteAlbumAssetAlbumAsset,

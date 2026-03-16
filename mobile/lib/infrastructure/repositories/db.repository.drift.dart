@@ -41,7 +41,7 @@ import 'package:immich_mobile/infrastructure/entities/store.entity.drift.dart'
     as i19;
 import 'package:immich_mobile/infrastructure/entities/trashed_local_asset.entity.drift.dart'
     as i20;
-import 'package:immich_mobile/infrastructure/entities/asset_ocr.entity.drift.dart'
+import 'package:immich_mobile/infrastructure/entities/asset_edit.entity.drift.dart'
     as i21;
 import 'package:immich_mobile/infrastructure/entities/merged_asset.drift.dart'
     as i22;
@@ -87,9 +87,8 @@ abstract class $Drift extends i0.GeneratedDatabase {
   late final i19.$StoreEntityTable storeEntity = i19.$StoreEntityTable(this);
   late final i20.$TrashedLocalAssetEntityTable trashedLocalAssetEntity = i20
       .$TrashedLocalAssetEntityTable(this);
-  late final i21.$AssetOcrEntityTable assetOcrEntity = i21.$AssetOcrEntityTable(
-    this,
-  );
+  late final i21.$AssetEditEntityTable assetEditEntity = i21
+      .$AssetEditEntityTable(this);
   i22.MergedAssetDrift get mergedAssetDrift => i23.ReadDatabaseContainer(
     this,
   ).accessor<i22.MergedAssetDrift>(i22.MergedAssetDrift.new);
@@ -130,7 +129,7 @@ abstract class $Drift extends i0.GeneratedDatabase {
     assetFaceEntity,
     storeEntity,
     trashedLocalAssetEntity,
-    assetOcrEntity,
+    assetEditEntity,
     i10.idxPartnerSharedWithId,
     i11.idxLatLng,
     i12.idxRemoteAlbumAssetAlbumAsset,
@@ -140,6 +139,7 @@ abstract class $Drift extends i0.GeneratedDatabase {
     i18.idxAssetFaceAssetId,
     i20.idxTrashedLocalAssetChecksum,
     i20.idxTrashedLocalAssetAlbum,
+    i21.idxAssetEditAssetId,
   ];
   @override
   i0.StreamQueryUpdateRules
@@ -336,7 +336,7 @@ abstract class $Drift extends i0.GeneratedDatabase {
         'remote_asset_entity',
         limitUpdateKind: i0.UpdateKind.delete,
       ),
-      result: [i0.TableUpdate('asset_ocr_entity', kind: i0.UpdateKind.delete)],
+      result: [i0.TableUpdate('asset_edit_entity', kind: i0.UpdateKind.delete)],
     ),
   ]);
   @override
@@ -397,6 +397,6 @@ class $DriftManager {
         _db,
         _db.trashedLocalAssetEntity,
       );
-  i21.$$AssetOcrEntityTableTableManager get assetOcrEntity =>
-      i21.$$AssetOcrEntityTableTableManager(_db, _db.assetOcrEntity);
+  i21.$$AssetEditEntityTableTableManager get assetEditEntity =>
+      i21.$$AssetEditEntityTableTableManager(_db, _db.assetEditEntity);
 }

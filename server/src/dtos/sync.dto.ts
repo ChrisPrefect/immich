@@ -276,6 +276,7 @@ export class SyncAssetOcrDeleteV1 {
   deletedAt!: Date;
 }
 
+@ExtraModel()
 export class SyncAssetEditV1 {
   id!: string;
   assetId!: string;

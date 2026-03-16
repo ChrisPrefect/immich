@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/ocr.model.dart';
-import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/providers/infrastructure/ocr.provider.dart';
 
 class OcrOverlay extends ConsumerStatefulWidget {
@@ -140,7 +139,7 @@ class _OcrOverlayState extends ConsumerState<OcrOverlay> {
                                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: Colors.grey[800]?.withValues(alpha: 0.4),
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: const BorderRadius.all(Radius.circular(4)),
                                 ),
                                 child: ConstrainedBox(
                                   constraints: BoxConstraints(
@@ -181,17 +180,17 @@ class _OcrBoxPainter extends CustomPainter {
   final bool isSelected;
   final BuildContext context;
 
-  _OcrBoxPainter({required this.points, required this.isSelected, required this.context});
+  const _OcrBoxPainter({required this.points, required this.isSelected, required this.context});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = isSelected ? context.primaryColor : Colors.green
+      ..color = isSelected ? Colors.blue : Colors.lightBlue
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
     final fillPaint = Paint()
-      ..color = (isSelected ? context.primaryColor : Colors.green).withValues(alpha: 0.1)
+      ..color = (isSelected ? Colors.blue : Colors.lightBlue).withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
 
     final path = Path()

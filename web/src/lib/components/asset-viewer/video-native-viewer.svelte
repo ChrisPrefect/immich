@@ -188,17 +188,19 @@
           src={assetFileUrl}
         ></video>
 
-        <media-settings-menu hidden anchor="auto" class="border-light-300 rounded-xl border shadow-sm w-3xs">
-          <Icon slot="checked-indicator" icon={mdiCheck} class="m-2" />
-          <media-settings-menu-item class="rounded-lg p-1 ps-2 mx-1">
-            {$t('playback_speed')}
-            <Icon slot="suffix" icon={mdiChevronRight} class="m-2" />
-            <media-playback-rate-menu slot="submenu" hidden rates="0.5 1 1.5 2">
-              <Icon slot="back-icon" icon={mdiChevronLeft} class="m-2" />
-              <span slot="title">{$t('playback_speed')}</span>
-            </media-playback-rate-menu>
-          </media-settings-menu-item>
-        </media-settings-menu>
+        {#if extendedControls}
+          <media-settings-menu hidden anchor="auto" class="border-light-300 rounded-xl border shadow-sm w-3xs">
+            <Icon slot="checked-indicator" icon={mdiCheck} class="m-2" />
+            <media-settings-menu-item class="rounded-lg p-1 ps-2 mx-1">
+              {$t('playback_speed')}
+              <Icon slot="suffix" icon={mdiChevronRight} class="m-2" />
+              <media-playback-rate-menu slot="submenu" hidden rates="0.5 1 1.5 2">
+                <Icon slot="back-icon" icon={mdiChevronLeft} class="m-2" />
+                <span slot="title">{$t('playback_speed')}</span>
+              </media-playback-rate-menu>
+            </media-settings-menu-item>
+          </media-settings-menu>
+        {/if}
 
         <div class="flex flex-col justify-end w-full h-32 px-4 bg-linear-to-b to-black/80">
           <media-control-bar part="bottom" class="flex w-full h-10 gap-2">

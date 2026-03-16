@@ -2419,6 +2419,7 @@
   "workflows": "Workflows",
   "workflows_help_text": "Workflows automate actions on your assets based on triggers and filters",
   "wrong_pin_code": "Wrong PIN code",
+  "x_of_total": "{x}/{total}",
   "year": "Year",
   "years_ago": "{years, plural, one {# year} other {# years}} ago",
   "yes": "Yes",

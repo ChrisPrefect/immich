@@ -32,7 +32,7 @@
   import { cancelMultiselect } from '$lib/utils/asset-utils';
   import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
   import { AssetMediaSize, AssetTypeEnum, getAssetInfo } from '@immich/sdk';
-  import { ActionButton, IconButton, toastManager } from '@immich/ui';
+  import { ActionButton, IconButton, Text, toastManager } from '@immich/ui';
   import {
     mdiCardsOutline,
     mdiChevronDown,
@@ -52,6 +52,7 @@
   } from '@mdi/js';
   import type { NavigationTarget, Page } from '@sveltejs/kit';
   import { DateTime } from 'luxon';
+  import 'media-chrome/media-mute-button';
   import { t } from 'svelte-i18n';
   import type { Attachment } from 'svelte/attachments';
   import { Tween } from 'svelte/motion';
@@ -389,42 +390,62 @@
         {/if}
       {/snippet}
 
-      <div class="flex place-content-center place-items-center gap-2 overflow-hidden">
-        <div class="w-12.5 dark">
-          <IconButton
-            shape="round"
-            variant="ghost"
-            color="secondary"
-            aria-label={paused ? $t('play_memories') : $t('pause_memories')}
-            icon={paused ? mdiPlay : mdiPause}
-            onclick={() => handlePromiseError(handleAction('PlayPauseButtonClick', paused ? 'play' : 'pause'))}
-          />
-        </div>
+      <div class="flex place-content-center place-items-center gap-2 dark">
+        <IconButton
+          shape="round"
+          variant="ghost"
+          color="secondary"
+          aria-label={paused ? $t('play_memories') : $t('pause_memories')}
+          icon={paused ? mdiPlay : mdiPause}
+          onclick={() => handlePromiseError(handleAction('PlayPauseButtonClick', paused ? 'play' : 'pause'))}
+        />
 
         {#each current.memory.assets as asset, index (asset.id)}
-          <a class="relative w-full py-2" href={asHref(asset)} aria-label={$t('view')}>
+          <a class="relative grow py-2" href={asHref(asset)} aria-label={$t('view')}>
             <span class="absolute start-0 h-0.5 w-full bg-gray-500"></span>
             <span class="absolute start-0 h-0.5 bg-white" style:width={`${toProgressPercentage(index)}%`}></span>
           </a>
         {/each}
 
-        <div>
-          <p class="text-small">
-            {(current.assetIndex + 1).toLocaleString($locale)}/{current.memory.assets.length.toLocaleString($locale)}
-          </p>
-        </div>
+        <Text size="small">
+          {$t('x_of_total', {
+            values: {
+              x: (current.assetIndex + 1).toLocaleString($locale),
+              total: current.memory.assets.length.toLocaleString($locale),
+            },
+          })}
+        </Text>
 
         {#if currentTimelineAssets.some((asset) => asset.type === AssetTypeEnum.Video)}
-          <div class="w-12.5 dark">
+          <media-mute-button
+            mediacontroller={videoPlayer ? 'memory-video' : ''}
+            disabled={!videoPlayer}
+            class="bg-transparent rounded-full focus-visible:outline-2 outline-offset-2 outline-dark"
+            style="--media-focus-box-shadow: none;"
+          >
             <IconButton
+              slot="off"
+              disabled={!videoPlayer}
+              tabindex={-1}
               shape="round"
               variant="ghost"
               color="secondary"
-              aria-label={videoPlayer?.muted ? $t('unmute_memories') : $t('mute_memories')}
-              icon={videoPlayer?.muted ? mdiVolumeOff : mdiVolumeHigh}
-              onclick={() => (videoPlayer ? (videoPlayer.muted = !videoPlayer.muted) : {})}
+              aria-label={$t('unmute_memories')}
+              icon={mdiVolumeOff}
+              onclick={() => {}}
             />
-          </div>
+            <IconButton
+              slot="high"
+              disabled={!videoPlayer}
+              tabindex={-1}
+              shape="round"
+              variant="ghost"
+              color="secondary"
+              aria-label={$t('mute_memories')}
+              icon={mdiVolumeHigh}
+              onclick={() => {}}
+            />
+          </media-mute-button>
         {/if}
       </div>
     </ControlAppBar>
@@ -515,7 +536,6 @@
                   color="secondary"
                   aria-label={isSaved ? $t('unfavorite') : $t('favorite')}
                   onclick={() => handleSaveMemory()}
-                  class="w-12 h-12"
                 />
                 <!-- <IconButton
                   icon={mdiShareVariantOutline}

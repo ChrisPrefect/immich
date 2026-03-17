@@ -165,7 +165,13 @@
       </div>
     {:else}
       <!-- dir=ltr based on https://github.com/videojs/video.js/issues/949 -->
-      <media-controller dir="ltr" nohotkeys class="h-full w-full dark" defaultduration={duration}>
+      <media-controller
+        dir="ltr"
+        nohotkeys
+        class="h-full max-w-full dark"
+        style={asset.width != null && asset.height != null ? `aspect-ratio: ${asset.width} / ${asset.height};` : undefined}
+        defaultduration={duration}
+      >
         <video
           bind:this={videoPlayer}
           slot="media"

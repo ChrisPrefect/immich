@@ -165,7 +165,7 @@
       </div>
     {:else}
       <!-- dir=ltr based on https://github.com/videojs/video.js/issues/949 -->
-      <media-controller dir="ltr" nohotkeys class="h-full dark" defaultduration={duration}>
+      <media-controller dir="ltr" nohotkeys class="h-full w-full dark" defaultduration={duration}>
         <video
           bind:this={videoPlayer}
           slot="media"

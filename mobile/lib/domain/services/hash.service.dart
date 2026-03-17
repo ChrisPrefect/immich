@@ -109,9 +109,11 @@ class HashService {
     _log.fine("Hashing ${toHash.length} files");
 
     final hashed = <String, String>{};
+    // Never download from iCloud just to hash. iCloud-only assets will be
+    // uploaded directly and the server will compute + return their checksum.
     final hashResults = await _nativeSyncApi.hashAssets(
       toHash.keys.toList(),
-      allowNetworkAccess: album.backupSelection == BackupSelection.selected,
+      allowNetworkAccess: false,
     );
     assert(
       hashResults.length == toHash.length,
@@ -127,6 +129,10 @@ class HashService {
       final hashResult = hashResults[i];
       if (hashResult.hash != null) {
         hashed[hashResult.assetId] = hashResult.hash!;
+      } else if (hashResult.error == 'ICLOUD_ONLY') {
+        // Asset is in iCloud and not available locally. It will be uploaded
+        // directly and the server will compute its checksum.
+        _log.fine("Skipping iCloud-only asset ${hashResult.assetId} from album: ${album.name}");
       } else {
         final asset = toHash[hashResult.assetId];
         _log.warning(

@@ -157,7 +157,7 @@ export class AssetMediaService extends BaseService {
 
       await this.userRepository.updateUsage(auth.user.id, file.size);
 
-      return { id: asset.id, status: AssetMediaStatus.CREATED };
+      return { id: asset.id, status: AssetMediaStatus.CREATED, checksum: file.checksum.toString('base64') };
     } catch (error: any) {
       return this.handleUploadError(error, auth, file, sidecarFile);
     }
@@ -350,7 +350,7 @@ export class AssetMediaService extends BaseService {
         await this.sharedLinkRepository.addAssets(auth.sharedLink.id, [duplicateId]);
       }
 
-      return { status: AssetMediaStatus.DUPLICATE, id: duplicateId };
+      return { status: AssetMediaStatus.DUPLICATE, id: duplicateId, checksum: file.checksum.toString('base64') };
     }
 
     this.logger.error(`Error uploading file ${error}`, error?.stack);

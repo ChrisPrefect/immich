@@ -11,6 +11,8 @@ export class AssetMediaResponseDto {
   status!: AssetMediaStatus;
   @ApiProperty({ description: 'Asset media ID' })
   id!: string;
+  @ApiPropertyOptional({ description: 'Asset checksum (SHA1 base64)' })
+  checksum?: string;
 }
 
 export enum AssetUploadAction {

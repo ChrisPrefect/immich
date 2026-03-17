@@ -136,7 +136,10 @@ class UploadRepository {
 
       try {
         final responseBody = jsonDecode(responseBodyString);
-        return UploadResult.success(remoteAssetId: responseBody['id'] as String);
+        return UploadResult.success(
+          remoteAssetId: responseBody['id'] as String,
+          checksum: responseBody['checksum'] as String?,
+        );
       } catch (e) {
         return UploadResult.error(errorMessage: 'Failed to parse server response');
       }
@@ -182,6 +185,7 @@ class UploadResult {
   final bool isSuccess;
   final bool isCancelled;
   final String? remoteAssetId;
+  final String? checksum;
   final String? errorMessage;
   final int? statusCode;
 
@@ -189,12 +193,13 @@ class UploadResult {
     required this.isSuccess,
     required this.isCancelled,
     this.remoteAssetId,
+    this.checksum,
     this.errorMessage,
     this.statusCode,
   });
 
-  factory UploadResult.success({required String remoteAssetId}) {
-    return UploadResult(isSuccess: true, isCancelled: false, remoteAssetId: remoteAssetId);
+  factory UploadResult.success({required String remoteAssetId, String? checksum}) {
+    return UploadResult(isSuccess: true, isCancelled: false, remoteAssetId: remoteAssetId, checksum: checksum);
   }
 
   factory UploadResult.error({String? errorMessage, int? statusCode}) {

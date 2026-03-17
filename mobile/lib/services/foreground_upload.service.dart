@@ -11,9 +11,11 @@ import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/extensions/network_capability_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/infrastructure/repositories/backup.repository.dart';
+import 'package:immich_mobile/infrastructure/repositories/local_asset.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
 import 'package:immich_mobile/platform/connectivity_api.g.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/storage.provider.dart';
 import 'package:immich_mobile/repositories/asset_media.repository.dart';
@@ -37,6 +39,7 @@ final foregroundUploadServiceProvider = Provider((ref) {
   return ForegroundUploadService(
     ref.watch(uploadRepositoryProvider),
     ref.watch(storageRepositoryProvider),
+    ref.watch(localAssetRepository),
     ref.watch(backupRepositoryProvider),
     ref.watch(connectivityApiProvider),
     ref.watch(appSettingsServiceProvider),
@@ -53,6 +56,7 @@ class ForegroundUploadService {
   ForegroundUploadService(
     this._uploadRepository,
     this._storageRepository,
+    this._localAssetRepository,
     this._backupRepository,
     this._connectivityApi,
     this._appSettingsService,
@@ -61,6 +65,7 @@ class ForegroundUploadService {
 
   final UploadRepository _uploadRepository;
   final StorageRepository _storageRepository;
+  final DriftLocalAssetRepository _localAssetRepository;
   final DriftBackupRepository _backupRepository;
   final ConnectivityApi _connectivityApi;
   final AppSettingsService _appSettingsService;
@@ -84,7 +89,7 @@ class ForegroundUploadService {
     UploadCallbacks callbacks = const UploadCallbacks(),
     bool useSequentialUpload = false,
   }) async {
-    final candidates = await _backupRepository.getCandidates(userId);
+    final candidates = await _backupRepository.getCandidates(userId, onlyHashed: false);
     if (candidates.isEmpty) {
       return;
     }
@@ -387,6 +392,10 @@ class ForegroundUploadService {
       );
 
       if (result.isSuccess && result.remoteAssetId != null) {
+        // Store server-computed checksum so iCloud-only assets don't need re-upload
+        if (result.checksum != null) {
+          await _localAssetRepository.updateHashes({asset.id: result.checksum!});
+        }
         callbacks.onSuccess?.call(asset.localId!, result.remoteAssetId!);
       } else if (result.isCancelled) {
         _logger.warning(() => "Backup was cancelled by the user");

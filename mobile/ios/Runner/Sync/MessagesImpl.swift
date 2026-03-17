@@ -357,6 +357,12 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
           completionHandler: { error in
             let result: HashResult? = switch (error) {
             case let e as PHPhotosError where e.code == .userCancelled: nil
+            case let e as PHPhotosError where e.code == .networkAccessRequired:
+              HashResult(
+                assetId: asset.localIdentifier,
+                error: "ICLOUD_ONLY",
+                hash: nil
+              )
             case let .some(e): HashResult(
               assetId: asset.localIdentifier,
               error: "Failed to hash asset: \(e.localizedDescription)",

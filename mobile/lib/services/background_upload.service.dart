@@ -162,7 +162,7 @@ class BackgroundUploadService {
     await _storageRepository.clearCache();
     shouldAbortQueuingTasks = false;
 
-    final candidates = await _backupRepository.getCandidates(userId);
+    final candidates = await _backupRepository.getCandidates(userId, onlyHashed: false);
     if (candidates.isEmpty) {
       _logger.info("No new backup candidates found, finishing background upload");
       return;
@@ -210,6 +210,7 @@ class BackgroundUploadService {
     switch (update.status) {
       case TaskStatus.complete:
         unawaited(_handleLivePhoto(update));
+        unawaited(_storeServerChecksum(update));
 
         if (CurrentPlatform.isIOS) {
           try {
@@ -224,6 +225,20 @@ class BackgroundUploadService {
 
       default:
         break;
+    }
+  }
+
+  Future<void> _storeServerChecksum(TaskStatusUpdate update) async {
+    try {
+      if (update.responseBody == null || update.responseBody!.isEmpty) return;
+      final response = jsonDecode(update.responseBody!);
+      final checksum = response['checksum'] as String?;
+      if (checksum == null) return;
+      final deviceAssetId = update.task.taskId;
+      if (deviceAssetId.isEmpty) return;
+      await _localAssetRepository.updateHashes({deviceAssetId: checksum});
+    } catch (e) {
+      _logger.warning('Failed to store server checksum: $e');
     }
   }
 

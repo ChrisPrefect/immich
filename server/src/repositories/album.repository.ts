@@ -1,12 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { ExpressionBuilder, Insertable, Kysely, NotNull, sql, Updateable } from 'kysely';
+import {
+  ExpressionBuilder,
+  Insertable,
+  Kysely,
+  NotNull,
+  Selectable,
+  ShallowDehydrateObject,
+  sql,
+  Updateable,
+} from 'kysely';
 import { jsonArrayFrom, jsonObjectFrom } from 'kysely/helpers/postgres';
 import { InjectKysely } from 'nestjs-kysely';
-import { columns, Exif } from 'src/database';
+import { columns } from 'src/database';
 import { Chunked, ChunkedArray, ChunkedSet, DummyValue, GenerateSql } from 'src/decorators';
 import { AlbumUserCreateDto } from 'src/dtos/album.dto';
 import { DB } from 'src/schema';
 import { AlbumTable } from 'src/schema/tables/album.table';
+import { AssetExifTable } from 'src/schema/tables/asset-exif.table';
 import { withDefaultVisibility } from 'src/utils/database';
 
 export interface AlbumAssetCount {
@@ -44,9 +54,9 @@ const withAlbumUsers = (eb: ExpressionBuilder<DB, 'album'>) => {
 };
 
 const withSharedLink = (eb: ExpressionBuilder<DB, 'album'>) => {
-  return jsonArrayFrom(eb.selectFrom('shared_link').selectAll().whereRef('shared_link.albumId', '=', 'album.id')).as(
-    'sharedLinks',
-  );
+  return jsonArrayFrom(
+    eb.selectFrom('shared_link').selectAll('shared_link').whereRef('shared_link.albumId', '=', 'album.id'),
+  ).as('sharedLinks');
 };
 
 const withAssets = (eb: ExpressionBuilder<DB, 'album'>) => {
@@ -56,7 +66,9 @@ const withAssets = (eb: ExpressionBuilder<DB, 'album'>) => {
         .selectFrom('asset')
         .selectAll('asset')
         .leftJoin('asset_exif', 'asset.id', 'asset_exif.assetId')
-        .select((eb) => eb.table('asset_exif').$castTo<Exif>().as('exifInfo'))
+        .select((eb) =>
+          eb.table('asset_exif').$castTo<ShallowDehydrateObject<Selectable<AssetExifTable>>>().as('exifInfo'),
+        )
         .innerJoin('album_asset', 'album_asset.assetId', 'asset.id')
         .whereRef('album_asset.albumId', '=', 'album.id')
         .where('asset.deletedAt', 'is', null)
@@ -283,7 +295,7 @@ export class AlbumRepository {
 
       return tx
         .selectFrom('album')
-        .selectAll()
+        .selectAll('album')
         .where('id', '=', newAlbum.id)
         .select(withOwner)
         .select(withAssets)

@@ -18,7 +18,15 @@ import 'package:immich_mobile/widgets/common/immich_toast.dart';
 class DeleteActionButton extends ConsumerWidget {
   final ActionSource source;
   final bool showConfirmation;
-  const DeleteActionButton({super.key, required this.source, this.showConfirmation = false});
+  final bool iconOnly;
+  final bool menuItem;
+  const DeleteActionButton({
+    super.key,
+    required this.source,
+    this.showConfirmation = false,
+    this.iconOnly = false,
+    this.menuItem = false,
+  });
 
   void _onTap(BuildContext context, WidgetRef ref) async {
     if (!context.mounted) {
@@ -49,12 +57,12 @@ class DeleteActionButton extends ConsumerWidget {
       if (confirm != true) return;
     }
 
-    final result = await ref.read(actionProvider.notifier).trashRemoteAndDeleteLocal(source);
-    ref.read(multiSelectProvider.notifier).reset();
-
     if (source == ActionSource.viewer) {
       EventStream.shared.emit(const ViewerReloadAssetEvent());
     }
+
+    final result = await ref.read(actionProvider.notifier).trashRemoteAndDeleteLocal(source);
+    ref.read(multiSelectProvider.notifier).reset();
 
     final successMessage = 'delete_action_prompt'.t(context: context, args: {'count': result.count.toString()});
 
@@ -74,6 +82,8 @@ class DeleteActionButton extends ConsumerWidget {
       maxWidth: 110.0,
       iconData: Icons.delete_sweep_outlined,
       label: "delete".t(context: context),
+      iconOnly: iconOnly,
+      menuItem: menuItem,
       onPressed: () => _onTap(context, ref),
     );
   }

@@ -15,20 +15,22 @@ import 'package:immich_mobile/widgets/common/immich_toast.dart';
 /// which will be permanently deleted after the number of days configure by the admin
 class TrashActionButton extends ConsumerWidget {
   final ActionSource source;
+  final bool iconOnly;
+  final bool menuItem;
 
-  const TrashActionButton({super.key, required this.source});
+  const TrashActionButton({super.key, required this.source, this.iconOnly = false, this.menuItem = false});
 
   void _onTap(BuildContext context, WidgetRef ref) async {
     if (!context.mounted) {
       return;
     }
 
-    final result = await ref.read(actionProvider.notifier).trash(source);
-    ref.read(multiSelectProvider.notifier).reset();
-
     if (source == ActionSource.viewer) {
       EventStream.shared.emit(const ViewerReloadAssetEvent());
     }
+
+    final result = await ref.read(actionProvider.notifier).trash(source);
+    ref.read(multiSelectProvider.notifier).reset();
 
     final successMessage = 'trash_action_prompt'.t(context: context, args: {'count': result.count.toString()});
 
@@ -48,6 +50,8 @@ class TrashActionButton extends ConsumerWidget {
       maxWidth: 85.0,
       iconData: Icons.delete_outline_rounded,
       label: "control_bottom_app_bar_trash_from_immich".t(context: context),
+      iconOnly: iconOnly,
+      menuItem: menuItem,
       onPressed: () => _onTap(context, ref),
     );
   }

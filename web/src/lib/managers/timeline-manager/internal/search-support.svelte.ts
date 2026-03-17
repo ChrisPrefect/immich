@@ -1,5 +1,5 @@
 import { plainDateTimeCompare, type TimelineYearMonth } from '$lib/utils/timeline-util';
-import { AssetOrder } from '@immich/sdk';
+import { AssetOrder, type AssetResponseDto } from '@immich/sdk';
 import { DateTime } from 'luxon';
 import type { MonthGroup } from '../month-group.svelte';
 import { TimelineManager } from '../timeline-manager.svelte';
@@ -7,12 +7,16 @@ import type { AssetDescriptor, Direction, TimelineAsset } from '../types';
 
 export async function getAssetWithOffset(
   timelineManager: TimelineManager,
-  assetDescriptor: AssetDescriptor,
+  assetDescriptor: AssetDescriptor | AssetResponseDto,
   interval: 'asset' | 'day' | 'month' | 'year' = 'asset',
   direction: Direction,
 ): Promise<TimelineAsset | undefined> {
-  const { asset, monthGroup } = findMonthGroupForAsset(timelineManager, assetDescriptor.id) ?? {};
-  if (!monthGroup || !asset) {
+  const monthGroup = await timelineManager.findMonthGroupForAsset(assetDescriptor);
+  if (!monthGroup) {
+    return;
+  }
+  const asset = monthGroup.findAssetById(assetDescriptor);
+  if (!asset) {
     return;
   }
 
@@ -118,6 +122,7 @@ export async function retrieveRange(timelineManager: TimelineManager, start: Ass
   const assetOrder: AssetOrder = timelineManager.getAssetOrder();
   if (plainDateTimeCompare(assetOrder === AssetOrder.Desc, startAsset.localDateTime, endAsset.localDateTime) < 0) {
     [startAsset, endAsset] = [endAsset, startAsset];
+    // eslint-disable-next-line no-useless-assignment
     [startMonthGroup, endMonthGroup] = [endMonthGroup, startMonthGroup];
   }
 

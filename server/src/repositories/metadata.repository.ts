@@ -72,6 +72,8 @@ export interface ImmichTags extends Omit<Tags, TagsWithWrongTypes> {
 
   AndroidMake?: string;
   AndroidModel?: string;
+  DeviceManufacturer?: string;
+  DeviceModelName?: string;
 }
 
 @Injectable()
@@ -89,6 +91,7 @@ export class MetadataRepository {
     // Enable exiftool LFS to parse metadata for files larger than 2GB.
     readArgs: ['-api', 'largefilesupport=1'],
     writeArgs: ['-api', 'largefilesupport=1', '-overwrite_original'],
+    taskTimeoutMillis: 2 * 60 * 1000,
   });
 
   constructor(private logger: LoggingRepository) {
@@ -105,7 +108,7 @@ export class MetadataRepository {
 
   readTags(path: string): Promise<ImmichTags> {
     const args = mimeTypes.isVideo(path) ? ['-ee'] : [];
-    return this.exiftool.read(path, args).catch((error) => {
+    return this.exiftool.read(path, { readArgs: args }).catch((error) => {
       this.logger.warn(`Error reading exif data (${path}): ${error}\n${error?.stack}`);
       return {};
     }) as Promise<ImmichTags>;

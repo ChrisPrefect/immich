@@ -4,9 +4,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/datetime_extensions.dart';
 import 'package:immich_mobile/models/activities/activity.model.dart';
+import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
 import 'package:immich_mobile/providers/activity.provider.dart';
 import 'package:immich_mobile/providers/activity_service.provider.dart';
-import 'package:immich_mobile/providers/image/immich_remote_thumbnail_provider.dart';
 import 'package:immich_mobile/providers/infrastructure/current_album.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/widgets/activities/dismissible_activity.dart';
@@ -41,7 +41,7 @@ class CommentBubble extends ConsumerWidget {
     // avatar (hidden for own messages)
     Widget avatar = const SizedBox.shrink();
     if (!isOwn) {
-      avatar = UserCircleAvatar(user: activity.user, size: 28, radius: 14);
+      avatar = UserCircleAvatar(user: activity.user, size: 28);
     }
 
     // Thumbnail with tappable behavior and optional heart overlay
@@ -56,7 +56,7 @@ class CommentBubble extends ConsumerWidget {
               child: ClipRRect(
                 borderRadius: const BorderRadius.all(Radius.circular(10)),
                 child: Image(
-                  image: ImmichRemoteThumbnailProvider(assetId: activity.assetId!),
+                  image: RemoteImageProvider.thumbnail(assetId: activity.assetId!, thumbhash: ""),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -67,8 +67,8 @@ class CommentBubble extends ConsumerWidget {
                 bottom: 6,
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.7), shape: BoxShape.circle),
-                  child: Icon(Icons.favorite, color: Colors.red[600], size: 18),
+                  decoration: BoxDecoration(color: context.colorScheme.surfaceContainer, shape: BoxShape.circle),
+                  child: Icon(Icons.thumb_up, color: context.primaryColor, size: 18),
                 ),
               ),
           ],
@@ -81,8 +81,8 @@ class CommentBubble extends ConsumerWidget {
     if (isLike && !showThumbnail) {
       likes = Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.7), shape: BoxShape.circle),
-        child: Icon(Icons.favorite, color: Colors.red[600], size: 18),
+        decoration: BoxDecoration(color: context.colorScheme.surfaceContainer, shape: BoxShape.circle),
+        child: Icon(Icons.thumb_up, color: context.primaryColor, size: 18),
       );
     }
 

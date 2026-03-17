@@ -1,11 +1,21 @@
 import { goto } from '$app/navigation';
-import { AppRoute } from '$lib/constants';
+import { OpenQueryParam } from '$lib/constants';
 import { eventManager } from '$lib/managers/event-manager.svelte';
+import { queueManager } from '$lib/managers/queue-manager.svelte';
 import JobCreateModal from '$lib/modals/JobCreateModal.svelte';
-import { user } from '$lib/stores/user.store';
+import { Route } from '$lib/route';
+import type { HeaderButtonActionItem } from '$lib/types';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
-import { emptyQueue, getQueue, QueueName, updateQueue, type QueueResponseDto } from '@immich/sdk';
+import {
+  emptyQueue,
+  getQueue,
+  QueueCommand,
+  QueueName,
+  runQueueCommandLegacy,
+  updateQueue,
+  type QueueResponseDto,
+} from '@immich/sdk';
 import { modalManager, toastManager, type ActionItem, type IconLike } from '@immich/ui';
 import {
   mdiClose,
@@ -20,10 +30,10 @@ import {
   mdiLibraryShelves,
   mdiOcr,
   mdiPause,
+  mdiPencil,
   mdiPlay,
   mdiPlus,
   mdiStateMachine,
-  mdiSync,
   mdiTable,
   mdiTagFaces,
   mdiTrashCanOutline,
@@ -31,7 +41,6 @@ import {
   mdiVideo,
 } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
-import { get } from 'svelte/store';
 
 type QueueItem = {
   icon: IconLike;
@@ -39,15 +48,17 @@ type QueueItem = {
   subtitle?: string;
 };
 
-export const getQueuesActions = ($t: MessageFormatter) => {
-  const ViewQueues: ActionItem = {
-    title: $t('admin.queues'),
-    description: $t('admin.queues_page_description'),
-    icon: mdiSync,
-    type: $t('page'),
-    isGlobal: true,
-    $if: () => get(user)?.isAdmin,
-    onAction: () => goto(AppRoute.ADMIN_QUEUES),
+export const getQueuesActions = ($t: MessageFormatter, queues: QueueResponseDto[] | undefined) => {
+  const pausedQueues = (queues ?? []).filter(({ isPaused }) => isPaused).map(({ name }) => name);
+
+  const ResumePaused: HeaderButtonActionItem = {
+    title: $t('resume_paused_jobs', { values: { count: pausedQueues.length } }),
+    $if: () => pausedQueues.length > 0,
+    icon: mdiPlay,
+    onAction: () => handleResumePausedJobs(pausedQueues),
+    data: {
+      title: pausedQueues.join(', '),
+    },
   };
 
   const CreateJob: ActionItem = {
@@ -55,9 +66,7 @@ export const getQueuesActions = ($t: MessageFormatter) => {
     title: $t('admin.create_job'),
     type: $t('command'),
     shortcuts: { shift: true, key: 'n' },
-    onAction: async () => {
-      await modalManager.show(JobCreateModal, {});
-    },
+    onAction: () => modalManager.show(JobCreateModal, {}),
   };
 
   const ManageConcurrency: ActionItem = {
@@ -65,10 +74,10 @@ export const getQueuesActions = ($t: MessageFormatter) => {
     title: $t('admin.manage_concurrency'),
     description: $t('admin.manage_concurrency_description'),
     type: $t('page'),
-    onAction: () => goto(`${AppRoute.ADMIN_SETTINGS}?isOpen=job`),
+    onAction: () => goto(Route.systemSettings({ isOpen: OpenQueryParam.JOB })),
   };
 
-  return { ViewQueues, ManageConcurrency, CreateJob };
+  return { ResumePaused, ManageConcurrency, CreateJob };
 };
 
 export const getQueueActions = ($t: MessageFormatter, queue: QueueResponseDto) => {
@@ -123,6 +132,19 @@ export const handleEmptyQueue = async (queue: QueueResponseDto) => {
     toastManager.success($t('admin.cleared_jobs', { values: { job: item.title } }));
   } catch (error) {
     handleError(error, $t('errors.something_went_wrong'));
+  }
+};
+
+const handleResumePausedJobs = async (queues: QueueName[]) => {
+  const $t = await getFormatter();
+
+  try {
+    for (const name of queues) {
+      await runQueueCommandLegacy({ name, queueCommandDto: { command: QueueCommand.Resume, force: false } });
+    }
+    await queueManager.refresh();
+  } catch (error) {
+    handleError(error, $t('admin.failed_job_command', { values: { command: 'resume', job: 'paused jobs' } }));
   }
 };
 
@@ -219,28 +241,13 @@ export const asQueueItem = ($t: MessageFormatter, queue: { name: QueueName }): Q
     },
     [QueueName.Workflow]: {
       icon: mdiStateMachine,
-      title: $t('workflow'),
+      title: $t('workflows'),
+    },
+    [QueueName.Editor]: {
+      icon: mdiPencil,
+      title: $t('editor'),
     },
   };
 
   return items[queue.name];
-};
-
-export const asQueueSlug = (name: QueueName) => {
-  return name.replaceAll(/[A-Z]/g, (m) => '-' + m.toLowerCase());
-};
-
-export const fromQueueSlug = (slug: string): QueueName | undefined => {
-  const name = slug.replaceAll(/-([a-z])/g, (_, c) => c.toUpperCase());
-  if (Object.values(QueueName).includes(name as QueueName)) {
-    return name as QueueName;
-  }
-};
-
-export const getQueueDetailUrl = (queue: QueueResponseDto) => {
-  return `${AppRoute.ADMIN_QUEUES}/${asQueueSlug(queue.name)}`;
-};
-
-export const handleViewQueue = (queue: QueueResponseDto) => {
-  return goto(getQueueDetailUrl(queue));
 };

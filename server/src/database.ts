@@ -1,4 +1,4 @@
-import { Selectable } from 'kysely';
+import { Selectable, ShallowDehydrateObject } from 'kysely';
 import { MapAsset } from 'src/dtos/asset-response.dto';
 import {
   AlbumUserRole,
@@ -16,6 +16,7 @@ import {
 } from 'src/enum';
 import { AlbumTable } from 'src/schema/tables/album.table';
 import { AssetExifTable } from 'src/schema/tables/asset-exif.table';
+import { AssetTable } from 'src/schema/tables/asset.table';
 import { PluginActionTable, PluginFilterTable, PluginTable } from 'src/schema/tables/plugin.table';
 import { WorkflowActionTable, WorkflowFilterTable, WorkflowTable } from 'src/schema/tables/workflow.table';
 import { UserMetadataItem } from 'src/types';
@@ -31,7 +32,7 @@ export type AuthUser = {
 };
 
 export type AlbumUser = {
-  user: User;
+  user: ShallowDehydrateObject<User>;
   role: AlbumUserRole;
 };
 
@@ -39,6 +40,7 @@ export type AssetFile = {
   id: string;
   type: AssetFileType;
   path: string;
+  isEdited: boolean;
 };
 
 export type Library = {
@@ -66,7 +68,7 @@ export type Activity = {
   updatedAt: Date;
   albumId: string;
   userId: string;
-  user: User;
+  user: ShallowDehydrateObject<User>;
   assetId: string | null;
   comment: string | null;
   isLiked: boolean;
@@ -104,7 +106,7 @@ export type Memory = {
   data: object;
   ownerId: string;
   isSaved: boolean;
-  assets: MapAsset[];
+  assets: ShallowDehydrateObject<MapAsset>[];
 };
 
 export type Asset = {
@@ -152,15 +154,14 @@ export type StorageAsset = {
   id: string;
   ownerId: string;
   files: AssetFile[];
-  encodedVideoPath: string | null;
 };
 
 export type Stack = {
   id: string;
   primaryAssetId: string;
-  owner?: User;
+  owner?: ShallowDehydrateObject<User>;
   ownerId: string;
-  assets: MapAsset[];
+  assets: ShallowDehydrateObject<MapAsset>[];
   assetCount?: number;
 };
 
@@ -176,11 +177,11 @@ export type AuthSharedLink = {
 
 export type SharedLink = {
   id: string;
-  album?: Album | null;
+  album?: ShallowDehydrateObject<Album> | null;
   albumId: string | null;
   allowDownload: boolean;
   allowUpload: boolean;
-  assets: MapAsset[];
+  assets: ShallowDehydrateObject<MapAsset>[];
   createdAt: Date;
   description: string | null;
   expiresAt: Date | null;
@@ -193,8 +194,8 @@ export type SharedLink = {
 };
 
 export type Album = Selectable<AlbumTable> & {
-  owner: User;
-  assets: MapAsset[];
+  owner: ShallowDehydrateObject<User>;
+  assets: ShallowDehydrateObject<Selectable<AssetTable>>[];
 };
 
 export type AuthSession = {
@@ -204,9 +205,9 @@ export type AuthSession = {
 
 export type Partner = {
   sharedById: string;
-  sharedBy: User;
+  sharedBy: ShallowDehydrateObject<User>;
   sharedWithId: string;
-  sharedWith: User;
+  sharedWith: ShallowDehydrateObject<User>;
   createdAt: Date;
   createId: string;
   updatedAt: Date;
@@ -240,7 +241,7 @@ export type Session = {
   isPendingSyncReset: boolean;
 };
 
-export type Exif = Omit<Selectable<AssetExifTable>, 'updatedAt' | 'updateId'>;
+export type Exif = Omit<Selectable<AssetExifTable>, 'updatedAt' | 'updateId' | 'lockedProperties'>;
 
 export type Person = {
   createdAt: Date;
@@ -269,9 +270,10 @@ export type AssetFace = {
   imageWidth: number;
   personId: string | null;
   sourceType: SourceType;
-  person?: Person | null;
+  person?: ShallowDehydrateObject<Person> | null;
   updatedAt: Date;
   updateId: string;
+  isVisible: boolean;
 };
 
 export type Plugin = Selectable<PluginTable>;
@@ -340,8 +342,18 @@ export const columns = {
     'asset.originalPath',
     'asset.ownerId',
     'asset.type',
+    'asset.width',
+    'asset.height',
   ],
-  assetFiles: ['asset_file.id', 'asset_file.path', 'asset_file.type'],
+  assetFiles: ['asset_file.id', 'asset_file.path', 'asset_file.type', 'asset_file.isEdited'],
+  assetFilesForThumbnail: [
+    'asset_file.id',
+    'asset_file.path',
+    'asset_file.type',
+    'asset_file.isEdited',
+    'asset_file.isProgressive',
+    'asset_file.isTransparent',
+  ],
   authUser: ['user.id', 'user.name', 'user.email', 'user.isAdmin', 'user.quotaUsageInBytes', 'user.quotaSizeInBytes'],
   authApiKey: ['api_key.id', 'api_key.permissions'],
   authSession: ['session.id', 'session.updatedAt', 'session.pinExpiresAt', 'session.appVersion'],
@@ -390,6 +402,9 @@ export const columns = {
     'asset.livePhotoVideoId',
     'asset.stackId',
     'asset.libraryId',
+    'asset.width',
+    'asset.height',
+    'asset.isEdited',
   ],
   syncAlbumUser: ['album_user.albumId as albumId', 'album_user.userId as userId', 'album_user.role'],
   syncStack: ['stack.id', 'stack.createdAt', 'stack.updatedAt', 'stack.primaryAssetId', 'stack.ownerId'],
@@ -422,6 +437,13 @@ export const columns = {
     'asset_exif.rating',
     'asset_exif.fps',
   ],
+  syncAssetEdit: [
+    'asset_edit.id',
+    'asset_edit.assetId',
+    'asset_edit.sequence',
+    'asset_edit.action',
+    'asset_edit.parameters',
+  ],
   exif: [
     'asset_exif.assetId',
     'asset_exif.autoStackId',
@@ -451,6 +473,7 @@ export const columns = {
     'asset_exif.projectionType',
     'asset_exif.rating',
     'asset_exif.state',
+    'asset_exif.tags',
     'asset_exif.timeZone',
   ],
   plugin: [
@@ -465,3 +488,14 @@ export const columns = {
     'plugin.updatedAt as updatedAt',
   ],
 } as const;
+
+export type LockableProperty = (typeof lockableProperties)[number];
+export const lockableProperties = [
+  'description',
+  'dateTimeOriginal',
+  'latitude',
+  'longitude',
+  'rating',
+  'timeZone',
+  'tags',
+] as const;

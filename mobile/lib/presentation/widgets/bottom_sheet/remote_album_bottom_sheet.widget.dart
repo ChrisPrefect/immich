@@ -13,12 +13,12 @@ import 'package:immich_mobile/presentation/widgets/action_buttons/edit_location_
 import 'package:immich_mobile/presentation/widgets/action_buttons/favorite_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/move_to_lock_folder_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/remove_from_album_action_button.widget.dart';
+import 'package:immich_mobile/presentation/widgets/action_buttons/set_album_cover.widget.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/share_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/share_link_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/stack_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/trash_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/unstack_action_button.widget.dart';
-import 'package:immich_mobile/presentation/widgets/action_buttons/upload_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/album/album_selector.widget.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/base_bottom_sheet.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
@@ -112,11 +112,10 @@ class _RemoteAlbumBottomSheetState extends ConsumerState<RemoteAlbumBottomSheet>
             if (multiselect.hasStacked) const UnStackActionButton(source: ActionSource.timeline),
           ],
         ],
-        if (multiselect.hasLocal) ...[
-          const DeleteLocalActionButton(source: ActionSource.timeline),
-          const UploadActionButton(source: ActionSource.timeline),
-        ],
+        if (multiselect.hasMerged) const DeleteLocalActionButton(source: ActionSource.timeline),
         if (ownsAlbum) RemoveFromAlbumActionButton(source: ActionSource.timeline, albumId: widget.album.id),
+        if (ownsAlbum && multiselect.selectedAssets.length == 1)
+          SetAlbumCoverActionButton(source: ActionSource.timeline, albumId: widget.album.id),
       ],
       slivers: ownsAlbum
           ? [

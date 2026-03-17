@@ -1,4 +1,4 @@
-import type { TimelineAsset, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
+import type { AssetDescriptor, TimelineAsset, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
 import { locale } from '$lib/stores/preferences.store';
 import { getAssetRatio } from '$lib/utils/asset-utils';
 import { AssetTypeEnum, type AssetResponseDto } from '@immich/sdk';
@@ -159,8 +159,7 @@ export const toTimelineAsset = (unknownAsset: AssetResponseDto | TimelineAsset):
     return unknownAsset;
   }
   const assetResponse = unknownAsset;
-  const { width, height } = getAssetRatio(assetResponse);
-  const ratio = width / height;
+  const ratio = getAssetRatio(assetResponse) ?? 1;
   const city = assetResponse.exifInfo?.city;
   const country = assetResponse.exifInfo?.country;
   const people = assetResponse.people?.map((person) => person.name) || [];
@@ -171,6 +170,7 @@ export const toTimelineAsset = (unknownAsset: AssetResponseDto | TimelineAsset):
   return {
     id: assetResponse.id,
     ownerId: assetResponse.ownerId,
+    tags: assetResponse.tags?.map((tag) => tag.id),
     ratio,
     thumbhash: assetResponse.thumbhash,
     localDateTime,
@@ -192,8 +192,13 @@ export const toTimelineAsset = (unknownAsset: AssetResponseDto | TimelineAsset):
   };
 };
 
-export const isTimelineAsset = (unknownAsset: AssetResponseDto | TimelineAsset): unknownAsset is TimelineAsset =>
-  (unknownAsset as TimelineAsset).ratio !== undefined;
+export const isTimelineAsset = (
+  unknownAsset: AssetDescriptor | AssetResponseDto | TimelineAsset,
+): unknownAsset is TimelineAsset => (unknownAsset as TimelineAsset).ratio !== undefined;
+
+export const isAssetResponseDto = (
+  unknownAsset: AssetDescriptor | AssetResponseDto | TimelineAsset,
+): unknownAsset is AssetResponseDto => (unknownAsset as AssetResponseDto).type !== undefined;
 
 export const isTimelineAssets = (assets: AssetResponseDto[] | TimelineAsset[]): assets is TimelineAsset[] =>
   assets.length === 0 || 'ratio' in assets[0];

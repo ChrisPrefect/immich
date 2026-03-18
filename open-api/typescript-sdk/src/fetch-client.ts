@@ -3698,18 +3698,13 @@ export function createAlbum({ createAlbumDto }: {
 /**
  * Add assets to albums
  */
-export function addAssetsToAlbums({ key, slug, albumsAddAssetsDto }: {
-    key?: string;
-    slug?: string;
+export function addAssetsToAlbums({ albumsAddAssetsDto }: {
     albumsAddAssetsDto: AlbumsAddAssetsDto;
 }, opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
         data: AlbumsAddAssetsResponseDto;
-    }>(`/albums/assets${QS.query(QS.explode({
-        key,
-        slug
-    }))}`, oazapfts.json({
+    }>("/albums/assets", oazapfts.json({
         ...opts,
         method: "PUT",
         body: albumsAddAssetsDto
@@ -5926,20 +5921,16 @@ export function sharedLinkLogin({ key, slug, sharedLinkLoginDto }: {
 /**
  * Retrieve current shared link
  */
-export function getMySharedLink({ key, password, slug, token }: {
+export function getMySharedLink({ key, slug }: {
     key?: string;
-    password?: string;
     slug?: string;
-    token?: string;
 }, opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
         data: SharedLinkResponseDto;
     }>(`/shared-links/me${QS.query(QS.explode({
         key,
-        password,
-        slug,
-        token
+        slug
     }))}`, {
         ...opts
     }));

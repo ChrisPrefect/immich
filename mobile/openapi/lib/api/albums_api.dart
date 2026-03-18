@@ -104,11 +104,7 @@ class AlbumsApi {
   /// Parameters:
   ///
   /// * [AlbumsAddAssetsDto] albumsAddAssetsDto (required):
-  ///
-  /// * [String] key:
-  ///
-  /// * [String] slug:
-  Future<Response> addAssetsToAlbumsWithHttpInfo(AlbumsAddAssetsDto albumsAddAssetsDto, { String? key, String? slug, }) async {
+  Future<Response> addAssetsToAlbumsWithHttpInfo(AlbumsAddAssetsDto albumsAddAssetsDto,) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/albums/assets';
 
@@ -118,13 +114,6 @@ class AlbumsApi {
     final queryParams = <QueryParam>[];
     final headerParams = <String, String>{};
     final formParams = <String, String>{};
-
-    if (key != null) {
-      queryParams.addAll(_queryParams('', 'key', key));
-    }
-    if (slug != null) {
-      queryParams.addAll(_queryParams('', 'slug', slug));
-    }
 
     const contentTypes = <String>['application/json'];
 
@@ -147,12 +136,8 @@ class AlbumsApi {
   /// Parameters:
   ///
   /// * [AlbumsAddAssetsDto] albumsAddAssetsDto (required):
-  ///
-  /// * [String] key:
-  ///
-  /// * [String] slug:
-  Future<AlbumsAddAssetsResponseDto?> addAssetsToAlbums(AlbumsAddAssetsDto albumsAddAssetsDto, { String? key, String? slug, }) async {
-    final response = await addAssetsToAlbumsWithHttpInfo(albumsAddAssetsDto,  key: key, slug: slug, );
+  Future<AlbumsAddAssetsResponseDto?> addAssetsToAlbums(AlbumsAddAssetsDto albumsAddAssetsDto,) async {
+    final response = await addAssetsToAlbumsWithHttpInfo(albumsAddAssetsDto,);
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

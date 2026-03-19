@@ -440,7 +440,29 @@ export const toggleArchive = async (asset: AssetResponseDto) => {
     });
 
     asset.isArchived = data.isArchived;
-    toastManager.primary(asset.isArchived ? $t(`added_to_archive`) : $t(`removed_from_archive`));
+    if (asset.isArchived) {
+      toastManager.custom(
+        {
+          component: ToastAction,
+          props: {
+            title: $t('success'),
+            description: $t('added_to_archive'),
+            color: 'success',
+            button: {
+              color: 'secondary',
+              text: $t('undo'),
+              onClick: () =>
+                undoArchiveAssets([asset.id], () => {
+                  asset.isArchived = false;
+                }),
+            },
+          },
+        },
+        { timeout: 5000 },
+      );
+    } else {
+      toastManager.primary($t('removed_from_archive'));
+    }
   } catch (error) {
     handleError(error, $t('errors.unable_to_add_remove_archive', { values: { archived: asset.isArchived } }));
   }
@@ -448,7 +470,29 @@ export const toggleArchive = async (asset: AssetResponseDto) => {
   return asset;
 };
 
-export const archiveAssets = async (assets: { id: string }[], visibility: AssetVisibility) => {
+const undoArchiveAssets = async (ids: string[], onUndo: ((ids: string[]) => void) | undefined = undefined) => {
+  const $t = get(t);
+  try {
+    if (ids.length > 0) {
+      await updateAssets({
+        assetBulkUpdateDto: {
+          ids,
+          visibility: AssetVisibility.Timeline,
+        },
+      });
+    }
+
+    onUndo?.(ids);
+  } catch (error) {
+    handleError(error, $t('errors.unable_to_archive_unarchive', { values: { archived: false } }));
+  }
+};
+
+export const archiveAssets = async (
+  assets: { id: string }[],
+  visibility: AssetVisibility,
+  onUndoArchive: ((ids: string[]) => void) | undefined = undefined,
+) => {
   const ids = assets.map(({ id }) => id);
   const $t = get(t);
 
@@ -459,11 +503,26 @@ export const archiveAssets = async (assets: { id: string }[], visibility: AssetV
       });
     }
 
-    toastManager.primary(
-      visibility === AssetVisibility.Archive
-        ? $t('archived_count', { values: { count: ids.length } })
-        : $t('unarchived_count', { values: { count: ids.length } }),
-    );
+    if (visibility === AssetVisibility.Archive) {
+      toastManager.custom(
+        {
+          component: ToastAction,
+          props: {
+            title: $t('success'),
+            description: $t('archived_count', { values: { count: ids.length } }),
+            color: 'success',
+            button: {
+              color: 'secondary',
+              text: $t('undo'),
+              onClick: () => undoArchiveAssets(ids, onUndoArchive),
+            },
+          },
+        },
+        { timeout: 5000 },
+      );
+    } else {
+      toastManager.primary($t('unarchived_count', { values: { count: ids.length } }));
+    }
   } catch (error) {
     handleError(
       error,

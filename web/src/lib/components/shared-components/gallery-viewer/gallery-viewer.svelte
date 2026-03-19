@@ -228,9 +228,11 @@
   };
 
   const toggleArchive = async () => {
+    const onUndoArchive = assetInteraction.isAllArchived ? undefined : () => onReload?.();
     const ids = await archiveAssets(
       assetInteraction.selectedAssets,
       assetInteraction.isAllArchived ? AssetVisibility.Timeline : AssetVisibility.Archive,
+      onUndoArchive,
     );
     if (ids) {
       assets = assets.filter((asset) => !ids.includes(asset.id));

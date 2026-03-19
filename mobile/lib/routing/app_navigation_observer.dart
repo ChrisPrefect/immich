@@ -28,6 +28,17 @@ class AppNavigationObserver extends AutoRouterObserver {
     });
   }
 
+  @override
+  void didPop(Route route, Route? previousRoute) {
+    _handleLockedViewState(previousRoute ?? route, null);
+    _handleDriftLockedFolderState(previousRoute ?? route, null);
+    Future(() {
+      ref.read(currentRouteNameProvider.notifier).state = previousRoute?.settings.name;
+      ref.read(previousRouteNameProvider.notifier).state = ref.read(previousRouteNameProvider);
+      ref.read(previousRouteDataProvider.notifier).state = previousRoute?.settings;
+    });
+  }
+
   _handleLockedViewState(Route route, Route? previousRoute) {
     final isInLockedView = ref.read(inLockedViewProvider);
     final isFromLockedViewToDetailView =

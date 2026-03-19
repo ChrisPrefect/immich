@@ -8,13 +8,13 @@
   import AssetViewerEvents from '$lib/components/AssetViewerEvents.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { castManager } from '$lib/managers/cast-manager.svelte';
-  import { isFaceEditMode } from '$lib/stores/face-edit.svelte';
+  import { isEditFacesPanelOpen, isFaceEditMode } from '$lib/stores/face-edit.svelte';
   import { ocrManager } from '$lib/stores/ocr.svelte';
   import { boundingBoxesArray, type Faces } from '$lib/stores/people.store';
   import { SlideshowLook, SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
   import { handlePromiseError } from '$lib/utils';
   import { canCopyImageToClipboard, copyImageToClipboard } from '$lib/utils/asset-utils';
-  import { getNaturalSize, scaleToFit, type Size } from '$lib/utils/container-utils';
+  import type { Size } from '$lib/utils/container-utils';
   import { handleError } from '$lib/utils/handle-error';
   import { getOcrBoundingBoxes } from '$lib/utils/ocr-utils';
   import { getBoundingBox } from '$lib/utils/people-utils';
@@ -67,13 +67,10 @@
     height: containerHeight,
   });
 
-  const overlaySize = $derived.by((): Size => {
-    if (!assetViewerManager.imgRef || !visibleImageReady) {
-      return { width: 0, height: 0 };
-    }
+  let imageDimensions = $state<Size>({ width: 0, height: 0 });
+  let scaledDimensions = $state<Size>({ width: 0, height: 0 });
 
-    return scaleToFit(getNaturalSize(assetViewerManager.imgRef), { width: containerWidth, height: containerHeight });
-  });
+  const overlaySize = $derived(visibleImageReady ? scaledDimensions : { width: 0, height: 0 });
 
   const ocrBoxes = $derived(ocrManager.showOverlay ? getOcrBoundingBoxes(ocrManager.data, overlaySize) : []);
 
@@ -96,12 +93,6 @@
   };
 
   const onPlaySlideshow = () => ($slideshowState = SlideshowState.PlaySlideshow);
-
-  $effect(() => {
-    if (isFaceEditMode.value && assetViewerManager.zoom > 1) {
-      onZoom();
-    }
-  });
 
   // TODO move to action + command palette
   const onCopyShortcut = (event: KeyboardEvent) => {
@@ -147,46 +138,22 @@
 
   const faceToNameMap = $derived.by(() => {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const map = new Map<Faces, string>();
+    const map = new Map<Faces, string | undefined>();
     for (const person of asset.people ?? []) {
       for (const face of person.faces ?? []) {
         map.set(face, person.name);
       }
     }
+    for (const face of asset.unassignedFaces ?? []) {
+      map.set(face, undefined);
+    }
     return map;
   });
 
+  // Array needed for indexed access in the template (faces[index])
   const faces = $derived(Array.from(faceToNameMap.keys()));
-
-  const handleImageMouseMove = (event: MouseEvent) => {
-    $boundingBoxesArray = [];
-    if (!assetViewerManager.imgRef || !element || isFaceEditMode.value || ocrManager.showOverlay) {
-      return;
-    }
-
-    const natural = getNaturalSize(assetViewerManager.imgRef);
-    const scaled = scaleToFit(natural, container);
-    const { currentZoom, currentPositionX, currentPositionY } = assetViewerManager.zoomState;
-
-    const contentOffsetX = (container.width - scaled.width) / 2;
-    const contentOffsetY = (container.height - scaled.height) / 2;
-
-    const containerRect = element.getBoundingClientRect();
-    const mouseX = (event.clientX - containerRect.left - contentOffsetX * currentZoom - currentPositionX) / currentZoom;
-    const mouseY = (event.clientY - containerRect.top - contentOffsetY * currentZoom - currentPositionY) / currentZoom;
-
-    const faceBoxes = getBoundingBox(faces, overlaySize);
-
-    for (const [index, box] of faceBoxes.entries()) {
-      if (mouseX >= box.left && mouseX <= box.left + box.width && mouseY >= box.top && mouseY <= box.top + box.height) {
-        $boundingBoxesArray.push(faces[index]);
-      }
-    }
-  };
-
-  const handleImageMouseLeave = () => {
-    $boundingBoxesArray = [];
-  };
+  const boundingBoxes = $derived(getBoundingBox(faces, overlaySize));
+  const activeBoundingBoxes = $derived(boundingBoxes.filter((box) => $boundingBoxesArray.some((f) => f.id === box.id)));
 </script>
 
 <AssetViewerEvents {onCopy} {onZoom} />
@@ -207,8 +174,6 @@
   bind:clientHeight={containerHeight}
   role="presentation"
   ondblclick={onZoom}
-  onmousemove={handleImageMouseMove}
-  onmouseleave={handleImageMouseLeave}
   use:zoomImageAction={{ zoomTarget: adaptiveImage }}
   {...useSwipe((event) => onSwipe?.(event))}
 >
@@ -227,6 +192,8 @@
       onReady?.();
     }}
     bind:imgRef={assetViewerManager.imgRef}
+    bind:imgNaturalSize={imageDimensions}
+    bind:imgScaledSize={scaledDimensions}
     bind:ref={adaptiveImage}
   >
     {#snippet backdrop()}
@@ -238,20 +205,40 @@
       {/if}
     {/snippet}
     {#snippet overlays()}
-      {#each getBoundingBox($boundingBoxesArray, overlaySize) as boundingbox, index (boundingbox.id)}
+      {#if !isFaceEditMode.value}
+        {#each boundingBoxes as boundingbox, index (boundingbox.id)}
+          {@const face = faces[index]}
+          {@const name = faceToNameMap.get(face)}
+          {#if name !== undefined || isEditFacesPanelOpen.value}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div
+              class="absolute pointer-events-auto outline-none rounded-lg"
+              style="top: {boundingbox.top}px; left: {boundingbox.left}px; height: {boundingbox.height}px; width: {boundingbox.width}px;"
+              aria-label="{$t('person')}: {name ?? $t('unknown')}"
+              onpointerenter={() => ($boundingBoxesArray = [face])}
+              onpointerleave={() => ($boundingBoxesArray = [])}
+            ></div>
+          {/if}
+        {/each}
+      {/if}
+
+      {#each activeBoundingBoxes as boundingbox (boundingbox.id)}
+        {@const face = faces.find((f) => f.id === boundingbox.id)}
+        {@const name = face ? faceToNameMap.get(face) : undefined}
         <div
-          class="absolute border-solid border-white border-3 rounded-lg"
+          class="absolute border-solid border-white border-3 rounded-lg pointer-events-none"
           style="top: {boundingbox.top}px; left: {boundingbox.left}px; height: {boundingbox.height}px; width: {boundingbox.width}px;"
-        ></div>
-        {#if faceToNameMap.get($boundingBoxesArray[index])}
-          <div
-            class="absolute bg-white/90 text-black px-2 py-1 rounded text-sm font-medium whitespace-nowrap pointer-events-none shadow-lg"
-            style="top: {boundingbox.top + boundingbox.height + 4}px; left: {boundingbox.left +
-              boundingbox.width}px; transform: translateX(-100%);"
-          >
-            {faceToNameMap.get($boundingBoxesArray[index])}
-          </div>
-        {/if}
+        >
+          {#if name}
+            <div
+              aria-hidden="true"
+              class="absolute bg-white/90 text-black px-2 py-1 rounded text-sm font-medium whitespace-nowrap shadow-lg"
+              style="top: {boundingbox.height + 4}px; right: 0;"
+            >
+              {name}
+            </div>
+          {/if}
+        </div>
       {/each}
 
       {#each ocrBoxes as ocrBox (ocrBox.id)}
@@ -261,6 +248,6 @@
   </AdaptiveImage>
 
   {#if isFaceEditMode.value && assetViewerManager.imgRef}
-    <FaceEditor htmlElement={assetViewerManager.imgRef} {containerWidth} {containerHeight} assetId={asset.id} />
+    <FaceEditor imageSize={imageDimensions} {containerWidth} {containerHeight} assetId={asset.id} />
   {/if}
 </div>

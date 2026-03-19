@@ -16,6 +16,7 @@
     circle?: boolean;
     hidden?: boolean;
     border?: boolean;
+    highlighted?: boolean;
     hiddenIconClass?: string;
     class?: ClassValue;
     brokenAssetClass?: ClassValue;
@@ -34,6 +35,7 @@
     circle = false,
     hidden = false,
     border = false,
+    highlighted = false,
     hiddenIconClass = 'text-white',
     onComplete = undefined,
     class: imageClass = '',
@@ -81,6 +83,10 @@
     title={title ?? undefined}
     loading={preload ? 'eager' : 'lazy'}
   />
+{/if}
+
+{#if highlighted}
+  <span class={['absolute inset-0 pointer-events-none border-2 border-white', sharedClasses]} {style}></span>
 {/if}
 
 {#if hidden}

@@ -4,7 +4,7 @@
   import { ProjectionType } from '$lib/constants';
   import type { AssetResponseDto } from '@immich/sdk';
 
-  interface Props {
+  type Props = {
     asset: AssetResponseDto;
     assetId?: string;
     projectionType: string | null | undefined;
@@ -16,7 +16,7 @@
     onNextAsset?: () => void;
     onVideoEnded?: () => void;
     onVideoStarted?: () => void;
-  }
+  };
 
   let {
     asset,
@@ -42,6 +42,7 @@
     {loopVideo}
     {cacheKey}
     assetId={effectiveAssetId}
+    imageSize={{ width: asset.width ?? 1, height: asset.height ?? 1 }}
     {playOriginalVideo}
     {onPreviousAsset}
     {onNextAsset}

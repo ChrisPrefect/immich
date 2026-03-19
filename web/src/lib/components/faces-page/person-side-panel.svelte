@@ -27,12 +27,12 @@
   import ImageThumbnail from '../assets/thumbnail/image-thumbnail.svelte';
   import AssignFaceSidePanel from './assign-face-side-panel.svelte';
 
-  interface Props {
+  type Props = {
     assetId: string;
     assetType: AssetTypeEnum;
     onClose: () => void;
     onRefresh: () => void;
-  }
+  };
 
   let { assetId, assetType, onClose, onRefresh }: Props = $props();
 
@@ -58,6 +58,8 @@
   let automaticRefreshTimeout: ReturnType<typeof setTimeout>;
 
   const thumbnailWidth = '90px';
+  const focusHighlightClass =
+    'group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-immich-primary dark:group-focus-visible:outline-immich-dark-primary';
 
   async function loadPeople() {
     const timeout = setTimeout(() => (isShowLoadingPeople = true), timeBeforeShowLoadingSpinner);
@@ -226,14 +228,16 @@
       {:else}
         {#each peopleWithFaces as face, index (face.id)}
           {@const personName = face.person ? face.person?.name : $t('face_unassigned')}
+          {@const isHighlighted = $boundingBoxesArray.some((f) => f.id === face.id)}
           <div class="relative h-29 w-24">
             <div
               role="button"
               tabindex={index}
-              class="absolute start-0 top-0 h-22.5 w-22.5 cursor-default"
+              data-testid="face-thumbnail"
+              class="group absolute inset-s-0 top-0 h-22.5 w-22.5 cursor-default outline-none"
               onfocus={() => ($boundingBoxesArray = [peopleWithFaces[index]])}
-              onmouseover={() => ($boundingBoxesArray = [peopleWithFaces[index]])}
-              onmouseleave={() => ($boundingBoxesArray = [])}
+              onpointerover={() => ($boundingBoxesArray = [peopleWithFaces[index]])}
+              onpointerleave={() => ($boundingBoxesArray = [])}
             >
               <div class="relative">
                 {#if selectedPersonToCreate[face.id]}
@@ -245,6 +249,8 @@
                     title={$t('new_person')}
                     widthStyle={thumbnailWidth}
                     heightStyle={thumbnailWidth}
+                    highlighted={isHighlighted}
+                    class={focusHighlightClass}
                   />
                 {:else if selectedPersonToReassign[face.id]}
                   <ImageThumbnail
@@ -259,6 +265,8 @@
                     widthStyle={thumbnailWidth}
                     heightStyle={thumbnailWidth}
                     hidden={selectedPersonToReassign[face.id].isHidden}
+                    highlighted={isHighlighted}
+                    class={focusHighlightClass}
                   />
                 {:else if face.person}
                   <ImageThumbnail
@@ -270,6 +278,8 @@
                     widthStyle={thumbnailWidth}
                     heightStyle={thumbnailWidth}
                     hidden={face.person.isHidden}
+                    highlighted={isHighlighted}
+                    class={focusHighlightClass}
                   />
                 {:else}
                   {#await zoomImageToBase64(face, assetId, assetType, assetViewerManager.imgRef)}
@@ -281,6 +291,8 @@
                       title={$t('face_unassigned')}
                       widthStyle="90px"
                       heightStyle="90px"
+                      highlighted={isHighlighted}
+                      class={focusHighlightClass}
                     />
                   {:then data}
                     <ImageThumbnail
@@ -291,6 +303,8 @@
                       title={$t('face_unassigned')}
                       widthStyle="90px"
                       heightStyle="90px"
+                      highlighted={isHighlighted}
+                      class={focusHighlightClass}
                     />
                   {/await}
                 {/if}

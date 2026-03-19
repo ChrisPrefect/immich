@@ -7,10 +7,11 @@
   import { timeToLoadTheMap } from '$lib/constants';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { eventManager } from '$lib/managers/event-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import AssetChangeDateModal from '$lib/modals/AssetChangeDateModal.svelte';
   import { Route } from '$lib/route';
-  import { isFaceEditMode } from '$lib/stores/face-edit.svelte';
+  import { isEditFacesPanelOpen, isFaceEditMode } from '$lib/stores/face-edit.svelte';
   import { boundingBoxesArray } from '$lib/stores/people.store';
   import { locale } from '$lib/stores/preferences.store';
   import { preferences, user } from '$lib/stores/user.store';
@@ -49,15 +50,15 @@
   import UserAvatar from '../shared-components/user-avatar.svelte';
   import AlbumListItemDetails from './album-list-item-details.svelte';
 
-  interface Props {
+  type Props = {
     asset: AssetResponseDto;
     currentAlbum?: AlbumResponseDto | null;
-  }
+  };
 
   let { asset, currentAlbum = null }: Props = $props();
 
   let showAssetPath = $state(false);
-  let showEditFaces = $state(false);
+  let showEditFaces = $derived(isEditFacesPanelOpen.value);
   let isOwner = $derived($user?.id === asset.ownerId);
   let people = $derived(asset.people || []);
   let unassignedFaces = $derived(asset.unassignedFaces || []);
@@ -106,7 +107,7 @@
       return;
     }
 
-    showEditFaces = false;
+    isEditFacesPanelOpen.value = false;
     previousId = asset.id;
   });
 
@@ -122,7 +123,8 @@
 
   const handleRefreshPeople = async () => {
     asset = await getAssetInfo({ id: asset.id });
-    showEditFaces = false;
+    eventManager.emit('AssetUpdate', asset);
+    isEditFacesPanelOpen.value = false;
   };
 
   const getAssetFolderHref = (asset: AssetResponseDto) => {
@@ -219,7 +221,7 @@
               shape="round"
               color="secondary"
               variant="ghost"
-              onclick={() => (showEditFaces = true)}
+              onclick={() => (isEditFacesPanelOpen.value = true)}
             />
           {/if}
         </div>
@@ -228,13 +230,14 @@
       <div class="mt-2 flex flex-wrap gap-2">
         {#each people as person, index (person.id)}
           {#if showingHiddenPeople || !person.isHidden}
+            {@const isHighlighted = people[index].faces.some((f) => $boundingBoxesArray.some((b) => b.id === f.id))}
             <a
-              class="w-22"
+              class="group w-22 outline-none"
               href={Route.viewPerson(person, { previousRoute })}
               onfocus={() => ($boundingBoxesArray = people[index].faces)}
               onblur={() => ($boundingBoxesArray = [])}
-              onmouseover={() => ($boundingBoxesArray = people[index].faces)}
-              onmouseleave={() => ($boundingBoxesArray = [])}
+              onpointerover={() => ($boundingBoxesArray = people[index].faces)}
+              onpointerleave={() => ($boundingBoxesArray = [])}
             >
               <div class="relative">
                 <ImageThumbnail
@@ -246,6 +249,8 @@
                   widthStyle="90px"
                   heightStyle="90px"
                   hidden={person.isHidden}
+                  highlighted={isHighlighted}
+                  class="group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-immich-primary dark:group-focus-visible:outline-immich-dark-primary"
                 />
               </div>
               <p class="mt-1 truncate font-medium" title={person.name}>{person.name}</p>
@@ -574,7 +579,7 @@
   <PersonSidePanel
     assetId={asset.id}
     assetType={asset.type}
-    onClose={() => (showEditFaces = false)}
+    onClose={() => (isEditFacesPanelOpen.value = false)}
     onRefresh={handleRefreshPeople}
   />
 {/if}

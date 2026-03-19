@@ -59,7 +59,7 @@
     previousAsset?: AssetResponseDto;
   };
 
-  interface Props {
+  type Props = {
     cursor: AssetCursor;
     showNavigation?: boolean;
     withStacked?: boolean;
@@ -72,7 +72,7 @@
     onUndoDelete?: OnUndoDelete;
     onClose?: (asset: AssetResponseDto) => void;
     onRandom?: () => Promise<{ id: string } | undefined>;
-  }
+  };
 
   let {
     cursor,
@@ -176,6 +176,7 @@
   onDestroy(() => {
     activityManager.reset();
     assetViewerManager.closeEditor();
+    isFaceEditMode.value = false;
     syncAssetViewerOpenClass(false);
     preloadManager.destroy();
   });
@@ -290,6 +291,9 @@
 
   const handleStackedAssetMouseEvent = (isMouseOver: boolean, stackedAsset: AssetResponseDto) => {
     previewStackedAsset = isMouseOver ? stackedAsset : undefined;
+    if (isMouseOver) {
+      isFaceEditMode.value = false;
+    }
   };
 
   const handlePreAction = (action: Action) => {
@@ -358,21 +362,30 @@
     }
   };
 
+  const refreshOcr = async () => {
+    ocrManager.clear();
+    if (sharedLink) {
+      return;
+    }
+
+    await ocrManager.getAssetOcr(asset.id);
+  };
+
   const refresh = async () => {
     await refreshStack();
-    ocrManager.clear();
-    if (!sharedLink) {
-      if (previewStackedAsset) {
-        await ocrManager.getAssetOcr(previewStackedAsset.id);
-      }
-      await ocrManager.getAssetOcr(asset.id);
-    }
+    await refreshOcr();
   };
 
   $effect(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     asset;
     untrack(() => handlePromiseError(refresh()));
+  });
+
+  $effect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    previewStackedAsset;
+    untrack(() => ocrManager.clear());
   });
 
   let lastCursor = $state<AssetCursor>();
@@ -460,7 +473,7 @@
 
 <section
   id="immich-asset-viewer"
-  class="fixed start-0 top-0 grid size-full grid-cols-4 grid-rows-[64px_1fr] overflow-hidden bg-black"
+  class="fixed start-0 top-0 grid size-full grid-cols-4 grid-rows-[64px_1fr] overflow-hidden bg-black touch-none"
   use:focusTrap
   bind:this={assetViewerHtmlElement}
 >
@@ -612,6 +625,7 @@
               onClick={() => {
                 cursor.current = stackedAsset;
                 previewStackedAsset = undefined;
+                isFaceEditMode.value = false;
               }}
               onMouseEvent={({ isMouseOver }) => handleStackedAssetMouseEvent(isMouseOver, stackedAsset)}
               readonly

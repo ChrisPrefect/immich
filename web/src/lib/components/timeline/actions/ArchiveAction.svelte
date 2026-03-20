@@ -26,7 +26,7 @@
   const handleArchive = async () => {
     const visibility = unarchive ? AssetVisibility.Timeline : AssetVisibility.Archive;
     const assets = [...getOwnedAssets()].filter((asset) => asset.visibility !== visibility);
-    const onUndoArchive = onArchive ? (ids: string[]) => onArchive(ids, AssetVisibility.Timeline) : undefined;
+    const onUndoArchive = (ids: string[]) => onArchive?.(ids, AssetVisibility.Timeline);
     loading = true;
     const ids = await archiveAssets(assets, visibility as AssetVisibility, onUndoArchive);
     if (ids) {

@@ -9,11 +9,7 @@ import 'package:flutter/painting.dart';
 /// Codec is disposed through the MultiFrameImageStreamCompleter's internals onDispose method
 class AnimatedImageStreamCompleter extends MultiFrameImageStreamCompleter {
   void Function()? _onLastListenerRemoved;
-  int _listenerCount = 0;
-  // True once any image or the codec has been provided.
-  // Until then the image cache holds one listener, so "last real listener gone"
-  // is _listenerCount == 1, not 0.
-  bool didProvideImage = false;
+  ImageStreamListener? _cacheListener;
 
   AnimatedImageStreamCompleter._({
     required super.codec,
@@ -38,18 +34,15 @@ class AnimatedImageStreamCompleter extends MultiFrameImageStreamCompleter {
     );
 
     if (initialImage != null) {
-      self.didProvideImage = true;
       self.setImage(initialImage);
     }
 
     stream.listen(
       (item) {
         if (item is ImageInfo) {
-          self.didProvideImage = true;
           self.setImage(item);
         } else if (item is ui.Codec) {
           if (!codecCompleter.isCompleted) {
-            self.didProvideImage = true;
             codecCompleter.complete(item);
           }
         }
@@ -60,8 +53,6 @@ class AnimatedImageStreamCompleter extends MultiFrameImageStreamCompleter {
         }
       },
       onDone: () {
-        // also complete if we are done but no error occurred, and we didn't call complete yet
-        // could happen on cancellation
         if (!codecCompleter.isCompleted) {
           codecCompleter.completeError(StateError('Stream closed without providing a codec'));
         }
@@ -73,24 +64,20 @@ class AnimatedImageStreamCompleter extends MultiFrameImageStreamCompleter {
 
   @override
   void addListener(ImageStreamListener listener) {
+    _cacheListener ??= listener;
     super.addListener(listener);
-    _listenerCount++;
   }
 
   @override
   void removeListener(ImageStreamListener listener) {
     super.removeListener(listener);
-    _listenerCount--;
-
-    final bool onlyCacheListenerLeft = _listenerCount == 1 && !didProvideImage;
-    final bool noListenersAfterCodec = _listenerCount == 0 && didProvideImage;
-
-    if (onlyCacheListenerLeft || noListenersAfterCodec) {
-      final onLastListenerRemoved = _onLastListenerRemoved;
-      if (onLastListenerRemoved != null) {
-        _onLastListenerRemoved = null;
-        onLastListenerRemoved();
-      }
+    if (listener != _cacheListener) {
+      _cancel();
     }
+  }
+
+  void _cancel() {
+    _onLastListenerRemoved?.call();
+    _onLastListenerRemoved = null;
   }
 }

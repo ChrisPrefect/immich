@@ -10,9 +10,7 @@ import 'package:flutter/painting.dart';
 /// An ImageStreamCompleter with support for loading multiple images.
 class OneFramePlaceholderImageStreamCompleter extends ImageStreamCompleter {
   void Function()? _onLastListenerRemoved;
-  int _listenerCount = 0;
-  // True once setImage() has been called at least once.
-  bool didProvideImage = false;
+  ImageStreamListener? _cacheListener;
 
   /// The constructor to create an OneFramePlaceholderImageStreamCompleter. The [images]
   /// should be the primary images to display (typically asynchronously as they load).
@@ -23,17 +21,12 @@ class OneFramePlaceholderImageStreamCompleter extends ImageStreamCompleter {
     ImageInfo? initialImage,
     InformationCollector? informationCollector,
     void Function()? onLastListenerRemoved,
-  }) {
+  }) : _onLastListenerRemoved = onLastListenerRemoved {
     if (initialImage != null) {
-      didProvideImage = true;
       setImage(initialImage);
     }
-    _onLastListenerRemoved = onLastListenerRemoved;
     images.listen(
-      (image) {
-        didProvideImage = true;
-        setImage(image);
-      },
+      (image) => setImage(image),
       onError: (Object error, StackTrace stack) {
         reportError(
           context: ErrorDescription('resolving a single-frame image stream'),
@@ -48,23 +41,20 @@ class OneFramePlaceholderImageStreamCompleter extends ImageStreamCompleter {
 
   @override
   void addListener(ImageStreamListener listener) {
+    _cacheListener ??= listener;
     super.addListener(listener);
-    _listenerCount = _listenerCount + 1;
   }
 
   @override
   void removeListener(ImageStreamListener listener) {
     super.removeListener(listener);
-    _listenerCount = _listenerCount - 1;
-
-    final bool onlyCacheListenerLeft = _listenerCount == 1 && !didProvideImage;
-    final bool noListenersAfterImage = _listenerCount == 0 && didProvideImage;
-
-    final onLastListenerRemoved = _onLastListenerRemoved;
-
-    if (onLastListenerRemoved != null && (noListenersAfterImage || onlyCacheListenerLeft)) {
-      _onLastListenerRemoved = null;
-      onLastListenerRemoved();
+    if (listener != _cacheListener) {
+      _cancel();
     }
+  }
+
+  void _cancel() {
+    _onLastListenerRemoved?.call();
+    _onLastListenerRemoved = null;
   }
 }

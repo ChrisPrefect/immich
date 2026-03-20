@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { goto, invalidate } from '$app/navigation';
   import AdminPageLayout from '$lib/components/layouts/AdminPageLayout.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import EmptyPlaceholder from '$lib/components/shared-components/empty-placeholder.svelte';
@@ -7,13 +7,7 @@
   import { getLibrariesActions, getLibraryActions } from '$lib/services/library.service';
   import { locale } from '$lib/stores/preferences.store';
   import { getBytesWithUnit } from '$lib/utils/byte-units';
-  import {
-    getLibrary,
-    getLibraryStatistics,
-    type LibraryResponseDto,
-    type LibraryStatsResponseDto,
-    type UserAdminResponseDto,
-  } from '@immich/sdk';
+  import { type LibraryResponseDto } from '@immich/sdk';
   import {
     CommandPaletteDefaultProvider,
     Container,
@@ -39,41 +33,15 @@
 
   const props: Props = $props();
 
-  let libraries = $state<LibraryResponseDto[]>([]);
-  let statistics = $state<Record<string, LibraryStatsResponseDto>>({});
-  let owners = $state<Record<string, UserAdminResponseDto>>({});
+  let libraries = $derived([...props.data.libraries]);
+  let owners = $derived({ ...props.data.owners });
 
-  $effect(() => {
-    libraries = [...props.data.libraries];
-    owners = { ...props.data.owners };
-  });
-
-  const onLibraryCreate = (library: LibraryResponseDto) => {
-    void goto(Route.viewLibrary(library));
+  const onLibraryCreate = async (library: LibraryResponseDto) => {
+    await goto(Route.viewLibrary(library));
   };
 
-  const onLibraryUpdate = (library: LibraryResponseDto) => {
-    const index = libraries.findIndex(({ id }) => id === library.id);
-
-    if (index === -1) {
-      return;
-    }
-
-    void Promise.all([getLibrary({ id: library.id }), getLibraryStatistics({ id: library.id })])
-      .then(([updatedLibrary, updatedStats]) => {
-        libraries[index] = updatedLibrary;
-        statistics[library.id] = updatedStats;
-      })
-      .catch((error) => {
-        console.error(`Failed to refresh library after update: ${error}`);
-      });
-  };
-
-  const onLibraryDelete = ({ id }: { id: string }) => {
-    libraries = libraries.filter((library) => library.id !== id);
-    delete statistics[id];
-    delete owners[id];
-  };
+  const onLibraryUpdate = () => invalidate('app:libraries');
+  const onLibraryDelete = () => invalidate('app:libraries');
 
   const { Create, ScanAll } = $derived(getLibrariesActions($t));
 
@@ -130,7 +98,7 @@
                     <span class="skeleton-loader inline-block h-4 w-20"></span>
                   </TableCell>
                 {:then loadedStats}
-                  {@const stats = statistics[library.id] || loadedStats[library.id]}
+                  {@const stats = loadedStats[library.id]}
                   <TableCell class={classes.column3}>
                     {stats.photos.toLocaleString($locale)}
                   </TableCell>

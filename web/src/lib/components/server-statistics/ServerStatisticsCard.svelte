@@ -2,10 +2,10 @@
   import { ByteUnit } from '$lib/utils/byte-units';
   import { Icon, Text } from '@immich/ui';
 
-  interface ValueData {
+  type ValueData = {
     value: number;
     unit?: ByteUnit | undefined;
-  }
+  };
 
   interface Props {
     icon: string;
@@ -38,7 +38,9 @@
   {:then data}
     <div class="mx-auto font-mono text-2xl font-medium relative">
       <span class="text-gray-300 dark:text-gray-600">{zeros(data)}</span><span>{data.value}</span>
-      {#if data.unit}<code class="font-mono text-base font-normal">{data.unit}</code>{/if}
+      {#if data.unit}
+        <code class="font-mono text-base font-normal">{data.unit}</code>
+      {/if}
     </div>
   {:catch _}
     <div class="mx-auto font-mono text-2xl font-medium relative">

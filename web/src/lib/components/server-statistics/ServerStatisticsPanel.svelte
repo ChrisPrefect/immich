@@ -49,8 +49,9 @@
     return '0'.repeat(zeroLength);
   };
 
-  const getUserStatsPromise = (userId: string) => {
-    return statsPromise.then((stats) => stats.usageByUser.find((userStats) => userStats.userId === userId));
+  const getUserStatsPromise = async (userId: string) => {
+    const stats = await statsPromise;
+    return stats.usageByUser.find((userStats) => userStats.userId === userId);
   };
 </script>
 
@@ -179,8 +180,6 @@
               {:else}
                 {@render placeholder()}
               {/if}
-            {:catch}
-              {@render placeholder()}
             {/await}
           </TableRow>
         {/each}

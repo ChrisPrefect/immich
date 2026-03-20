@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
+  import { goto, invalidate } from '$app/navigation';
   import emptyFoldersUrl from '$lib/assets/empty-folders.svg';
   import AdminCard from '$lib/components/AdminCard.svelte';
   import AdminPageLayout from '$lib/components/layouts/AdminPageLayout.svelte';
@@ -16,7 +16,6 @@
   } from '$lib/services/library.service';
   import { getBytesWithUnit } from '$lib/utils/byte-units';
 
-  import type { LibraryResponseDto } from '@immich/sdk';
   import { Code, CommandPaletteDefaultProvider, Container, Heading, modalManager } from '@immich/ui';
   import { mdiCameraIris, mdiChartPie, mdiFilterMinusOutline, mdiFolderOutline, mdiPlayCircle } from '@mdi/js';
   import type { Snippet } from 'svelte';
@@ -29,27 +28,21 @@
   };
 
   let { children, data }: Props = $props();
-  const statisticsPromise = $derived.by(() => data.statisticsPromise);
 
-  const photosPromise = $derived.by(() => statisticsPromise.then((stats) => ({ value: stats.photos })));
+  const photosPromise = $derived(data.statisticsPromise.then((stats) => ({ value: stats.photos })));
 
-  const videosPromise = $derived.by(() => statisticsPromise.then((stats) => ({ value: stats.videos })));
+  const videosPromise = $derived(data.statisticsPromise.then((stats) => ({ value: stats.videos })));
 
-  const usagePromise = $derived.by(() =>
-    statisticsPromise.then((stats) => {
+  const usagePromise = $derived(
+    data.statisticsPromise.then((stats) => {
       const [value, unit] = getBytesWithUnit(stats.usage);
       return { value, unit };
     }),
   );
 
-  let updatedLibrary = $state<LibraryResponseDto | undefined>(undefined);
-  const library = $derived.by(() => (updatedLibrary?.id === data.library.id ? updatedLibrary : data.library));
+  const library = $derived(data.library);
 
-  const onLibraryUpdate = (newLibrary: LibraryResponseDto) => {
-    if (newLibrary.id === library.id) {
-      updatedLibrary = newLibrary;
-    }
-  };
+  const onLibraryUpdate = () => invalidate('app:library');
 
   const onLibraryDelete = ({ id }: { id: string }) => {
     if (id === library.id) {

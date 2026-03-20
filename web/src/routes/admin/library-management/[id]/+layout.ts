@@ -5,7 +5,8 @@ import { getLibrary, getLibraryStatistics, type LibraryResponseDto } from '@immi
 import { redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
 
-export const load = (async ({ params: { id }, url }) => {
+export const load = (async ({ params: { id }, url, depends }) => {
+  depends('app:library');
   await authenticate(url, { admin: true });
 
   let library: LibraryResponseDto;

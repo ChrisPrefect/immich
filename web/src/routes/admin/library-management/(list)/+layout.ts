@@ -3,7 +3,8 @@ import { getFormatter } from '$lib/utils/i18n';
 import { getAllLibraries, getLibraryStatistics, getUserAdmin, searchUsersAdmin } from '@immich/sdk';
 import type { LayoutLoad } from './$types';
 
-export const load = (async ({ url }) => {
+export const load = (async ({ url, depends }) => {
+  depends('app:libraries');
   await authenticate(url, { admin: true });
   await requestServerInfo();
   const allUsers = await searchUsersAdmin({ withDeleted: false });

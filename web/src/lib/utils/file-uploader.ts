@@ -131,7 +131,6 @@ function getDeviceAssetId(asset: File) {
 type FileUploaderParams = {
   assetFile: File;
   albumId?: string;
-  replaceAssetId?: string;
   isLockedAssets?: boolean;
   deviceAssetId: string;
 };

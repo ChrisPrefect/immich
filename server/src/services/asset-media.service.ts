@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, InternalServerErrorException, NotFound
 import { extname } from 'node:path';
 import sanitize from 'sanitize-filename';
 import { StorageCore } from 'src/cores/storage.core';
-import { Asset } from 'src/database';
 import {
   AssetBulkUploadCheckResponseDto,
   AssetMediaResponseDto,
@@ -15,22 +14,13 @@ import {
   AssetBulkUploadCheckDto,
   AssetMediaCreateDto,
   AssetMediaOptionsDto,
-  AssetMediaReplaceDto,
   AssetMediaSize,
   CheckExistingAssetsDto,
   UploadFieldName,
 } from 'src/dtos/asset-media.dto';
 import { AssetDownloadOriginalDto } from 'src/dtos/asset.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
-import {
-  AssetFileType,
-  AssetStatus,
-  AssetVisibility,
-  CacheControl,
-  JobName,
-  Permission,
-  StorageFolder,
-} from 'src/enum';
+import { AssetFileType, AssetVisibility, CacheControl, JobName, Permission, StorageFolder } from 'src/enum';
 import { AuthRequest } from 'src/middleware/auth.guard';
 import { BaseService } from 'src/services/base.service';
 import { UploadFile, UploadRequest } from 'src/types';
@@ -158,40 +148,6 @@ export class AssetMediaService extends BaseService {
       await this.userRepository.updateUsage(auth.user.id, file.size);
 
       return { id: asset.id, status: AssetMediaStatus.CREATED };
-    } catch (error: any) {
-      return this.handleUploadError(error, auth, file, sidecarFile);
-    }
-  }
-
-  async replaceAsset(
-    auth: AuthDto,
-    id: string,
-    dto: AssetMediaReplaceDto,
-    file: UploadFile,
-    sidecarFile?: UploadFile,
-  ): Promise<AssetMediaResponseDto> {
-    try {
-      await this.requireAccess({ auth, permission: Permission.AssetUpdate, ids: [id] });
-      const asset = await this.assetRepository.getById(id);
-
-      if (!asset) {
-        throw new Error('Asset not found');
-      }
-
-      this.requireQuota(auth, file.size);
-
-      await this.replaceFileData(asset.id, dto, file, sidecarFile?.originalPath);
-
-      // Next, create a backup copy of the existing record. The db record has already been updated above,
-      // but the local variable holds the original file data paths.
-      const copiedPhoto = await this.createCopy(asset);
-      // and immediate trash it
-      await this.assetRepository.updateAll([copiedPhoto.id], { deletedAt: new Date(), status: AssetStatus.Trashed });
-      await this.eventRepository.emit('AssetTrash', { assetId: copiedPhoto.id, userId: auth.user.id });
-
-      await this.userRepository.updateUsage(auth.user.id, file.size);
-
-      return { status: AssetMediaStatus.REPLACED, id: copiedPhoto.id };
     } catch (error: any) {
       return this.handleUploadError(error, auth, file, sidecarFile);
     }
@@ -355,82 +311,6 @@ export class AssetMediaService extends BaseService {
 
     this.logger.error(`Error uploading file ${error}`, error?.stack);
     throw error;
-  }
-
-  /**
-   * Updates the specified assetId to the specified photo data file properties: checksum, path,
-   * timestamps, deviceIds, and sidecar. Derived properties like: faces, smart search info, etc
-   * are UNTOUCHED. The photo data files modification times on the filesysytem are updated to
-   * the specified timestamps. The exif db record is upserted, and then A METADATA_EXTRACTION
-   * job is queued to update these derived properties.
-   */
-  private async replaceFileData(
-    assetId: string,
-    dto: AssetMediaReplaceDto,
-    file: UploadFile,
-    sidecarPath?: string,
-  ): Promise<void> {
-    await this.assetRepository.update({
-      id: assetId,
-
-      checksum: file.checksum,
-      originalPath: file.originalPath,
-      type: mimeTypes.assetType(file.originalPath),
-      originalFileName: file.originalName,
-
-      deviceAssetId: dto.deviceAssetId,
-      deviceId: dto.deviceId,
-      fileCreatedAt: dto.fileCreatedAt,
-      fileModifiedAt: dto.fileModifiedAt,
-      localDateTime: dto.fileCreatedAt,
-      duration: dto.duration || null,
-
-      livePhotoVideoId: null,
-    });
-
-    await (sidecarPath
-      ? this.assetRepository.upsertFile({ assetId, type: AssetFileType.Sidecar, path: sidecarPath })
-      : this.assetRepository.deleteFile({ assetId, type: AssetFileType.Sidecar }));
-
-    await this.storageRepository.utimes(file.originalPath, new Date(), new Date(dto.fileModifiedAt));
-    await this.assetRepository.upsertExif(
-      { assetId, fileSizeInByte: file.size },
-      { lockedPropertiesBehavior: 'override' },
-    );
-    await this.jobRepository.queue({
-      name: JobName.AssetExtractMetadata,
-      data: { id: assetId, source: 'upload' },
-    });
-  }
-
-  /**
-   * Create a 'shallow' copy of the specified asset record creating a new asset record in the database.
-   * Uses only vital properties excluding things like: stacks, faces, smart search info, etc,
-   * and then queues a METADATA_EXTRACTION job.
-   */
-  private async createCopy(asset: Omit<Asset, 'id'>) {
-    const created = await this.assetRepository.create({
-      ownerId: asset.ownerId,
-      originalPath: asset.originalPath,
-      originalFileName: asset.originalFileName,
-      libraryId: asset.libraryId,
-      deviceAssetId: asset.deviceAssetId,
-      deviceId: asset.deviceId,
-      type: asset.type,
-      checksum: asset.checksum,
-      fileCreatedAt: asset.fileCreatedAt,
-      localDateTime: asset.localDateTime,
-      fileModifiedAt: asset.fileModifiedAt,
-      livePhotoVideoId: asset.livePhotoVideoId,
-    });
-
-    const { size } = await this.storageRepository.stat(created.originalPath);
-    await this.assetRepository.upsertExif(
-      { assetId: created.id, fileSizeInByte: size },
-      { lockedPropertiesBehavior: 'override' },
-    );
-    await this.jobRepository.queue({ name: JobName.AssetExtractMetadata, data: { id: created.id, source: 'copy' } });
-    return created;
   }
 
   private async create(ownerId: string, dto: AssetMediaCreateDto, file: UploadFile, sidecarFile?: UploadFile) {

@@ -1,6 +1,7 @@
 import { BrowserContext, expect, Page } from '@playwright/test';
 import { DateTime } from 'luxon';
 import { TimelineAssetConfig } from 'src/ui/generators/timeline';
+import { waitForServiceWorker } from 'src/ui/mock-network/base-network';
 
 export const sleep = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -143,6 +144,7 @@ export const timelineUtils = {
     return page.locator('#asset-grid');
   },
   async waitForTimelineLoad(page: Page) {
+    await waitForServiceWorker(page);
     await expect(timelineUtils.locator(page)).toBeInViewport();
     await expect.poll(() => thumbnailUtils.locator(page).count()).toBeGreaterThan(0);
   },
@@ -163,6 +165,7 @@ export const assetViewerUtils = {
     return page.locator('#immich-asset-viewer');
   },
   async waitForViewerLoad(page: Page, asset: TimelineAssetConfig) {
+    await waitForServiceWorker(page);
     await page
       .locator(
         `img[draggable="false"][src="/api/assets/${asset.id}/thumbnail?size=preview&c=${asset.thumbhash}&edited=true"]`,

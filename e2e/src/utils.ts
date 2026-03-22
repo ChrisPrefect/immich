@@ -71,7 +71,7 @@ import { io, type Socket } from 'socket.io-client';
 import { loginDto, signupDto } from 'src/fixtures';
 import { makeRandomImage } from 'src/generators';
 import request from 'supertest';
-import { playwrightDbHost, playwrightHost, playwriteBaseUrl } from '../playwright.config';
+import { playwrightDbHost, playwrightDbPort, playwrightHost, playwriteBaseUrl } from '../playwright.config';
 
 export type { Emitter } from '@socket.io/component-emitter';
 
@@ -81,7 +81,7 @@ type WaitOptions = { event: EventType; id?: string; total?: number; timeout?: nu
 type AdminSetupOptions = { onboarding?: boolean };
 type FileData = { bytes?: Buffer; filename: string };
 
-const dbUrl = `postgres://postgres:postgres@${playwrightDbHost}:5435/immich`;
+const dbUrl = `postgres://postgres:postgres@${playwrightDbHost}:${playwrightDbPort}/immich`;
 export const baseUrl = playwriteBaseUrl;
 export const shareUrl = `${baseUrl}/share`;
 export const app = `${baseUrl}/api`;
@@ -522,13 +522,13 @@ export const utils = {
   queueCommand: async (accessToken: string, name: QueueName, queueCommandDto: QueueCommandDto) =>
     runQueueCommandLegacy({ name, queueCommandDto }, { headers: asBearerAuth(accessToken) }),
 
-  setAuthCookies: async (context: BrowserContext, accessToken: string, domain = playwrightHost) =>
+  setAuthCookies: async (context: BrowserContext, accessToken: string, domain = playwrightHost, url?: string) => {
+    const origin = url ? { url } : { domain, path: '/' };
     await context.addCookies([
       {
         name: 'immich_access_token',
         value: accessToken,
-        domain,
-        path: '/',
+        ...origin,
         expires: 2_058_028_213,
         httpOnly: true,
         secure: false,
@@ -537,8 +537,7 @@ export const utils = {
       {
         name: 'immich_auth_type',
         value: 'password',
-        domain,
-        path: '/',
+        ...origin,
         expires: 2_058_028_213,
         httpOnly: true,
         secure: false,
@@ -547,14 +546,14 @@ export const utils = {
       {
         name: 'immich_is_authenticated',
         value: 'true',
-        domain,
-        path: '/',
+        ...origin,
         expires: 2_058_028_213,
         httpOnly: false,
         secure: false,
         sameSite: 'Lax',
       },
-    ]),
+    ]);
+  },
 
   setMaintenanceAuthCookie: async (context: BrowserContext, token: string, domain = '127.0.0.1') =>
     await context.addCookies([

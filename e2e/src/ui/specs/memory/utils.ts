@@ -1,5 +1,6 @@
 import type { AssetResponseDto } from '@immich/sdk';
 import { expect, Page } from '@playwright/test';
+import { waitForServiceWorker } from 'src/ui/mock-network/base-network';
 
 function getAssetIdFromUrl(url: URL): string | null {
   const pathMatch = url.pathname.match(/\/memory\/photos\/([^/]+)/);
@@ -15,6 +16,7 @@ export const memoryViewerUtils = {
   },
 
   async waitForMemoryLoad(page: Page) {
+    await waitForServiceWorker(page);
     await expect(this.locator(page)).toBeVisible();
     await expect(page.locator('#memory-viewer img').first()).toBeVisible();
   },

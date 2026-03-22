@@ -1,4 +1,4 @@
-import { BrowserContext } from '@playwright/test';
+import { BrowserContext, expect, Page } from '@playwright/test';
 import { playwrightHost } from 'playwright.config';
 
 export const setupBaseMockApiRoutes = async (context: BrowserContext, adminUserId: string) => {
@@ -282,4 +282,14 @@ export const setupBaseMockApiRoutes = async (context: BrowserContext, adminUserI
       ],
     });
   });
+};
+
+export const waitForServiceWorker = async (page: Page) => {
+  await expect
+    .poll(() => page.context().serviceWorkers().length, {
+      message:
+        'Service worker not registered. Ensure the origin is a secure context (localhost or use --unsafely-treat-insecure-origin-as-secure flag).',
+      timeout: 10_000,
+    })
+    .toBeGreaterThan(0);
 };

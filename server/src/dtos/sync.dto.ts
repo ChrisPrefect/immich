@@ -227,34 +227,34 @@ export class SyncAssetOcrV1 {
   @ApiProperty({ description: 'Asset ID' })
   assetId!: string;
 
-  @ApiProperty({ description: 'Top-left X coordinate (normalized 0–1)' })
+  @ApiProperty({ type: 'number', format: 'double', description: 'Top-left X coordinate (normalized 0–1)' })
   x1!: number;
 
-  @ApiProperty({ description: 'Top-left Y coordinate (normalized 0–1)' })
+  @ApiProperty({ type: 'number', format: 'double', description: 'Top-left Y coordinate (normalized 0–1)' })
   y1!: number;
 
-  @ApiProperty({ description: 'Top-right X coordinate (normalized 0–1)' })
+  @ApiProperty({ type: 'number', format: 'double', description: 'Top-right X coordinate (normalized 0–1)' })
   x2!: number;
 
-  @ApiProperty({ description: 'Top-right Y coordinate (normalized 0–1)' })
+  @ApiProperty({ type: 'number', format: 'double', description: 'Top-right Y coordinate (normalized 0–1)' })
   y2!: number;
 
-  @ApiProperty({ description: 'Bottom-right X coordinate (normalized 0–1)' })
+  @ApiProperty({ type: 'number', format: 'double', description: 'Bottom-right X coordinate (normalized 0–1)' })
   x3!: number;
 
-  @ApiProperty({ description: 'Bottom-right Y coordinate (normalized 0–1)' })
+  @ApiProperty({ type: 'number', format: 'double', description: 'Bottom-right Y coordinate (normalized 0–1)' })
   y3!: number;
 
-  @ApiProperty({ description: 'Bottom-left X coordinate (normalized 0–1)' })
+  @ApiProperty({ type: 'number', format: 'double', description: 'Bottom-left X coordinate (normalized 0–1)' })
   x4!: number;
 
-  @ApiProperty({ description: 'Bottom-left Y coordinate (normalized 0–1)' })
+  @ApiProperty({ type: 'number', format: 'double', description: 'Bottom-left Y coordinate (normalized 0–1)' })
   y4!: number;
 
-  @ApiProperty({ description: 'Confidence score of the bounding box' })
+  @ApiProperty({ type: 'number', format: 'double', description: 'Confidence score of the bounding box' })
   boxScore!: number;
 
-  @ApiProperty({ description: 'Confidence score of the recognized text' })
+  @ApiProperty({ type: 'number', format: 'double', description: 'Confidence score of the recognized text' })
   textScore!: number;
 
   @ApiProperty({ description: 'Recognized text content' })

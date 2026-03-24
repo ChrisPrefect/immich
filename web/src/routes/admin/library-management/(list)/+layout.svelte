@@ -31,10 +31,10 @@
     data: LayoutData;
   };
 
-  const props: Props = $props();
+  let { children, data }: Props = $props();
 
-  let libraries = $derived([...props.data.libraries]);
-  let owners = $derived({ ...props.data.owners });
+  let libraries = $derived([...data.libraries]);
+  let owners = $derived({ ...data.owners });
 
   const onLibraryCreate = async (library: LibraryResponseDto) => {
     await goto(Route.viewLibrary(library));
@@ -64,7 +64,7 @@
 
 <CommandPaletteDefaultProvider name={$t('library')} actions={[Create, ScanAll]} />
 
-<AdminPageLayout breadcrumbs={[{ title: props.data.meta.title }]} actions={[ScanAll, Create]}>
+<AdminPageLayout breadcrumbs={[{ title: data.meta.title }]} actions={[ScanAll, Create]}>
   <Container size="large" center class="my-4">
     <div class="flex flex-col items-center gap-2" in:fade={{ duration: 500 }}>
       {#if libraries.length > 0}
@@ -87,7 +87,7 @@
                 <TableCell class={classes.column2}>
                   <Link href={Route.viewUser(owner)}>{owner.name}</Link>
                 </TableCell>
-                {#await props.data.statisticsPromise}
+                {#await data.statisticsPromise}
                   <TableCell class={classes.column3}>
                     <span class="skeleton-loader inline-block h-4 w-14"></span>
                   </TableCell>
@@ -137,7 +137,7 @@
         />
       {/if}
 
-      {@render props.children?.()}
+      {@render children?.()}
     </div>
   </Container>
 </AdminPageLayout>

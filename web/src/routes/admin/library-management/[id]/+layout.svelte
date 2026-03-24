@@ -15,7 +15,6 @@
     getLibraryFolderActions,
   } from '$lib/services/library.service';
   import { getBytesWithUnit } from '$lib/utils/byte-units';
-
   import { Code, CommandPaletteDefaultProvider, Container, Heading, modalManager } from '@immich/ui';
   import { mdiCameraIris, mdiChartPie, mdiFilterMinusOutline, mdiFolderOutline, mdiPlayCircle } from '@mdi/js';
   import type { Snippet } from 'svelte';
@@ -27,7 +26,7 @@
     data: LayoutData;
   };
 
-  let { children, data }: Props = $props();
+  const { children, data }: Props = $props();
 
   const photosPromise = $derived(data.statisticsPromise.then((stats) => ({ value: stats.photos })));
 
@@ -44,9 +43,9 @@
 
   const onLibraryUpdate = () => invalidate('app:library');
 
-  const onLibraryDelete = ({ id }: { id: string }) => {
+  const onLibraryDelete = async ({ id }: { id: string }) => {
     if (id === library.id) {
-      void goto(Route.libraries());
+      await goto(Route.libraries());
     }
   };
 

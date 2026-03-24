@@ -30,6 +30,7 @@ import {
   AssetMediaOptionsDto,
   AssetMediaReplaceDto,
   AssetMediaSize,
+  AssetThumbnailOptionsDto,
   CheckExistingAssetsDto,
   UploadFieldName,
 } from 'src/dtos/asset-media.dto';
@@ -154,7 +155,7 @@ export class AssetMediaController {
   async viewAsset(
     @Auth() auth: AuthDto,
     @Param() { id }: UUIDParamDto,
-    @Query() dto: AssetMediaOptionsDto,
+    @Query() dto: AssetThumbnailOptionsDto,
     @Req() req: Request,
     @Res() res: Response,
     @Next() next: NextFunction,
@@ -197,9 +198,10 @@ export class AssetMediaController {
     @Auth() auth: AuthDto,
     @Param() { id }: UUIDParamDto,
     @Res() res: Response,
+    @Query() dto: AssetMediaOptionsDto,
     @Next() next: NextFunction,
   ) {
-    await sendFile(res, next, () => this.service.playbackVideo(auth, id), this.logger);
+    await sendFile(res, next, () => this.service.playbackVideo(auth, id, dto), this.logger);
   }
 
   @Post('exist')

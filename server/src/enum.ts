@@ -588,8 +588,6 @@ export enum JobName {
   AssetDetectFaces = 'AssetDetectFaces',
   AssetDetectDuplicatesQueueAll = 'AssetDetectDuplicatesQueueAll',
   AssetDetectDuplicates = 'AssetDetectDuplicates',
-  AssetEditThumbnailGeneration = 'AssetEditThumbnailGeneration',
-  AssetEditTranscodeGeneration = 'AssetEditTranscodeGeneration',
   AssetEncodeVideoQueueAll = 'AssetEncodeVideoQueueAll',
   AssetEncodeVideo = 'AssetEncodeVideo',
   AssetEmptyTrash = 'AssetEmptyTrash',
@@ -598,6 +596,7 @@ export enum JobName {
   AssetFileMigration = 'AssetFileMigration',
   AssetGenerateThumbnailsQueueAll = 'AssetGenerateThumbnailsQueueAll',
   AssetGenerateThumbnails = 'AssetGenerateThumbnails',
+  AssetProcessEdit = 'AssetProcessEdit',
 
   AuditLogCleanup = 'AuditLogCleanup',
   AuditTableCleanup = 'AuditTableCleanup',

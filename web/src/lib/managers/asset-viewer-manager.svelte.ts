@@ -139,6 +139,7 @@ export class AssetViewerManager extends BaseEventManager<Events> {
 
   openEditor() {
     this.closeActivityPanel();
+    this.isPlayingMotionPhoto = false;
     this.isShowEditor = true;
   }
 

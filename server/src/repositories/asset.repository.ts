@@ -1149,12 +1149,12 @@ export class AssetRepository {
       .executeTakeFirstOrThrow();
   }
 
-  @GenerateSql({ params: [DummyValue.UUID] })
-  async getForVideo(id: string) {
+  @GenerateSql({ params: [DummyValue.UUID, true] })
+  async getForVideo(id: string, isEdited: boolean) {
     return this.db
       .selectFrom('asset')
       .select(['asset.originalPath'])
-      .select((eb) => withFilePath(eb, AssetFileType.EncodedVideo).as('encodedVideoPath'))
+      .select((eb) => withFilePath(eb, AssetFileType.EncodedVideo, isEdited).as('encodedVideoPath'))
       .where('asset.id', '=', id)
       .where('asset.type', '=', AssetType.Video)
       .executeTakeFirst();

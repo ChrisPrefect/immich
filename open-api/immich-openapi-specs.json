@@ -4403,6 +4403,16 @@
         "operationId": "playAssetVideo",
         "parameters": [
           {
+            "name": "edited",
+            "required": false,
+            "in": "query",
+            "description": "Return edited asset if available",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
             "name": "id",
             "required": true,
             "in": "path",
@@ -18144,8 +18154,6 @@
           "AssetDetectFaces",
           "AssetDetectDuplicatesQueueAll",
           "AssetDetectDuplicates",
-          "AssetEditThumbnailGeneration",
-          "AssetEditTranscodeGeneration",
           "AssetEncodeVideoQueueAll",
           "AssetEncodeVideo",
           "AssetEmptyTrash",
@@ -18154,6 +18162,7 @@
           "AssetFileMigration",
           "AssetGenerateThumbnailsQueueAll",
           "AssetGenerateThumbnails",
+          "AssetProcessEdit",
           "AuditLogCleanup",
           "AuditTableCleanup",
           "DatabaseBackup",

@@ -8,7 +8,7 @@ import {
   RotateParameters,
 } from 'src/dtos/editing.dto';
 import { SystemConfigFFmpegDto } from 'src/dtos/system-config.dto';
-import { CQMode, LogLevel, ToneMapping, TranscodeHardwareAcceleration, TranscodeTarget, VideoCodec } from 'src/enum';
+import { CQMode, ToneMapping, TranscodeHardwareAcceleration, TranscodeTarget, VideoCodec } from 'src/enum';
 import {
   AudioStreamInfo,
   BitrateDistribution,
@@ -98,8 +98,17 @@ export class BaseConfig implements VideoCodecSWConfig {
     format?: VideoFormat,
     edits: AssetEditActionItem[] = [],
   ) {
+    const inputOptions = this.getBaseInputOptions(videoStream, format);
+
+    if (edits.length > 0) {
+      // turns out MOV files can have cropping metadata that ffmpeg automatically applies when decoding
+      // this means that the video streams dimensions can just be wrong once it hits the filter pipeline
+      // https://github.com/FFmpeg/FFmpeg/blob/f40fcf802472227851e0b8eeba40b9e6b3b8a3a1/libavutil/frame.h#L1021
+      inputOptions.push('-apply_cropping 0');
+    }
+
     const options = {
-      inputOptions: this.getBaseInputOptions(videoStream, format),
+      inputOptions,
       outputOptions: [...this.getBaseOutputOptions(target, videoStream, audioStream), '-v verbose'],
       twoPass: this.eligibleForTwoPass(),
       progress: { frameCount: videoStream.frameCount, percentInterval: 5 },

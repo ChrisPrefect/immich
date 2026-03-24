@@ -17,6 +17,7 @@ import {
   AssetMediaOptionsDto,
   AssetMediaReplaceDto,
   AssetMediaSize,
+  AssetThumbnailOptionsDto,
   CheckExistingAssetsDto,
   UploadFieldName,
 } from 'src/dtos/asset-media.dto';
@@ -222,7 +223,7 @@ export class AssetMediaService extends BaseService {
   async viewThumbnail(
     auth: AuthDto,
     id: string,
-    dto: AssetMediaOptionsDto,
+    dto: AssetThumbnailOptionsDto,
   ): Promise<ImmichFileResponse | AssetMediaRedirectResponse> {
     await this.requireAccess({ auth, permission: Permission.AssetView, ids: [id] });
 
@@ -266,10 +267,10 @@ export class AssetMediaService extends BaseService {
     });
   }
 
-  async playbackVideo(auth: AuthDto, id: string): Promise<ImmichFileResponse> {
+  async playbackVideo(auth: AuthDto, id: string, dto: AssetMediaOptionsDto): Promise<ImmichFileResponse> {
     await this.requireAccess({ auth, permission: Permission.AssetView, ids: [id] });
 
-    const asset = await this.assetRepository.getForVideo(id);
+    const asset = await this.assetRepository.getForVideo(id, dto.edited ?? false);
 
     if (!asset) {
       throw new NotFoundException('Asset not found or asset is not a video');

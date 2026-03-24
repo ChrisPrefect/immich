@@ -238,8 +238,8 @@ export const getAssetMediaUrl = (options: AssetUrlOptions) => {
 };
 
 export const getAssetPlaybackUrl = (options: AssetUrlOptions) => {
-  const { id, cacheKey: c } = options;
-  return createUrl(getAssetPlaybackPath(id), { ...authManager.params, c });
+  const { id, cacheKey: c, edited = true } = options;
+  return createUrl(getAssetPlaybackPath(id), { ...authManager.params, c, edited });
 };
 
 export const getProfileImageUrl = (user: UserResponseDto) =>

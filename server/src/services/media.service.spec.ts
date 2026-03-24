@@ -273,7 +273,7 @@ describe(MediaService.name, () => {
           data: { id: asset.id },
         },
         {
-          name: JobName.AssetEditThumbnailGeneration,
+          name: JobName.AssetProcessEdit,
           data: { id: asset.id },
         },
       ]);
@@ -1323,7 +1323,7 @@ describe(MediaService.name, () => {
     });
   });
 
-  describe('handleAssetEditThumbnailGeneration', () => {
+  describe('handleAssetEditProcessing', () => {
     let rawInfo: RawImageInfo;
 
     beforeEach(() => {
@@ -1344,7 +1344,7 @@ describe(MediaService.name, () => {
       const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
       mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
 
-      await expect(sut.handleAssetEditThumbnailGeneration({ id: asset.id })).resolves.toBe(JobStatus.Success);
+      await expect(sut.handleAssetEditProcessing({ id: asset.id })).resolves.toBe(JobStatus.Success);
       expect(mocks.media.generateThumbnail).not.toHaveBeenCalled();
     });
 
@@ -1365,7 +1365,7 @@ describe(MediaService.name, () => {
       mocks.person.getFaces.mockResolvedValue([]);
       mocks.ocr.getByAssetId.mockResolvedValue([]);
 
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
+      await sut.handleAssetEditProcessing({ id: asset.id });
 
       expect(mocks.asset.upsertFiles).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -1385,7 +1385,7 @@ describe(MediaService.name, () => {
       mocks.person.getFaces.mockResolvedValue([]);
       mocks.ocr.getByAssetId.mockResolvedValue([]);
 
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
+      await sut.handleAssetEditProcessing({ id: asset.id });
       expect(mocks.media.generateThumbnail).toHaveBeenCalledWith(
         rawBuffer,
         expect.objectContaining({
@@ -1411,7 +1411,7 @@ describe(MediaService.name, () => {
         .build();
       mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
 
-      const status = await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
+      const status = await sut.handleAssetEditProcessing({ id: asset.id });
 
       expect(mocks.job.queue).toHaveBeenCalledWith({
         name: JobName.FileDelete,
@@ -1431,7 +1431,7 @@ describe(MediaService.name, () => {
       mocks.person.getFaces.mockResolvedValue([]);
       mocks.ocr.getByAssetId.mockResolvedValue([]);
 
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
+      await sut.handleAssetEditProcessing({ id: asset.id });
 
       expect(mocks.media.generateThumbnail).toHaveBeenCalledTimes(3);
       expect(mocks.media.generateThumbnail).toHaveBeenCalledWith(
@@ -1456,7 +1456,7 @@ describe(MediaService.name, () => {
       mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
       mocks.media.generateThumbhash.mockResolvedValue(factory.buffer());
 
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id, source: 'upload' });
+      await sut.handleAssetEditProcessing({ id: asset.id, source: 'upload' });
 
       expect(mocks.media.generateThumbhash).toHaveBeenCalled();
     });
@@ -1469,7 +1469,7 @@ describe(MediaService.name, () => {
       mocks.person.getFaces.mockResolvedValue([]);
       mocks.ocr.getByAssetId.mockResolvedValue([]);
 
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
+      await sut.handleAssetEditProcessing({ id: asset.id });
 
       expect(mocks.asset.update).toHaveBeenCalledWith(expect.objectContaining({ thumbhash: thumbhashBuffer }));
     });

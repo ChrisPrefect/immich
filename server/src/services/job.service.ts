@@ -95,8 +95,7 @@ export class JobService extends BaseService {
         }
         break;
       }
-
-      case JobName.AssetEditThumbnailGeneration: {
+      case JobName.AssetProcessEdit: {
         const asset = await this.assetRepository.getById(item.data.id);
         const edits = await this.assetEditRepository.getWithSyncInfo(item.data.id);
 

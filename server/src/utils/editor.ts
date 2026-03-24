@@ -1,4 +1,5 @@
 import { AssetFace } from 'src/database';
+import { AssetEditActionItem, CropParameters } from 'src/dtos/editing.dto';
 import { AssetOcrResponseDto } from 'src/dtos/ocr.dto';
 import { ImageDimensions } from 'src/types';
 
@@ -28,6 +29,15 @@ const scale = (box: BoundingBox, target: ImageDimensions, source?: ImageDimensio
     y1: (box.y1 / sourceHeight) * target.height,
     x2: (box.x2 / sourceWidth) * target.width,
     y2: (box.y2 / sourceHeight) * target.height,
+  };
+};
+
+const scaleCrop = (crop: CropParameters, target: ImageDimensions, source: ImageDimensions) => {
+  return {
+    width: Math.round((crop.width / source.width) * target.width),
+    height: Math.round((crop.height / source.height) * target.height),
+    x: Math.round((crop.x / source.width) * target.width),
+    y: Math.round((crop.y / source.height) * target.height),
   };
 };
 
@@ -104,4 +114,21 @@ export const checkOcrVisibility = (
     visible: status.filter((s) => s.isVisible).map((s) => s.ocr),
     hidden: status.filter((s) => !s.isVisible).map((s) => s.ocr),
   };
+};
+
+export const scaleEdits = (
+  edits: AssetEditActionItem[],
+  target: ImageDimensions,
+  source: ImageDimensions,
+): AssetEditActionItem[] => {
+  return edits.map((edit) => {
+    if (edit.action === 'crop') {
+      return {
+        ...edit,
+        parameters: scaleCrop(edit.parameters as CropParameters, target, source),
+      } as AssetEditActionItem;
+    }
+
+    return edit;
+  });
 };

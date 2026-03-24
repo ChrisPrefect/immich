@@ -128,6 +128,8 @@ export class EditManager {
     try {
       // Setup the websocket listener before sending the edit request
       const editCompleted = waitForWebsocketEvent('AssetEditReadyV1', (event) => event.asset.id === assetId, 10_000);
+      if (this.currentAsset.livePhotoVideoId) {
+      }
 
       await (edits.length === 0
         ? removeAssetEdits({ id: assetId })

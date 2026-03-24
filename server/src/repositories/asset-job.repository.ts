@@ -139,6 +139,39 @@ export class AssetJobRepository {
   }
 
   @GenerateSql({ params: [DummyValue.UUID] })
+  getForAssetEditProcessing(id: string) {
+    return this.db
+      .selectFrom('asset')
+      .select([
+        'asset.id',
+        'asset.visibility',
+        'asset.originalFileName',
+        'asset.originalPath',
+        'asset.ownerId',
+        'asset.thumbhash',
+        'asset.type',
+      ])
+      .select((eb) =>
+        jsonArrayFrom(
+          eb
+            .selectFrom('asset_file')
+            .select(columns.assetFilesForThumbnail)
+            .whereRef('asset_file.assetId', '=', 'asset.id')
+            .where('asset_file.type', 'in', [
+              AssetFileType.Thumbnail,
+              AssetFileType.Preview,
+              AssetFileType.FullSize,
+              AssetFileType.EncodedVideo,
+            ]),
+        ).as('files'),
+      )
+      .select(withEdits)
+      .$call(withExifInner)
+      .where('asset.id', '=', id)
+      .executeTakeFirst();
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID] })
   getForMetadataExtraction(id: string) {
     return this.db
       .selectFrom('asset')
@@ -308,7 +341,7 @@ export class AssetJobRepository {
   streamForVideoConversion(force?: boolean) {
     return this.db
       .selectFrom('asset')
-      .select(['asset.id'])
+      .select(['asset.id', 'asset.isEdited'])
       .where('asset.type', '=', sql.lit(AssetType.Video))
       .$if(!force, (qb) =>
         qb
@@ -334,7 +367,15 @@ export class AssetJobRepository {
     return this.db
       .selectFrom('asset')
       .select(['asset.id', 'asset.ownerId', 'asset.originalPath'])
-      .select(withFiles)
+      .select((eb) =>
+        jsonArrayFrom(
+          eb
+            .selectFrom('asset_file')
+            .select(columns.assetFilesForThumbnail)
+            .whereRef('asset_file.assetId', '=', 'asset.id')
+            .where('asset_file.type', '=', sql.lit(AssetFileType.EncodedVideo)),
+        ).as('files'),
+      )
       .select(withEdits)
       .where('asset.id', '=', id)
       .where('asset.type', '=', sql.lit(AssetType.Video))

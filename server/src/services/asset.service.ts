@@ -47,6 +47,7 @@ import {
 } from 'src/utils/asset.util';
 import { updateLockedColumns } from 'src/utils/database';
 import { extractTimeZone } from 'src/utils/date';
+import { scaleEdits } from 'src/utils/editor';
 import { transformOcrBoundingBox } from 'src/utils/transform';
 
 @Injectable()
@@ -605,10 +606,27 @@ export class AssetService extends BaseService {
     }
 
     const newEdits = await this.assetEditRepository.replaceAll(id, edits);
-    await this.jobRepository.queue({ name: JobName.AssetEditThumbnailGeneration, data: { id } });
+    await this.jobRepository.queue({ name: JobName.AssetProcessEdit, data: { id } });
 
     if (asset.livePhotoVideoId) {
-      await this.jobRepository.queue({ name: JobName.AssetEditTranscodeGeneration, data: { id } });
+      const liveAsset = await this.assetRepository.getForEdit(asset.livePhotoVideoId);
+      if (!liveAsset) {
+        throw new BadRequestException('Live photo video not found');
+      }
+
+      const { width: liveWidth, height: liveHeight } = getDimensions(liveAsset);
+      console.log(liveWidth, liveHeight);
+      const scaledEdits = scaleEdits(
+        edits,
+        { width: liveWidth, height: liveHeight },
+        { width: assetWidth, height: assetHeight },
+      );
+
+      await this.assetEditRepository.replaceAll(asset.livePhotoVideoId, scaledEdits);
+      await this.jobRepository.queue({
+        name: JobName.AssetProcessEdit,
+        data: { id: asset.livePhotoVideoId },
+      });
     }
 
     // Return the asset and its applied edits
@@ -627,6 +645,14 @@ export class AssetService extends BaseService {
     }
 
     await this.assetEditRepository.replaceAll(id, []);
-    await this.jobRepository.queue({ name: JobName.AssetEditThumbnailGeneration, data: { id } });
+    await this.jobRepository.queue({ name: JobName.AssetProcessEdit, data: { id } });
+
+    if (asset.livePhotoVideoId) {
+      await this.assetEditRepository.replaceAll(asset.livePhotoVideoId, []);
+      await this.jobRepository.queue({
+        name: JobName.AssetProcessEdit,
+        data: { id: asset.livePhotoVideoId },
+      });
+    }
   }
 }

@@ -120,8 +120,8 @@ export class StorageCore {
     );
   }
 
-  static getEncodedVideoPath(asset: ThumbnailPathEntity) {
-    return StorageCore.getNestedPath(StorageFolder.EncodedVideo, asset.ownerId, `${asset.id}.mp4`);
+  static getEncodedVideoPath(asset: ThumbnailPathEntity, isEdited: boolean = false) {
+    return StorageCore.getNestedPath(StorageFolder.EncodedVideo, asset.ownerId, `${asset.id}${isEdited ? '_edited' : ''}.mp4`);
   }
 
   static getAndroidMotionPath(asset: ThumbnailPathEntity, uuid: string) {

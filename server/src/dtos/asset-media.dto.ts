@@ -18,11 +18,13 @@ export enum AssetMediaSize {
 }
 
 export class AssetMediaOptionsDto {
-  @ValidateEnum({ enum: AssetMediaSize, name: 'AssetMediaSize', description: 'Asset media size', optional: true })
-  size?: AssetMediaSize;
-
   @ValidateBoolean({ optional: true, description: 'Return edited asset if available', default: false })
   edited?: boolean;
+}
+
+export class AssetThumbnailOptionsDto extends AssetMediaOptionsDto {
+  @ValidateEnum({ enum: AssetMediaSize, name: 'AssetMediaSize', description: 'Asset media size', optional: true })
+  size?: AssetMediaSize;
 }
 
 export enum UploadFieldName {

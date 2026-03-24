@@ -8409,7 +8409,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MergePersonDto"
+                "$ref": "#/components/schemas/MergeFaceClusterDto"
               }
             }
           },
@@ -18878,10 +18878,10 @@
         },
         "type": "object"
       },
-      "MergePersonDto": {
+      "MergeFaceClusterDto": {
         "properties": {
           "ids": {
-            "description": "Person IDs to merge",
+            "description": "Face cluster IDs to merge",
             "items": {
               "format": "uuid",
               "type": "string"
@@ -23055,6 +23055,70 @@
         ],
         "type": "object"
       },
+      "SyncAssetFaceV3": {
+        "properties": {
+          "assetId": {
+            "description": "Asset ID",
+            "type": "string"
+          },
+          "boundingBoxX1": {
+            "type": "integer"
+          },
+          "boundingBoxX2": {
+            "type": "integer"
+          },
+          "boundingBoxY1": {
+            "type": "integer"
+          },
+          "boundingBoxY2": {
+            "type": "integer"
+          },
+          "deletedAt": {
+            "description": "Face deleted at",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "faceClusterId": {
+            "description": "Face cluster ID",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Asset face ID",
+            "type": "string"
+          },
+          "imageHeight": {
+            "type": "integer"
+          },
+          "imageWidth": {
+            "type": "integer"
+          },
+          "isVisible": {
+            "description": "Is the face visible in the asset",
+            "type": "boolean"
+          },
+          "sourceType": {
+            "description": "Source type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assetId",
+          "boundingBoxX1",
+          "boundingBoxX2",
+          "boundingBoxY1",
+          "boundingBoxY2",
+          "deletedAt",
+          "faceClusterId",
+          "id",
+          "imageHeight",
+          "imageWidth",
+          "isVisible",
+          "sourceType"
+        ],
+        "type": "object"
+      },
       "SyncAssetMetadataDeleteV1": {
         "properties": {
           "assetId": {
@@ -23348,10 +23412,14 @@
           "StackV1",
           "StackDeleteV1",
           "PersonV1",
+          "PersonV2",
           "PersonDeleteV1",
           "AssetFaceV1",
           "AssetFaceV2",
+          "AssetFaceV3",
           "AssetFaceDeleteV1",
+          "FaceClusterV1",
+          "FaceClusterDeleteV1",
           "UserMetadataV1",
           "UserMetadataDeleteV1",
           "SyncAckV1",
@@ -23359,6 +23427,47 @@
           "SyncCompleteV1"
         ],
         "type": "string"
+      },
+      "SyncFaceClusterDeleteV1": {
+        "properties": {
+          "faceClusterId": {
+            "description": "Face cluster ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "faceClusterId"
+        ],
+        "type": "object"
+      },
+      "SyncFaceClusterV1": {
+        "properties": {
+          "createdAt": {
+            "description": "Created at",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Face cluster ID",
+            "type": "string"
+          },
+          "ownerId": {
+            "description": "Owner ID",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Updated at",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "createdAt",
+          "id",
+          "ownerId",
+          "updatedAt"
+        ],
+        "type": "object"
       },
       "SyncMemoryAssetDeleteV1": {
         "properties": {
@@ -23602,6 +23711,75 @@
         ],
         "type": "object"
       },
+      "SyncPersonV2": {
+        "properties": {
+          "birthDate": {
+            "description": "Birth date",
+            "format": "date-time",
+            "nullable": true,
+            "type": "string"
+          },
+          "color": {
+            "description": "Color",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "description": "Created at",
+            "format": "date-time",
+            "type": "string"
+          },
+          "faceAssetId": {
+            "description": "Face asset ID",
+            "nullable": true,
+            "type": "string"
+          },
+          "faceClusterId": {
+            "description": "Face cluster ID",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "Person ID",
+            "type": "string"
+          },
+          "isFavorite": {
+            "description": "Is favorite",
+            "type": "boolean"
+          },
+          "isHidden": {
+            "description": "Is hidden",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Person name",
+            "type": "string"
+          },
+          "ownerId": {
+            "description": "Owner ID",
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Updated at",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "birthDate",
+          "color",
+          "createdAt",
+          "faceAssetId",
+          "faceClusterId",
+          "id",
+          "isFavorite",
+          "isHidden",
+          "name",
+          "ownerId",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "SyncRequestType": {
         "description": "Sync request types",
         "enum": [
@@ -23624,8 +23802,11 @@
           "StacksV1",
           "UsersV1",
           "PeopleV1",
+          "PeopleV2",
           "AssetFacesV1",
           "AssetFacesV2",
+          "AssetFacesV3",
+          "FaceClusterV1",
           "UserMetadataV1"
         ],
         "type": "string"

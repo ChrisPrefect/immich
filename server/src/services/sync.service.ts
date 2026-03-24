@@ -13,8 +13,10 @@ import {
   SyncAckDeleteDto,
   SyncAckSetDto,
   syncAssetFaceV2ToV1,
+  syncAssetFaceV3ToV2,
   SyncAssetV1,
   SyncItem,
+  syncPersonV2ToV1,
   SyncStreamDto,
 } from 'src/dtos/sync.dto';
 import {
@@ -192,8 +194,11 @@ export class SyncService extends BaseService {
       [SyncRequestType.StacksV1]: () => this.syncStackV1(options, response, checkpointMap),
       [SyncRequestType.PartnerStacksV1]: () => this.syncPartnerStackV1(options, response, checkpointMap, session.id),
       [SyncRequestType.PeopleV1]: () => this.syncPeopleV1(options, response, checkpointMap),
+      [SyncRequestType.PeopleV2]: () => this.syncPeopleV2(options, response, checkpointMap),
       [SyncRequestType.AssetFacesV1]: async () => this.syncAssetFacesV1(options, response, checkpointMap),
       [SyncRequestType.AssetFacesV2]: async () => this.syncAssetFacesV2(options, response, checkpointMap),
+      [SyncRequestType.AssetFacesV3]: async () => this.syncAssetFacesV3(options, response, checkpointMap),
+      [SyncRequestType.FaceClusterV1]: async () => this.syncFaceClusterV1(options, response, checkpointMap),
       [SyncRequestType.UserMetadataV1]: () => this.syncUserMetadataV1(options, response, checkpointMap),
     };
 
@@ -797,6 +802,20 @@ export class SyncService extends BaseService {
     const upsertType = SyncEntityType.PersonV1;
     const upserts = this.syncRepository.person.getUpserts({ ...options, ack: checkpointMap[upsertType] });
     for await (const { updateId, ...data } of upserts) {
+      send(response, { type: upsertType, ids: [updateId], data: syncPersonV2ToV1(data) });
+    }
+  }
+
+  private async syncPeopleV2(options: SyncQueryOptions, response: Writable, checkpointMap: CheckpointMap) {
+    const deleteType = SyncEntityType.PersonDeleteV1;
+    const deletes = this.syncRepository.person.getDeletes({ ...options, ack: checkpointMap[deleteType] });
+    for await (const { id, ...data } of deletes) {
+      send(response, { type: deleteType, ids: [id], data });
+    }
+
+    const upsertType = SyncEntityType.PersonV2;
+    const upserts = this.syncRepository.person.getUpserts({ ...options, ack: checkpointMap[upsertType] });
+    for await (const { updateId, ...data } of upserts) {
       send(response, { type: upsertType, ids: [updateId], data });
     }
   }
@@ -810,8 +829,8 @@ export class SyncService extends BaseService {
 
     const upsertType = SyncEntityType.AssetFaceV1;
     const upserts = this.syncRepository.assetFace.getUpserts({ ...options, ack: checkpointMap[upsertType] });
-    for await (const { updateId, ...data } of upserts) {
-      const v1 = syncAssetFaceV2ToV1(data);
+    for await (const { updateId, personId, ...data } of upserts) {
+      const v1 = syncAssetFaceV2ToV1(syncAssetFaceV3ToV2(data, personId));
       send(response, { type: upsertType, ids: [updateId], data: v1 });
     }
   }
@@ -825,6 +844,34 @@ export class SyncService extends BaseService {
 
     const upsertType = SyncEntityType.AssetFaceV2;
     const upserts = this.syncRepository.assetFace.getUpserts({ ...options, ack: checkpointMap[upsertType] });
+    for await (const { updateId, personId, ...data } of upserts) {
+      send(response, { type: upsertType, ids: [updateId], data: syncAssetFaceV3ToV2(data, personId) });
+    }
+  }
+
+  private async syncAssetFacesV3(options: SyncQueryOptions, response: Writable, checkpointMap: CheckpointMap) {
+    const deleteType = SyncEntityType.AssetFaceDeleteV1;
+    const deletes = this.syncRepository.assetFace.getDeletes({ ...options, ack: checkpointMap[deleteType] });
+    for await (const { id, ...data } of deletes) {
+      send(response, { type: deleteType, ids: [id], data });
+    }
+
+    const upsertType = SyncEntityType.AssetFaceV3;
+    const upserts = this.syncRepository.assetFace.getUpserts({ ...options, ack: checkpointMap[upsertType] });
+    for await (const { updateId, personId: _, ...data } of upserts) {
+      send(response, { type: upsertType, ids: [updateId], data });
+    }
+  }
+
+  private async syncFaceClusterV1(options: SyncQueryOptions, response: Writable, checkpointMap: CheckpointMap) {
+    const deleteType = SyncEntityType.FaceClusterDeleteV1;
+    const deletes = this.syncRepository.faceCluster.getDeletes({ ...options, ack: checkpointMap[deleteType] });
+    for await (const { id, ...data } of deletes) {
+      send(response, { type: deleteType, ids: [id], data });
+    }
+
+    const upsertType = SyncEntityType.FaceClusterV1;
+    const upserts = this.syncRepository.faceCluster.getUpserts({ ...options, ack: checkpointMap[upsertType] });
     for await (const { updateId, ...data } of upserts) {
       send(response, { type: upsertType, ids: [updateId], data });
     }

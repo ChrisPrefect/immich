@@ -412,6 +412,18 @@ export class SyncPersonV1 {
 }
 
 @ExtraModel()
+export class SyncPersonV2 extends SyncPersonV1 {
+  @ApiProperty({ description: 'Face cluster ID' })
+  faceClusterId!: string | null;
+}
+
+export function syncPersonV2ToV1(personV2: SyncPersonV2): SyncPersonV1 {
+  const { faceClusterId: _, ...personV1 } = personV2;
+
+  return personV1;
+}
+
+@ExtraModel()
 export class SyncPersonDeleteV1 {
   @ApiProperty({ description: 'Person ID' })
   personId!: string;
@@ -449,6 +461,40 @@ export class SyncAssetFaceV2 extends SyncAssetFaceV1 {
   isVisible!: boolean;
 }
 
+@ExtraModel()
+export class SyncAssetFaceV3 {
+  @ApiProperty({ description: 'Asset face ID' })
+  id!: string;
+  @ApiProperty({ description: 'Asset ID' })
+  assetId!: string;
+  @ApiProperty({ description: 'Face cluster ID' })
+  faceClusterId!: string | null;
+  @ApiProperty({ type: 'integer' })
+  imageWidth!: number;
+  @ApiProperty({ type: 'integer' })
+  imageHeight!: number;
+  @ApiProperty({ type: 'integer' })
+  boundingBoxX1!: number;
+  @ApiProperty({ type: 'integer' })
+  boundingBoxY1!: number;
+  @ApiProperty({ type: 'integer' })
+  boundingBoxX2!: number;
+  @ApiProperty({ type: 'integer' })
+  boundingBoxY2!: number;
+  @ApiProperty({ description: 'Source type' })
+  sourceType!: string;
+  @ApiProperty({ description: 'Face deleted at' })
+  deletedAt!: Date | null;
+  @ApiProperty({ description: 'Is the face visible in the asset' })
+  isVisible!: boolean;
+}
+
+export function syncAssetFaceV3ToV2(faceV3: SyncAssetFaceV3, personId: string | null): SyncAssetFaceV2 {
+  const { faceClusterId: _, ...face } = faceV3;
+
+  return { ...face, personId };
+}
+
 export function syncAssetFaceV2ToV1(faceV2: SyncAssetFaceV2): SyncAssetFaceV1 {
   const { deletedAt: _, isVisible: __, ...faceV1 } = faceV2;
 
@@ -459,6 +505,24 @@ export function syncAssetFaceV2ToV1(faceV2: SyncAssetFaceV2): SyncAssetFaceV1 {
 export class SyncAssetFaceDeleteV1 {
   @ApiProperty({ description: 'Asset face ID' })
   assetFaceId!: string;
+}
+
+@ExtraModel()
+export class SyncFaceClusterV1 {
+  @ApiProperty({ description: 'Face cluster ID' })
+  id!: string;
+  @ApiProperty({ description: 'Created at' })
+  createdAt!: Date;
+  @ApiProperty({ description: 'Updated at' })
+  updatedAt!: Date;
+  @ApiProperty({ description: 'Owner ID' })
+  ownerId!: string;
+}
+
+@ExtraModel()
+export class SyncFaceClusterDeleteV1 {
+  @ApiProperty({ description: 'Face cluster ID' })
+  faceClusterId!: string;
 }
 
 @ExtraModel()
@@ -530,10 +594,14 @@ export type SyncItem = {
   [SyncEntityType.PartnerStackDeleteV1]: SyncStackDeleteV1;
   [SyncEntityType.PartnerStackV1]: SyncStackV1;
   [SyncEntityType.PersonV1]: SyncPersonV1;
+  [SyncEntityType.PersonV2]: SyncPersonV2;
   [SyncEntityType.PersonDeleteV1]: SyncPersonDeleteV1;
   [SyncEntityType.AssetFaceV1]: SyncAssetFaceV1;
   [SyncEntityType.AssetFaceV2]: SyncAssetFaceV2;
+  [SyncEntityType.AssetFaceV3]: SyncAssetFaceV3;
   [SyncEntityType.AssetFaceDeleteV1]: SyncAssetFaceDeleteV1;
+  [SyncEntityType.FaceClusterV1]: SyncFaceClusterV1;
+  [SyncEntityType.FaceClusterDeleteV1]: SyncFaceClusterDeleteV1;
   [SyncEntityType.UserMetadataV1]: SyncUserMetadataV1;
   [SyncEntityType.UserMetadataDeleteV1]: SyncUserMetadataDeleteV1;
   [SyncEntityType.SyncAckV1]: SyncAckV1;

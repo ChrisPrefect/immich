@@ -41,6 +41,8 @@ import { AssetMetadataTable } from 'src/schema/tables/asset-metadata.table';
 import { AssetOcrTable } from 'src/schema/tables/asset-ocr.table';
 import { AssetTable } from 'src/schema/tables/asset.table';
 import { AuditTable } from 'src/schema/tables/audit.table';
+import { FaceClusterAuditTable } from 'src/schema/tables/face-cluster-audit.table';
+import { FaceClusterTable } from 'src/schema/tables/face-cluster.table';
 import { FaceSearchTable } from 'src/schema/tables/face-search.table';
 import { GeodataPlacesTable } from 'src/schema/tables/geodata-places.table';
 import { LibraryTable } from 'src/schema/tables/library.table';
@@ -199,6 +201,8 @@ export interface DB {
 
   audit: AuditTable;
 
+  face_cluster: FaceClusterTable;
+  face_cluster_audit: FaceClusterAuditTable;
   face_search: FaceSearchTable;
 
   geodata_places: GeodataPlacesTable;

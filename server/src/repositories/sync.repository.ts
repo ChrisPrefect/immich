@@ -57,6 +57,7 @@ export class SyncRepository {
   assetFace: AssetFaceSync;
   assetMetadata: AssetMetadataSync;
   authUser: AuthUserSync;
+  faceCluster: FaceClusterSync;
   memory: MemorySync;
   memoryToAsset: MemoryToAssetSync;
   partner: PartnerSync;
@@ -80,6 +81,7 @@ export class SyncRepository {
     this.assetFace = new AssetFaceSync(this.db);
     this.assetMetadata = new AssetMetadataSync(this.db);
     this.authUser = new AuthUserSync(this.db);
+    this.faceCluster = new FaceClusterSync(this.db);
     this.memory = new MemorySync(this.db);
     this.memoryToAsset = new MemoryToAssetSync(this.db);
     this.partner = new PartnerSync(this.db);
@@ -447,6 +449,7 @@ class PersonSync extends BaseSync {
         'color',
         'updateId',
         'faceAssetId',
+        'faceClusterId',
       ])
       .where('ownerId', '=', options.userId)
       .stream();
@@ -473,7 +476,7 @@ class AssetFaceSync extends BaseSync {
       .select([
         'asset_face.id',
         'assetId',
-        'personId',
+        'faceClusterId',
         'imageWidth',
         'imageHeight',
         'boundingBoxX1',
@@ -485,9 +488,40 @@ class AssetFaceSync extends BaseSync {
         'asset_face.deletedAt',
         'asset_face.updateId',
       ])
+      .leftJoin('person', 'person.faceClusterId', 'asset_face.faceClusterId')
+      .select('person.id as personId')
       .leftJoin('asset', 'asset.id', 'asset_face.assetId')
       .where('asset.ownerId', '=', options.userId)
       .where('asset_face.isVisible', '=', true)
+      .stream();
+  }
+}
+
+class FaceClusterSync extends BaseSync {
+  @GenerateSql({ params: [dummyQueryOptions], stream: true })
+  getDeletes(options: SyncQueryOptions) {
+    return this.auditQuery('face_cluster_audit', options)
+      .select(['face_cluster_audit.id', 'face_cluster_audit.faceClusterId'])
+      .leftJoin('face_cluster', 'face_cluster.id', 'face_cluster_audit.id')
+      .where('face_cluster.ownerId', '=', options.userId)
+      .stream();
+  }
+
+  cleanupAuditTable(daysAgo: number) {
+    return this.auditCleanup('face_cluster_audit', daysAgo);
+  }
+
+  @GenerateSql({ params: [dummyQueryOptions], stream: true })
+  getUpserts(options: SyncQueryOptions) {
+    return this.upsertQuery('face_cluster', options)
+      .select([
+        'face_cluster.id',
+        'face_cluster.createdAt',
+        'face_cluster.updatedAt',
+        'face_cluster.ownerId',
+        'face_cluster.updateId',
+      ])
+      .where('face_cluster.ownerId', '=', options.userId)
       .stream();
   }
 }

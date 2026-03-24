@@ -144,7 +144,12 @@ export function withFacesAndPeople(
       .selectFrom('asset_face')
       .leftJoinLateral(
         (eb) =>
-          eb.selectFrom('person').selectAll('person').whereRef('asset_face.personId', '=', 'person.id').as('person'),
+          eb
+            .selectFrom('face_cluster')
+            .where('face_cluster.id', '=', 'asset_face.faceClusterId')
+            .innerJoin('person', 'person.faceClusterId', 'face_cluster.id')
+            .selectAll('person')
+            .as('person'),
         (join) => join.onTrue(),
       )
       .selectAll('asset_face')
@@ -161,11 +166,12 @@ export function hasPeople<O>(qb: SelectQueryBuilder<DB, 'asset', O>, personIds: 
       eb
         .selectFrom('asset_face')
         .select('assetId')
-        .where('personId', '=', anyUuid(personIds!))
+        .innerJoin('person', 'person.faceClusterId', 'asset_face.faceClusterId')
+        .where('person.id', '=', anyUuid(personIds!))
         .where('deletedAt', 'is', null)
         .where('isVisible', 'is', true)
         .groupBy('assetId')
-        .having((eb) => eb.fn.count('personId').distinct(), '=', personIds.length)
+        .having((eb) => eb.fn.count('person.id').distinct(), '=', personIds.length)
         .as('has_people'),
     (join) => join.onRef('has_people.assetId', '=', 'asset.id'),
   );

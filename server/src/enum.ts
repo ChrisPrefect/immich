@@ -735,8 +735,11 @@ export enum SyncRequestType {
   StacksV1 = 'StacksV1',
   UsersV1 = 'UsersV1',
   PeopleV1 = 'PeopleV1',
+  PeopleV2 = 'PeopleV2',
   AssetFacesV1 = 'AssetFacesV1',
   AssetFacesV2 = 'AssetFacesV2',
+  AssetFacesV3 = 'AssetFacesV3',
+  FaceClusterV1 = 'FaceClusterV1',
   UserMetadataV1 = 'UserMetadataV1',
 }
 
@@ -794,11 +797,16 @@ export enum SyncEntityType {
   StackDeleteV1 = 'StackDeleteV1',
 
   PersonV1 = 'PersonV1',
+  PersonV2 = 'PersonV2',
   PersonDeleteV1 = 'PersonDeleteV1',
 
   AssetFaceV1 = 'AssetFaceV1',
   AssetFaceV2 = 'AssetFaceV2',
+  AssetFaceV3 = 'AssetFaceV3',
   AssetFaceDeleteV1 = 'AssetFaceDeleteV1',
+
+  FaceClusterV1 = 'FaceClusterV1',
+  FaceClusterDeleteV1 = 'FaceClusterDeleteV1',
 
   UserMetadataV1 = 'UserMetadataV1',
   UserMetadataDeleteV1 = 'UserMetadataDeleteV1',

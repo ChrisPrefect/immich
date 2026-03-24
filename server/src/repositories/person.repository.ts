@@ -33,9 +33,9 @@ export interface AssetFaceId {
 }
 
 export interface UpdateFacesData {
-  oldPersonId?: string;
+  oldFaceClusterId?: string;
   faceIds?: string[];
-  newPersonId: string;
+  newFaceClusterId: string;
 }
 
 export interface PersonStatistics {
@@ -54,7 +54,7 @@ export interface GetAllPeopleOptions {
 }
 
 export interface GetAllFacesOptions {
-  personId?: string | null;
+  faceClusterId?: string | null;
   assetId?: string;
   sourceType?: SourceType;
 }
@@ -65,7 +65,7 @@ export type SelectFaceOptions = (keyof Selectable<AssetFaceTable>)[];
 
 const withPerson = (eb: ExpressionBuilder<DB, 'asset_face'>) => {
   return jsonObjectFrom(
-    eb.selectFrom('person').selectAll('person').whereRef('person.id', '=', 'asset_face.personId'),
+    eb.selectFrom('person').selectAll('person').whereRef('person.faceClusterId', '=', 'asset_face.faceClusterId'),
   ).as('person');
 };
 
@@ -80,11 +80,11 @@ export class PersonRepository {
   constructor(@InjectKysely() private db: Kysely<DB>) {}
 
   @GenerateSql({ params: [{ oldPersonId: DummyValue.UUID, newPersonId: DummyValue.UUID }] })
-  async reassignFaces({ oldPersonId, faceIds, newPersonId }: UpdateFacesData): Promise<number> {
+  async reassignFaces({ oldFaceClusterId, faceIds, newFaceClusterId }: UpdateFacesData): Promise<number> {
     const result = await this.db
       .updateTable('asset_face')
-      .set({ personId: newPersonId })
-      .$if(!!oldPersonId, (qb) => qb.where('asset_face.personId', '=', oldPersonId!))
+      .set({ faceClusterId: newFaceClusterId })
+      .$if(!!oldFaceClusterId, (qb) => qb.where('asset_face.faceClusterId', '=', oldFaceClusterId!))
       .$if(!!faceIds, (qb) => qb.where('asset_face.id', 'in', faceIds!))
       .executeTakeFirst();
 
@@ -94,7 +94,7 @@ export class PersonRepository {
   async unassignFaces({ sourceType }: UnassignFacesOptions): Promise<void> {
     await this.db
       .updateTable('asset_face')
-      .set({ personId: null })
+      .set({ faceClusterId: null })
       .where('asset_face.sourceType', '=', sourceType)
       .execute();
   }
@@ -117,8 +117,8 @@ export class PersonRepository {
     return this.db
       .selectFrom('asset_face')
       .selectAll('asset_face')
-      .$if(options.personId === null, (qb) => qb.where('asset_face.personId', 'is', null))
-      .$if(!!options.personId, (qb) => qb.where('asset_face.personId', '=', options.personId!))
+      .$if(options.faceClusterId === null, (qb) => qb.where('asset_face.faceClusterId', 'is', null))
+      .$if(!!options.faceClusterId, (qb) => qb.where('asset_face.faceClusterId', '=', options.faceClusterId!))
       .$if(!!options.sourceType, (qb) => qb.where('asset_face.sourceType', '=', options.sourceType!))
       .$if(!!options.assetId, (qb) => qb.where('asset_face.assetId', '=', options.assetId!))
       .where('asset_face.deletedAt', 'is', null)
@@ -153,7 +153,7 @@ export class PersonRepository {
     const items = await this.db
       .selectFrom('person')
       .selectAll('person')
-      .innerJoin('asset_face', 'asset_face.personId', 'person.id')
+      .innerJoin('asset_face', 'asset_face.faceClusterId', 'person.faceClusterId')
       .innerJoin('asset', (join) =>
         join
           .onRef('asset_face.assetId', '=', 'asset.id')
@@ -209,7 +209,7 @@ export class PersonRepository {
     return this.db
       .selectFrom('person')
       .selectAll('person')
-      .leftJoin('asset_face', 'asset_face.personId', 'person.id')
+      .leftJoin('asset_face', 'asset_face.faceClusterId', 'person.faceClusterId')
       .where('asset_face.deletedAt', 'is', null)
       .where('asset_face.isVisible', 'is', true)
       .having((eb) => eb.fn.count('asset_face.assetId'), '=', 0)
@@ -248,7 +248,7 @@ export class PersonRepository {
   getFaceForFacialRecognitionJob(id: string) {
     return this.db
       .selectFrom('asset_face')
-      .select(['asset_face.id', 'asset_face.personId', 'asset_face.sourceType'])
+      .select(['asset_face.id', 'asset_face.faceClusterId', 'asset_face.sourceType'])
       .select((eb) =>
         jsonObjectFrom(
           eb
@@ -297,10 +297,10 @@ export class PersonRepository {
   }
 
   @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID] })
-  async reassignFace(assetFaceId: string, newPersonId: string): Promise<number> {
+  async reassignFace(assetFaceId: string, newFaceClusterId: string): Promise<number> {
     const result = await this.db
       .updateTable('asset_face')
-      .set({ personId: newPersonId })
+      .set({ faceClusterId: newFaceClusterId })
       .where('asset_face.id', '=', assetFaceId)
       .executeTakeFirst();
 
@@ -346,13 +346,13 @@ export class PersonRepository {
   }
 
   @GenerateSql({ params: [DummyValue.UUID] })
-  async getStatistics(personId: string): Promise<PersonStatistics> {
+  async getStatistics(faceClusterId: string): Promise<PersonStatistics> {
     const result = await this.db
       .selectFrom('asset_face')
       .leftJoin('asset', (join) =>
         join
           .onRef('asset.id', '=', 'asset_face.assetId')
-          .on('asset_face.personId', '=', personId)
+          .on('asset_face.faceClusterId', '=', faceClusterId)
           .on('asset.visibility', '=', sql.lit(AssetVisibility.Timeline))
           .on('asset.deletedAt', 'is', null),
       )
@@ -375,7 +375,7 @@ export class PersonRepository {
         eb.exists((eb) =>
           eb
             .selectFrom('asset_face')
-            .whereRef('asset_face.personId', '=', 'person.id')
+            .whereRef('asset_face.faceClusterId', '=', 'person.faceClusterId')
             .where('asset_face.deletedAt', 'is', null)
             .where('asset_face.isVisible', '=', true)
             .where((eb) =>
@@ -395,7 +395,16 @@ export class PersonRepository {
       .executeTakeFirstOrThrow();
   }
 
-  create(person: Insertable<PersonTable>) {
+  async create(person: Insertable<PersonTable>) {
+    if (!person.faceClusterId) {
+      const { id } = await this.db
+        .insertInto('face_cluster')
+        .values({ ownerId: person.ownerId })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      person.faceClusterId = id;
+    }
+
     return this.db.insertInto('person').values(person).returningAll().executeTakeFirstOrThrow();
   }
 
@@ -486,18 +495,19 @@ export class PersonRepository {
       .selectFrom('asset_face')
       .selectAll('asset_face')
       .select(withPerson)
+      .innerJoin('person', (join) => join.onRef('person.faceClusterId', '=', 'asset_face.faceClusterId'))
+      .where('person.id', 'in', personIds)
       .where('asset_face.assetId', 'in', assetIds)
-      .where('asset_face.personId', 'in', personIds)
       .where('asset_face.deletedAt', 'is', null)
       .execute();
   }
 
   @GenerateSql({ params: [DummyValue.UUID] })
-  getRandomFace(personId: string) {
+  getRandomFace(faceClusterId: string) {
     return this.db
       .selectFrom('asset_face')
       .selectAll('asset_face')
-      .where('asset_face.personId', '=', personId)
+      .where('asset_face.faceClusterId', '=', faceClusterId)
       .where('asset_face.deletedAt', 'is', null)
       .where('asset_face.isVisible', 'is', true)
       .executeTakeFirst();
@@ -584,7 +594,9 @@ export class PersonRepository {
       .selectFrom('asset_face')
       .select('asset_face.id')
       .where('asset_face.assetId', '=', assetId)
-      .where('asset_face.personId', '=', personId)
+      .innerJoin('person', (join) =>
+        join.onRef('person.faceClusterId', '=', 'asset_face.faceClusterId').on('person.id', '=', personId),
+      )
       .innerJoin('asset', (join) => join.onRef('asset.id', '=', 'asset_face.assetId').on('asset.isOffline', '=', false))
       .executeTakeFirst();
   }

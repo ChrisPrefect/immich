@@ -67,8 +67,8 @@ export class PeopleUpdateItem extends PersonUpdateDto {
   id!: string;
 }
 
-export class MergePersonDto {
-  @ValidateUUID({ each: true, description: 'Person IDs to merge' })
+export class MergeFaceClusterDto {
+  @ValidateUUID({ each: true, description: 'Face cluster IDs to merge' })
   ids!: string[];
 }
 

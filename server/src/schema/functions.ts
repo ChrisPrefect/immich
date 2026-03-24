@@ -299,3 +299,16 @@ export const asset_edit_audit = registerFunction({
       RETURN NULL;
     END`,
 });
+
+export const face_cluster_delete_audit = registerFunction({
+  name: 'face_cluster_delete_audit',
+  returnType: 'TRIGGER',
+  language: 'PLPGSQL',
+  body: `
+    BEGIN
+      INSERT INTO face_cluster_audit ("faceClusterId", "ownerId")
+      SELECT "id", "ownerId"
+      FROM OLD;
+      RETURN NULL;
+    END`,
+});

@@ -13,6 +13,7 @@ import {
 import { UpdatedAtTrigger, UpdateIdColumn } from 'src/decorators';
 import { person_delete_audit } from 'src/schema/functions';
 import { AssetFaceTable } from 'src/schema/tables/asset-face.table';
+import { FaceClusterTable } from 'src/schema/tables/face-cluster.table';
 import { UserTable } from 'src/schema/tables/user.table';
 
 @Table('person')
@@ -60,4 +61,7 @@ export class PersonTable {
 
   @UpdateIdColumn({ index: true })
   updateId!: Generated<string>;
+
+  @ForeignKeyColumn(() => FaceClusterTable, { onDelete: 'CASCADE', onUpdate: 'CASCADE', nullable: true, index: true })
+  faceClusterId!: string | null;
 }

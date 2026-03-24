@@ -338,15 +338,15 @@ export class SearchRepository {
             .selectFrom('asset_face')
             .select([
               'asset_face.id',
-              'asset_face.personId',
+              'asset_face.faceClusterId',
               sql<number>`face_search.embedding <=> ${embedding}`.as('distance'),
             ])
             .innerJoin('asset', 'asset.id', 'asset_face.assetId')
             .innerJoin('face_search', 'face_search.faceId', 'asset_face.id')
-            .leftJoin('person', 'person.id', 'asset_face.personId')
+            .leftJoin('person', 'person.faceClusterId', 'asset_face.faceClusterId')
             .where('asset.ownerId', '=', anyUuid(userIds))
             .where('asset.deletedAt', 'is', null)
-            .$if(!!hasPerson, (qb) => qb.where('asset_face.personId', 'is not', null))
+            .$if(!!hasPerson, (qb) => qb.where('asset_face.faceClusterId', 'is not', null))
             .$if(!!minBirthDate, (qb) =>
               qb.where((eb) =>
                 eb.or([eb('person.birthDate', 'is', null), eb('person.birthDate', '<=', minBirthDate!)]),

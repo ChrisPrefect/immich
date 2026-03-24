@@ -50,9 +50,9 @@ export class TrashService extends BaseService {
     const assets = this.trashRepository.getDeletedIds();
 
     let count = 0;
-    const batch: string[] = [];
-    for await (const { id } of assets) {
-      batch.push(id);
+    const batch: Array<{ id: string; isOffline: boolean }> = [];
+    for await (const asset of assets) {
+      batch.push(asset);
 
       if (batch.length === JOBS_ASSET_PAGINATION_SIZE) {
         await this.handleBatch(batch);
@@ -70,14 +70,14 @@ export class TrashService extends BaseService {
     return JobStatus.Success;
   }
 
-  private async handleBatch(ids: string[]) {
-    this.logger.debug(`Queueing ${ids.length} asset(s) for deletion from the trash`);
+  private async handleBatch(assets: Array<{ id: string; isOffline: boolean }>) {
+    this.logger.debug(`Queueing ${assets.length} asset(s) for deletion from the trash`);
     await this.jobRepository.queueAll(
-      ids.map((assetId) => ({
+      assets.map(({ id, isOffline }) => ({
         name: JobName.AssetDelete,
         data: {
-          id: assetId,
-          deleteOnDisk: true,
+          id,
+          deleteOnDisk: !isOffline,
         },
       })),
     );

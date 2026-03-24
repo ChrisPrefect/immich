@@ -859,6 +859,48 @@ describe('/libraries', () => {
       ]);
     });
 
+    it('should not delete excluded external files from disk when trash is emptied', async () => {
+      const relativePath = 'temp/offline-empty-trash/offline.png';
+      const filePath = `${testAssetDir}/${relativePath}`;
+      const internalFilePath = `${testAssetDirInternal}/${relativePath}`;
+
+      utils.createImageFile(filePath);
+
+      const library = await utils.createLibrary(admin.accessToken, {
+        ownerId: admin.userId,
+        importPaths: [`${testAssetDirInternal}/temp/offline-empty-trash`],
+      });
+
+      await utils.scan(admin.accessToken, library.id);
+
+      const { assets } = await utils.searchAssets(admin.accessToken, {
+        libraryId: library.id,
+        originalPath: internalFilePath,
+      });
+      expect(assets.count).toBe(1);
+
+      await utils.updateLibrary(admin.accessToken, library.id, {
+        exclusionPatterns: ['**/offline-empty-trash/**'],
+      });
+
+      await utils.scan(admin.accessToken, library.id);
+
+      const trashedAsset = await utils.getAssetInfo(admin.accessToken, assets.items[0].id);
+      expect(trashedAsset.isTrashed).toBe(true);
+      expect(trashedAsset.isOffline).toBe(true);
+
+      const { status } = await request(app).post('/trash/empty').set('Authorization', `Bearer ${admin.accessToken}`);
+      expect(status).toBe(200);
+
+      await utils.waitForQueueFinish(admin.accessToken, 'backgroundTask');
+
+      expect(existsSync(filePath)).toBe(true);
+
+      if (existsSync(filePath)) {
+        utils.removeImageFile(filePath);
+      }
+    });
+
     it('should not set an asset offline if its file exists, is in an import path, and not covered by an exclusion pattern', async () => {
       const library = await utils.createLibrary(admin.accessToken, {
         ownerId: admin.userId,

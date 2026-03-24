@@ -4,10 +4,19 @@ import { TrashService } from 'src/services/trash.service';
 import { authStub } from 'test/fixtures/auth.stub';
 import { newTestService, ServiceMocks } from 'test/utils';
 
-async function* makeAssetIdStream(count: number): AsyncIterableIterator<{ id: string }> {
+async function* makeAssetIdStream(count: number): AsyncIterableIterator<{ id: string; isOffline: boolean }> {
   for (let i = 0; i < count; i++) {
     await Promise.resolve();
-    yield { id: `asset-${i + 1}` };
+    yield { id: `asset-${i + 1}`, isOffline: false };
+  }
+}
+
+async function* makeDeletedAssetStream(
+  assets: Array<{ id: string; isOffline: boolean }>,
+): AsyncIterableIterator<{ id: string; isOffline: boolean }> {
+  for (const asset of assets) {
+    await Promise.resolve();
+    yield asset;
   }
 }
 
@@ -96,6 +105,28 @@ describe(TrashService.name, () => {
         {
           name: JobName.AssetDelete,
           data: { id: 'asset-1', deleteOnDisk: true },
+        },
+      ]);
+    });
+
+    it('should not delete offline assets on disk', async () => {
+      mocks.trash.getDeletedIds.mockReturnValue(
+        makeDeletedAssetStream([
+          { id: 'asset-1', isOffline: false },
+          { id: 'asset-2', isOffline: true },
+        ]),
+      );
+
+      await expect(sut.handleEmptyTrash()).resolves.toEqual(JobStatus.Success);
+
+      expect(mocks.job.queueAll).toHaveBeenCalledWith([
+        {
+          name: JobName.AssetDelete,
+          data: { id: 'asset-1', deleteOnDisk: true },
+        },
+        {
+          name: JobName.AssetDelete,
+          data: { id: 'asset-2', deleteOnDisk: false },
         },
       ]);
     });

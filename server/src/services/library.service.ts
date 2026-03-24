@@ -90,27 +90,50 @@ export class LibraryService extends BaseService {
 
     this.logger.log(`Starting to watch library ${library.id} with import path(s) ${library.importPaths}`);
 
-    const matcher = picomatch(`**/*{${mimeTypes.getSupportedFileExtensions().join(',')}}`, {
-      nocase: true,
-      ignore: library.exclusionPatterns,
-    });
+    const supportedExtensions = mimeTypes.getSupportedFileExtensions().map((extension) => extension.toLowerCase());
+    const exclusionPatterns = library.exclusionPatterns.flatMap((pattern) =>
+      pattern.endsWith('/**') ? [pattern, pattern.slice(0, -3)] : [pattern],
+    );
+    const excludeMatcher = picomatch(exclusionPatterns, { nocase: true });
+    const isExcluded = (path: string) => excludeMatcher(path.replaceAll('\\', '/'));
+    const isSupportedFile = (path: string) => {
+      const normalizedPath = path.toLowerCase();
+      return supportedExtensions.some((extension) => normalizedPath.endsWith(extension));
+    };
 
     let _resolve: () => void;
     const ready$ = new Promise<void>((resolve) => (_resolve = resolve));
 
     const handler = async (event: string, path: string) => {
-      if (matcher(path)) {
-        this.logger.debug(`File ${event} event received for ${path} in library ${library.id}}`);
-        await this.jobRepository.queue({
-          name: JobName.LibrarySyncFiles,
-          data: { libraryId: library.id, paths: [path] },
-        });
-      } else {
+      const ignored = !isSupportedFile(path);
+
+      await this.eventRepository.emit('LibraryWatchFired', {
+        libraryId: library.id,
+        event: event as 'add' | 'change',
+        path,
+        ignored,
+      });
+
+      if (ignored) {
         this.logger.verbose(`Ignoring file ${event} event for ${path} in library ${library.id}`);
+        return;
       }
+
+      this.logger.debug(`File ${event} event received for ${path} in library ${library.id}}`);
+      await this.jobRepository.queue({
+        name: JobName.LibrarySyncFiles,
+        data: { libraryId: library.id, paths: [path] },
+      });
     };
 
     const deletionHandler = async (path: string) => {
+      await this.eventRepository.emit('LibraryWatchFired', {
+        libraryId: library.id,
+        event: 'unlink',
+        path,
+        ignored: false,
+      });
+
       this.logger.debug(`File unlink event received for ${path} in library ${library.id}}`);
       await this.jobRepository.queue({
         name: JobName.LibraryRemoveAsset,
@@ -123,6 +146,7 @@ export class LibraryService extends BaseService {
       {
         usePolling: false,
         ignoreInitial: true,
+        ignored: isExcluded,
         awaitWriteFinish: {
           stabilityThreshold: 5000,
           pollInterval: 1000,
@@ -147,6 +171,8 @@ export class LibraryService extends BaseService {
 
     // Wait for the watcher to initialize before returning
     await ready$;
+
+    await this.eventRepository.emit('LibraryWatchEnabled', { id });
 
     return true;
   }

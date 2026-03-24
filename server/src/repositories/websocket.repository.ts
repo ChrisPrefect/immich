@@ -35,6 +35,9 @@ export interface ClientEventMap {
   on_notification: [NotificationDto];
   on_session_delete: [string];
 
+  on_library_watch_enabled: [{ libraryId: string }];
+  on_library_watch_fired: [{ libraryId: string; event: 'add' | 'change' | 'unlink'; path: string; ignored: boolean }];
+
   AssetUploadReadyV1: [{ asset: SyncAssetV1; exif: SyncAssetExifV1 }];
   AppRestartV1: [AppRestartEvent];
   AssetEditReadyV1: [{ asset: SyncAssetV1; edit: SyncAssetEditV1[] }];

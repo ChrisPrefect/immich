@@ -95,6 +95,10 @@ type EventMap = {
 
   // websocket events
   WebsocketConnect: [{ userId: string }];
+
+  // library events
+  LibraryWatchEnabled: [{ id: string }];
+  LibraryWatchFired: [{ libraryId: string; event: 'add' | 'change' | 'unlink'; path: string; ignored: boolean }];
 };
 
 export type AppRestartEvent = {

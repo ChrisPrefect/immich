@@ -107,13 +107,6 @@ export class LibraryService extends BaseService {
     const handler = async (event: string, path: string) => {
       const ignored = !isSupportedFile(path);
 
-      await this.eventRepository.emit('LibraryWatchFired', {
-        libraryId: library.id,
-        event: event as 'add' | 'change',
-        path,
-        ignored,
-      });
-
       if (ignored) {
         this.logger.verbose(`Ignoring file ${event} event for ${path} in library ${library.id}`);
         return;
@@ -127,13 +120,6 @@ export class LibraryService extends BaseService {
     };
 
     const deletionHandler = async (path: string) => {
-      await this.eventRepository.emit('LibraryWatchFired', {
-        libraryId: library.id,
-        event: 'unlink',
-        path,
-        ignored: false,
-      });
-
       this.logger.debug(`File unlink event received for ${path} in library ${library.id}}`);
       await this.jobRepository.queue({
         name: JobName.LibraryRemoveAsset,
@@ -171,8 +157,6 @@ export class LibraryService extends BaseService {
 
     // Wait for the watcher to initialize before returning
     await ready$;
-
-    await this.eventRepository.emit('LibraryWatchEnabled', { id });
 
     return true;
   }

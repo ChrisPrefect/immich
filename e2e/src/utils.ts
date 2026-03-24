@@ -76,21 +76,8 @@ import { playwrightDbHost, playwrightHost, playwriteBaseUrl } from '../playwrigh
 export type { Emitter } from '@socket.io/component-emitter';
 
 type CommandResponse = { stdout: string; stderr: string; exitCode: number | null };
-type EventType =
-  | 'assetUpload'
-  | 'assetUpdate'
-  | 'assetDelete'
-  | 'userDelete'
-  | 'assetHidden'
-  | 'libraryWatchEnabled'
-  | 'libraryWatchFired';
+type EventType = 'assetUpload' | 'assetUpdate' | 'assetDelete' | 'userDelete' | 'assetHidden';
 type WaitOptions = { event: EventType; id?: string; total?: number; timeout?: number };
-type LibraryWatchEventOptions = {
-  libraryId: string;
-  event: 'add' | 'change' | 'unlink';
-  path: string;
-  timeout?: number;
-};
 type AdminSetupOptions = { onboarding?: boolean };
 type FileData = { bytes?: Buffer; filename: string };
 
@@ -141,17 +128,12 @@ const events: Record<EventType, Set<string>> = {
   assetUpdate: new Set<string>(),
   assetDelete: new Set<string>(),
   userDelete: new Set<string>(),
-  libraryWatchEnabled: new Set<string>(),
-  libraryWatchFired: new Set<string>(),
 };
 
 const idCallbacks: Record<string, () => void> = {};
 const countCallbacks: Record<string, { count: number; callback: () => void }> = {};
 
 const execPromise = promisify(exec);
-
-const getLibraryWatchEventKey = ({ libraryId, event, path }: Omit<LibraryWatchEventOptions, 'timeout'>) =>
-  `${libraryId}:${event}:${path}`;
 
 const onEvent = ({ event, id }: { event: EventType; id: string }) => {
   // console.log(`Received event: ${event} [id=${id}]`);
@@ -266,12 +248,6 @@ export const utils = {
         .on('on_asset_hidden', (assetId: string) => onEvent({ event: 'assetHidden', id: assetId }))
         .on('on_asset_delete', (assetId: string) => onEvent({ event: 'assetDelete', id: assetId }))
         .on('on_user_delete', (userId: string) => onEvent({ event: 'userDelete', id: userId }))
-        .on('on_library_watch_enabled', (data: { libraryId: string }) =>
-          onEvent({ event: 'libraryWatchEnabled', id: data.libraryId }),
-        )
-        .on('on_library_watch_fired', (data: { libraryId: string; event: 'add' | 'change' | 'unlink'; path: string }) =>
-          onEvent({ event: 'libraryWatchFired', id: getLibraryWatchEventKey(data) }),
-        )
         .connect();
     });
   },
@@ -323,13 +299,6 @@ export const utils = {
       }
     });
   },
-
-  waitForLibraryWatchEvent: ({ libraryId, event, path, timeout }: LibraryWatchEventOptions): Promise<void> =>
-    utils.waitForWebsocketEvent({
-      event: 'libraryWatchFired',
-      id: getLibraryWatchEventKey({ libraryId, event, path }),
-      timeout,
-    }),
 
   initSdk: () => {
     setBaseUrl(app);

@@ -114,16 +114,6 @@ export class NotificationService extends BaseService {
     this.websocketRepository.serverSend('ConfigUpdate', { oldConfig, newConfig });
   }
 
-  @OnEvent({ name: 'LibraryWatchEnabled' })
-  onLibraryWatchEnabled({ id }: ArgOf<'LibraryWatchEnabled'>) {
-    this.websocketRepository.clientBroadcast('on_library_watch_enabled', { libraryId: id });
-  }
-
-  @OnEvent({ name: 'LibraryWatchFired' })
-  onLibraryWatchFired(event: ArgOf<'LibraryWatchFired'>) {
-    this.websocketRepository.clientBroadcast('on_library_watch_fired', event);
-  }
-
   @OnEvent({ name: 'AppRestart' })
   onAppRestart(state: ArgOf<'AppRestart'>) {
     this.websocketRepository.clientBroadcast('AppRestartV1', {

@@ -75,29 +75,42 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
       child: AnimatedOpacity(
         opacity: opacity,
         duration: Durations.short2,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: showingDetails
-                ? null
-                : const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.black45, Colors.black12, Colors.transparent],
-                    stops: [0.0, 0.7, 1.0],
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: showingDetails
+                        ? null
+                        : const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.black45, Colors.black12, Colors.transparent],
+                            stops: [0.0, 0.7, 1.0],
+                          ),
                   ),
-          ),
-          child: AppBar(
-            backgroundColor: Colors.transparent,
-            leading: const _AppBarBackButton(),
-            iconTheme: const IconThemeData(size: 22, color: Colors.white),
-            actionsIconTheme: const IconThemeData(size: 22, color: Colors.white),
-            shape: const Border(),
-            actions: showingDetails || isReadonlyModeEnabled
-                ? null
-                : isInLockedView
-                ? lockedViewActions
-                : actions,
-          ),
+                ),
+              ),
+            ),
+            SafeArea(
+              bottom: false,
+              child: SizedBox(
+                height: preferredSize.height,
+                child: Theme(
+                  data: context.themeData.copyWith(iconTheme: const IconThemeData(size: 22, color: Colors.white)),
+                  child: Row(
+                    children: [
+                      const _AppBarBackButton(),
+                      const Spacer(),
+                      if (!showingDetails && !isReadonlyModeEnabled)
+                        if (isInLockedView) ...lockedViewActions else ...actions,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

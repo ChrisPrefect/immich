@@ -82,13 +82,15 @@ class VideoControls extends HookConsumerWidget {
                 onPressed: () => _toggle(ref, isCasting),
               ),
               const Spacer(),
-              Text(
-                "${position.format()} / ${duration.format()}",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                  shadows: _controlShadows,
+              IgnorePointer(
+                child: Text(
+                  "${position.format()} / ${duration.format()}",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                    shadows: _controlShadows,
+                  ),
                 ),
               ),
               const SizedBox(width: 16),

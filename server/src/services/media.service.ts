@@ -803,12 +803,8 @@ export class MediaService extends BaseService {
     const { ffmpeg } = await this.getConfig({ withCache: true });
 
     const files: UpsertFileOptions[] = [];
-
     try {
       const generated = await this.transcodeVideo(asset, ffmpeg);
-      if (!generated) {
-        return JobStatus.Skipped;
-      }
       if (generated?.file) {
         files.push(generated.file);
       }

@@ -695,7 +695,9 @@ describe(AssetMediaService.name, () => {
 
   describe('playbackVideo', () => {
     it('should require asset.view permissions', async () => {
-      await expect(sut.playbackVideo(authStub.admin, 'id')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(sut.playbackVideo(authStub.admin, 'id', { edited: true })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
 
       expect(mocks.access.asset.checkOwnerAccess).toHaveBeenCalledWith(userStub.admin.id, new Set(['id']), undefined);
       expect(mocks.access.asset.checkAlbumAccess).toHaveBeenCalledWith(userStub.admin.id, new Set(['id']));
@@ -706,7 +708,9 @@ describe(AssetMediaService.name, () => {
       const asset = AssetFactory.create();
       mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([asset.id]));
 
-      await expect(sut.playbackVideo(authStub.admin, asset.id)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(sut.playbackVideo(authStub.admin, asset.id, { edited: true })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it('should return the encoded video path if available', async () => {
@@ -719,7 +723,7 @@ describe(AssetMediaService.name, () => {
         encodedVideoPath: asset.files[0].path,
       });
 
-      await expect(sut.playbackVideo(authStub.admin, asset.id)).resolves.toEqual(
+      await expect(sut.playbackVideo(authStub.admin, asset.id, { edited: true })).resolves.toEqual(
         new ImmichFileResponse({
           path: '/path/to/encoded/video.mp4',
           cacheControl: CacheControl.PrivateWithCache,
@@ -736,7 +740,7 @@ describe(AssetMediaService.name, () => {
         encodedVideoPath: null,
       });
 
-      await expect(sut.playbackVideo(authStub.admin, asset.id)).resolves.toEqual(
+      await expect(sut.playbackVideo(authStub.admin, asset.id, { edited: true })).resolves.toEqual(
         new ImmichFileResponse({
           path: asset.originalPath,
           cacheControl: CacheControl.PrivateWithCache,

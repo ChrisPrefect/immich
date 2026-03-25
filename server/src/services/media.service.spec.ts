@@ -1321,6 +1321,98 @@ describe(MediaService.name, () => {
         expect.stringContaining('fullsize.jpeg'),
       );
     });
+
+    it('should generate edited video thumbnails when asset has edits', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/video.mp4' })
+        .exif()
+        .edit({ action: AssetEditAction.Crop, parameters: { height: 500, width: 500, x: 0, y: 0 } })
+        .build();
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
+      const thumbhashBuffer = Buffer.from('a thumbhash', 'utf8');
+      mocks.media.generateThumbhash.mockResolvedValue(thumbhashBuffer);
+
+      await sut.handleGenerateThumbnails({ id: asset.id });
+
+      // should generate both original and edited thumbnails (2 original + 2 edited transcodes)
+      expect(mocks.media.transcode).toHaveBeenCalledTimes(4);
+
+      // should upsert files for both original and edited
+      expect(mocks.asset.upsertFiles).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ type: AssetFileType.Preview, isEdited: false }),
+          expect.objectContaining({ type: AssetFileType.Thumbnail, isEdited: false }),
+          expect.objectContaining({ type: AssetFileType.Preview, isEdited: true }),
+          expect.objectContaining({ type: AssetFileType.Thumbnail, isEdited: true }),
+        ]),
+      );
+    });
+
+    it('should not generate edited video thumbnails when asset has no edits', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/video.mp4' }).exif().build();
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
+      mocks.media.generateThumbhash.mockResolvedValue(Buffer.from('thumbhash'));
+
+      await sut.handleGenerateThumbnails({ id: asset.id });
+
+      // should only generate original thumbnails (2 transcodes for preview + thumbnail)
+      expect(mocks.media.transcode).toHaveBeenCalledTimes(2);
+      expect(mocks.asset.upsertFiles).toHaveBeenCalledWith(
+        expect.not.arrayContaining([expect.objectContaining({ isEdited: true })]),
+      );
+    });
+
+    it('should use edited thumbhash when asset has edits', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/video.mp4' })
+        .exif()
+        .edit({ action: AssetEditAction.Crop })
+        .build();
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
+      const originalThumbhash = Buffer.from('original thumbhash');
+      const editedThumbhash = Buffer.from('edited thumbhash');
+      mocks.media.generateThumbhash.mockResolvedValueOnce(originalThumbhash).mockResolvedValueOnce(editedThumbhash);
+
+      await sut.handleGenerateThumbnails({ id: asset.id });
+
+      // should use the edited thumbhash (second call) for the asset update
+      expect(mocks.asset.update).toHaveBeenCalledWith(expect.objectContaining({ thumbhash: editedThumbhash }));
+    });
+
+    it('should generate edited image thumbnails with edits applied', async () => {
+      const asset = AssetFactory.from()
+        .exif()
+        .edit({ action: AssetEditAction.Crop, parameters: { height: 500, width: 500, x: 100, y: 100 } })
+        .build();
+      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
+      const thumbhashBuffer = Buffer.from('a thumbhash', 'utf8');
+      mocks.media.generateThumbhash.mockResolvedValue(thumbhashBuffer);
+
+      await sut.handleGenerateThumbnails({ id: asset.id });
+
+      // should generate original (2) + edited (3 with fullsize) thumbnails
+      expect(mocks.media.generateThumbnail).toHaveBeenCalledWith(
+        rawBuffer,
+        expect.objectContaining({
+          edits: [
+            expect.objectContaining({
+              action: 'crop',
+              parameters: { height: 500, width: 500, x: 100, y: 100 },
+            }),
+          ],
+        }),
+        expect.stringContaining('edited'),
+      );
+
+      // should upsert both original and edited files
+      expect(mocks.asset.upsertFiles).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ isEdited: false }),
+          expect.objectContaining({ isEdited: true }),
+        ]),
+      );
+    });
   });
 
   describe('handleAssetEditProcessing', () => {
@@ -1464,6 +1556,127 @@ describe(MediaService.name, () => {
       await sut.handleAssetEditProcessing({ id: asset.id });
 
       expect(mocks.asset.update).toHaveBeenCalledWith(expect.objectContaining({ thumbhash: thumbhashBuffer }));
+    });
+
+    it('should return failed if asset not found', async () => {
+      mocks.assetJob.getForAssetEditProcessing.mockResolvedValue(undefined as never);
+      const status = await sut.handleAssetEditProcessing({ id: 'non-existent' });
+      expect(status).toBe(JobStatus.Failed);
+    });
+
+    it('should transcode edited video and generate thumbnails', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/video.mp4' })
+        .exif()
+        .edit({ action: AssetEditAction.Crop, parameters: { height: 500, width: 500, x: 0, y: 0 } })
+        .files([
+          { type: AssetFileType.Preview, isEdited: false },
+          { type: AssetFileType.EncodedVideo, isEdited: true },
+          { type: AssetFileType.Preview, isEdited: true },
+          { type: AssetFileType.Thumbnail, isEdited: true },
+        ])
+        .build();
+      mocks.assetJob.getForAssetEditProcessing.mockResolvedValue(getForGenerateThumbnail(asset));
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+      const thumbhashBuffer = Buffer.from('a thumbhash', 'utf8');
+      mocks.media.generateThumbhash.mockResolvedValue(thumbhashBuffer);
+
+      await sut.handleAssetEditProcessing({ id: asset.id });
+
+      // should transcode the video with hw accel disabled
+      expect(mocks.media.transcode).toHaveBeenCalledWith(
+        '/original/video.mp4',
+        expect.stringContaining('edited'),
+        expect.objectContaining({
+          inputOptions: expect.any(Array),
+          outputOptions: expect.any(Array),
+        }),
+      );
+
+      // should generate edited thumbnails (preview + thumbnail via transcode)
+      expect(mocks.media.transcode).toHaveBeenCalledTimes(3); // 1 video + 2 thumbnails
+
+      // should update thumbhash
+      expect(mocks.asset.update).toHaveBeenCalledWith(expect.objectContaining({ thumbhash: thumbhashBuffer }));
+    });
+
+    it('should clean up edited video files when asset has no edits', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/video.mp4' })
+        .exif()
+        .files([
+          { type: AssetFileType.EncodedVideo, path: 'edited_video.mp4', isEdited: true },
+          { type: AssetFileType.Preview, path: 'edited_preview.jpg', isEdited: true },
+          { type: AssetFileType.Thumbnail, path: 'edited_thumbnail.webp', isEdited: true },
+        ])
+        .build();
+      mocks.assetJob.getForAssetEditProcessing.mockResolvedValue(getForGenerateThumbnail(asset));
+      mocks.media.generateThumbhash.mockResolvedValue(factory.buffer());
+
+      await sut.handleAssetEditProcessing({ id: asset.id });
+
+      // should not transcode since there are no edits
+      expect(mocks.media.transcode).not.toHaveBeenCalled();
+
+      // should delete old edited files
+      expect(mocks.job.queue).toHaveBeenCalledWith({
+        name: JobName.FileDelete,
+        data: {
+          files: expect.arrayContaining(['edited_video.mp4']),
+        },
+      });
+    });
+
+    it('should skip thumbnail generation for hidden video assets (live photo video portions)', async () => {
+      const asset = AssetFactory.from({
+        type: AssetType.Video,
+        originalPath: '/original/video.mp4',
+        visibility: AssetVisibility.Hidden,
+      })
+        .exif()
+        .edit({ action: AssetEditAction.Crop })
+        .files([{ type: AssetFileType.Preview, isEdited: false }])
+        .build();
+      mocks.assetJob.getForAssetEditProcessing.mockResolvedValue(getForGenerateThumbnail(asset));
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+
+      await sut.handleAssetEditProcessing({ id: asset.id });
+
+      expect(mocks.media.transcode).toHaveBeenCalledTimes(1);
+      expect(mocks.media.generateThumbhash).not.toHaveBeenCalled();
+    });
+
+    it('should use original thumbhash when video has no edits but is visible', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/video.mp4' })
+        .exif()
+        .files([{ type: AssetFileType.Preview, path: '/thumbs/preview.jpg', isEdited: false }])
+        .build();
+      mocks.assetJob.getForAssetEditProcessing.mockResolvedValue(getForGenerateThumbnail(asset));
+      const thumbhashBuffer = factory.buffer();
+      mocks.media.generateThumbhash.mockResolvedValue(thumbhashBuffer);
+
+      await sut.handleAssetEditProcessing({ id: asset.id });
+
+      expect(mocks.media.generateThumbhash).toHaveBeenCalledWith('/thumbs/preview.jpg', expect.any(Object));
+      expect(mocks.asset.update).toHaveBeenCalledWith(
+        expect.objectContaining({ id: asset.id, thumbhash: thumbhashBuffer }),
+      );
+    });
+
+    it('should update dimensions from transcoded video edit', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/video.mp4' })
+        .exif()
+        .edit({ action: AssetEditAction.Crop, parameters: { height: 500, width: 800, x: 100, y: 100 } })
+        .files([{ type: AssetFileType.Preview, isEdited: false }])
+        .build();
+      mocks.assetJob.getForAssetEditProcessing.mockResolvedValue(getForGenerateThumbnail(asset));
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+      mocks.media.generateThumbhash.mockResolvedValue(factory.buffer());
+
+      await sut.handleAssetEditProcessing({ id: asset.id });
+
+      // should update asset dimensions
+      expect(mocks.asset.update).toHaveBeenCalledWith(
+        expect.objectContaining({ id: asset.id, width: 800, height: 500 }),
+      );
     });
   });
 
@@ -3596,6 +3809,95 @@ describe(MediaService.name, () => {
           twoPass: false,
         }),
       );
+    });
+
+    it('should also transcode edited version when asset has edits', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/path.ext' })
+        .edit({ action: AssetEditAction.Crop, parameters: { height: 500, width: 500, x: 0, y: 0 } })
+        .build();
+      mocks.assetJob.getForVideoConversion.mockResolvedValue(asset);
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+
+      await sut.handleVideoConversion({ id: asset.id });
+
+      // should be called for both original and edited
+      expect(mocks.media.probe).toHaveBeenCalledTimes(2);
+      expect(mocks.media.transcode).toHaveBeenCalledWith(
+        '/original/path.ext',
+        expect.stringContaining('edited'),
+        expect.objectContaining({
+          inputOptions: expect.any(Array),
+          outputOptions: expect.any(Array),
+        }),
+      );
+    });
+
+    it('should not transcode edited version when asset has no edits', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/path.ext' }).build();
+      mocks.assetJob.getForVideoConversion.mockResolvedValue(asset);
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+
+      await sut.handleVideoConversion({ id: asset.id });
+
+      // probe is called for both original and edit attempt, but only original is transcoded
+      expect(mocks.media.transcode).toHaveBeenCalledTimes(1);
+      expect(mocks.asset.upsertFiles).not.toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ isEdited: true })]),
+      );
+    });
+
+    it('should disable hardware acceleration for edited video transcoding', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/path.ext' })
+        .edit({ action: AssetEditAction.Crop, parameters: { height: 500, width: 500, x: 0, y: 0 } })
+        .build();
+      mocks.assetJob.getForVideoConversion.mockResolvedValue(asset);
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+      mocks.systemMetadata.get.mockResolvedValue({
+        ffmpeg: { accel: TranscodeHardwareAcceleration.Qsv, transcode: TranscodePolicy.All },
+      });
+
+      await sut.handleVideoConversion({ id: asset.id });
+
+      // the edited transcode call should NOT have hw accel options
+      const transcodeCalls = mocks.media.transcode.mock.calls;
+      const editedCall = transcodeCalls.find((call) => (call[1] as string).includes('edited'));
+      expect(editedCall).toBeDefined();
+      // hw accel typically adds device-specific input options; for edited, should be software only
+      expect(editedCall![2].inputOptions).not.toEqual(expect.arrayContaining([expect.stringContaining('qsv')]));
+    });
+
+    it('should upsert both original and edited encoded video files', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/path.ext' })
+        .edit({ action: AssetEditAction.Crop, parameters: { height: 500, width: 500, x: 0, y: 0 } })
+        .build();
+      mocks.assetJob.getForVideoConversion.mockResolvedValue(asset);
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+
+      await sut.handleVideoConversion({ id: asset.id });
+
+      expect(mocks.asset.upsertFiles).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ type: AssetFileType.EncodedVideo, isEdited: false }),
+          expect.objectContaining({ type: AssetFileType.EncodedVideo, isEdited: true }),
+        ]),
+      );
+    });
+
+    it('should clean up edited encoded video when edits are removed', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/path.ext' })
+        .file({ type: AssetFileType.EncodedVideo, path: '/encoded/edited_video.mp4', isEdited: true })
+        .build();
+      mocks.assetJob.getForVideoConversion.mockResolvedValue(asset);
+      mocks.media.probe.mockResolvedValue(probeStub.multipleVideoStreams);
+
+      await sut.handleVideoConversion({ id: asset.id });
+
+      expect(mocks.job.queue).toHaveBeenCalledWith({
+        name: JobName.FileDelete,
+        data: {
+          files: expect.arrayContaining(['/encoded/edited_video.mp4']),
+        },
+      });
     });
   });
 

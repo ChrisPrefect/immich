@@ -94,8 +94,20 @@ jobs:
         run: pnpm check
         if: ${{ !cancelled() }}
       - name: Run small tests & coverage
-        run: pnpm test
+        run: pnpm test --reporter=default --reporter=json --outputFile test-results.json --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reporter=json
         if: ${{ !cancelled() }}
+      - name: Write test summary
+        if: always()
+        run: node ${{ github.workspace }}/.github/scripts/write-test-summary.mjs --json test-results.json --name "Server Unit Tests" --framework vitest --coverage coverage/coverage-summary.json
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-server-unit
+          path: |
+            server/test-results.json
+            server/coverage/coverage-summary.json
+          retention-days: 1
   cli-unit-tests:
     name: Unit Test CLI
     needs: pre-job
@@ -141,8 +153,18 @@ jobs:
         run: pnpm check
         if: ${{ !cancelled() }}
       - name: Run unit tests & coverage
-        run: pnpm test
+        run: pnpm test --reporter=default --reporter=json --outputFile test-results.json
         if: ${{ !cancelled() }}
+      - name: Write test summary
+        if: always()
+        run: node ${{ github.workspace }}/.github/scripts/write-test-summary.mjs --json test-results.json --name "CLI Unit Tests" --framework vitest
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-cli-unit
+          path: cli/test-results.json
+          retention-days: 1
   cli-unit-tests-win:
     name: Unit Test CLI (Windows)
     needs: pre-job
@@ -183,8 +205,18 @@ jobs:
         run: pnpm check
         if: ${{ !cancelled() }}
       - name: Run unit tests & coverage
-        run: pnpm test
+        run: pnpm test --reporter=default --reporter=json --outputFile test-results.json
         if: ${{ !cancelled() }}
+      - name: Write test summary
+        if: always()
+        run: node ${{ github.workspace }}/.github/scripts/write-test-summary.mjs --json test-results.json --name "CLI Unit Tests (Windows)" --framework vitest
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-cli-unit-win
+          path: cli/test-results.json
+          retention-days: 1
   web-lint:
     name: Lint Web
     needs: pre-job
@@ -268,8 +300,20 @@ jobs:
         run: pnpm check:typescript
         if: ${{ !cancelled() }}
       - name: Run unit tests & coverage
-        run: pnpm test
+        run: pnpm test --reporter=default --reporter=json --outputFile test-results.json --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reporter=json
         if: ${{ !cancelled() }}
+      - name: Write test summary
+        if: always()
+        run: node ${{ github.workspace }}/.github/scripts/write-test-summary.mjs --json test-results.json --name "Web Unit Tests" --framework vitest --coverage coverage/coverage-summary.json
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-web-unit
+          path: |
+            web/test-results.json
+            web/coverage/coverage-summary.json
+          retention-days: 1
   i18n-tests:
     name: Test i18n
     needs: pre-job
@@ -395,8 +439,20 @@ jobs:
       - name: Run pnpm install
         run: SHARP_IGNORE_GLOBAL_LIBVIPS=true pnpm install --frozen-lockfile
       - name: Run medium tests
-        run: pnpm test:medium
+        run: pnpm test:medium --reporter=default --reporter=json --outputFile test-results-medium.json --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reporter=json
         if: ${{ !cancelled() }}
+      - name: Write test summary
+        if: always()
+        run: node ${{ github.workspace }}/.github/scripts/write-test-summary.mjs --json test-results-medium.json --name "Server Medium Tests" --framework vitest --coverage coverage/coverage-summary.json
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-server-medium
+          path: |
+            server/test-results-medium.json
+            server/coverage/coverage-summary.json
+          retention-days: 1
   e2e-tests-server-cli:
     name: End-to-End Tests (Server & CLI)
     needs: pre-job
@@ -438,8 +494,18 @@ jobs:
         run: docker compose up -d --renew-anon-volumes --force-recreate --remove-orphans --wait --wait-timeout 300
         if: ${{ !cancelled() }}
       - name: Run e2e tests (api & cli)
-        run: docker compose --profile test run --rm e2e-runner pnpm test
+        run: docker compose --profile test run --rm e2e-runner pnpm test --reporter=default --reporter=json --outputFile playwright-report/test-results.json
         if: ${{ !cancelled() }}
+      - name: Write test summary
+        if: always()
+        run: node ${{ github.workspace }}/.github/scripts/write-test-summary.mjs --json playwright-report/test-results.json --name "E2E Server & CLI Tests (${{ matrix.runner }})" --framework vitest
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-e2e-server-cli-${{ matrix.runner }}
+          path: e2e/playwright-report/test-results.json
+          retention-days: 1
       - name: Capture Docker logs
         if: always()
         run: docker compose logs --no-color > docker-compose-logs.txt
@@ -490,8 +556,18 @@ jobs:
         run: docker compose up -d --renew-anon-volumes --force-recreate --remove-orphans --wait --wait-timeout 300
         if: ${{ !cancelled() }}
       - name: Run e2e tests (maintenance)
-        run: docker compose --profile test run --rm e2e-runner pnpm test:maintenance
+        run: docker compose --profile test run --rm e2e-runner pnpm test:maintenance --reporter=default --reporter=json --outputFile playwright-report/test-results.json
         if: ${{ !cancelled() }}
+      - name: Write test summary
+        if: always()
+        run: node ${{ github.workspace }}/.github/scripts/write-test-summary.mjs --json playwright-report/test-results.json --name "E2E Server Maintenance Tests (${{ matrix.runner }})" --framework vitest
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-e2e-server-maintenance-${{ matrix.runner }}
+          path: e2e/playwright-report/test-results.json
+          retention-days: 1
       - name: Capture Docker logs
         if: always()
         run: docker compose logs --no-color > docker-compose-logs.txt
@@ -544,6 +620,16 @@ jobs:
       - name: Run e2e tests (web)
         run: docker compose --profile test run --rm e2e-runner pnpm test:web
         if: ${{ !cancelled() }}
+      - name: Write test summary (web)
+        if: always()
+        run: node ${{ github.workspace }}/.github/scripts/write-test-summary.mjs --json playwright-report/test-results.json --name "E2E Web Tests (${{ matrix.runner }})" --framework playwright
+      - name: Upload test results (web)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-e2e-web-${{ matrix.runner }}
+          path: e2e/playwright-report/test-results.json
+          retention-days: 1
       - name: Archive e2e test (web) results
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: success() || failure()
@@ -602,6 +688,16 @@ jobs:
       - name: Run ui tests (web)
         run: docker compose --profile test run --rm e2e-runner pnpm test:web:ui
         if: ${{ !cancelled() }}
+      - name: Write test summary (ui)
+        if: always()
+        run: node ${{ github.workspace }}/.github/scripts/write-test-summary.mjs --json playwright-report/test-results.json --name "E2E Web UI Tests (${{ matrix.runner }})" --framework playwright
+      - name: Upload test results (ui)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-e2e-web-ui-${{ matrix.runner }}
+          path: e2e/playwright-report/test-results.json
+          retention-days: 1
       - name: Archive ui test (web) results
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: success() || failure()
@@ -660,6 +756,16 @@ jobs:
       - name: Run maintenance tests
         run: docker compose --profile test run --rm e2e-runner pnpm test:web:maintenance
         if: ${{ !cancelled() }}
+      - name: Write test summary (maintenance)
+        if: always()
+        run: node ${{ github.workspace }}/.github/scripts/write-test-summary.mjs --json playwright-report/test-results.json --name "E2E Web Maintenance Tests (${{ matrix.runner }})" --framework playwright
+      - name: Upload test results (maintenance)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: report-e2e-web-maintenance-${{ matrix.runner }}
+          path: e2e/playwright-report/test-results.json
+          retention-days: 1
       - name: Archive maintenance tests (web) results
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: success() || failure()
@@ -692,6 +798,39 @@ jobs:
       - uses: immich-app/devtools/actions/success-check@68f10eb389bb02a3cf9d1156111964c549eb421b # 0.0.4
         with:
           needs: ${{ toJSON(needs) }}
+  test-report:
+    name: PR Test Report
+    if: github.event_name == 'pull_request' && always()
+    needs:
+      - server-unit-tests
+      - web-unit-tests
+      - server-medium-tests
+      - cli-unit-tests
+      - cli-unit-tests-win
+      - e2e-tests-server-cli
+      - e2e-tests-server-maintenance
+      - e2e-tests-web
+      - e2e-tests-web-ui
+      - e2e-tests-web-maintenance
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: 'report-*'
+          path: artifacts
+      - name: Generate unified report
+        run: node .github/scripts/write-test-summary.mjs --pr-comment --artifacts-dir artifacts > pr-comment.md
+      - name: Post PR comment
+        uses: marocchino/sticky-pull-request-comment@70d2764d1a7d5d9560b100cbea0077fc8f633987 # v3.0.2
+        with:
+          header: test-report
+          path: pr-comment.md
   mobile-unit-tests:
     name: Unit Test Mobile
     needs: pre-job

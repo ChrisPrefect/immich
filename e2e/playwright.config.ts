@@ -20,7 +20,11 @@ const config: PlaywrightTestConfig = {
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 4 : 0,
-  reporter: 'html',
+  reporter: [
+    ['html'],
+    ['json', { outputFile: 'playwright-report/test-results.json' }],
+    ...(process.env.CI ? [['blob', { outputDir: 'blob-report' }] as const] : []),
+  ],
   use: {
     baseURL: playwriteBaseUrl,
     trace: 'on-first-retry',

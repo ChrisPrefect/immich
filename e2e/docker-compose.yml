@@ -84,6 +84,7 @@ services:
     volumes:
       - ./test-assets:/app/e2e/test-assets
       - ./playwright-report:/app/e2e/playwright-report
+      - ./blob-report:/app/e2e/blob-report
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       immich-server:

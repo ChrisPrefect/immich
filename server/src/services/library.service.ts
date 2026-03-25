@@ -26,6 +26,21 @@ import { JobOf } from 'src/types';
 import { mimeTypes } from 'src/utils/mime-types';
 import { handlePromiseError } from 'src/utils/misc';
 
+const createMatchers = (exclusionPatterns: string[]) => {
+  const supportedExtensions = mimeTypes.getSupportedFileExtensions().map((extension) => extension.toLowerCase());
+  const expandedPatterns = exclusionPatterns.flatMap((pattern) =>
+    pattern.endsWith('/**') ? [pattern, pattern.slice(0, -3)] : [pattern],
+  );
+  const excludeMatcher = picomatch(expandedPatterns, { nocase: true });
+  return {
+    isExcluded: (path: string) => excludeMatcher(path.replaceAll('\\', '/')),
+    isSupported: (path: string) => {
+      const normalizedPath = path.toLowerCase();
+      return supportedExtensions.some((extension) => normalizedPath.endsWith(extension));
+    },
+  };
+};
+
 @Injectable()
 export class LibraryService extends BaseService {
   private watchLibraries = false;
@@ -90,22 +105,13 @@ export class LibraryService extends BaseService {
 
     this.logger.log(`Starting to watch library ${library.id} with import path(s) ${library.importPaths}`);
 
-    const supportedExtensions = mimeTypes.getSupportedFileExtensions().map((extension) => extension.toLowerCase());
-    const exclusionPatterns = library.exclusionPatterns.flatMap((pattern) =>
-      pattern.endsWith('/**') ? [pattern, pattern.slice(0, -3)] : [pattern],
-    );
-    const excludeMatcher = picomatch(exclusionPatterns, { nocase: true });
-    const isExcluded = (path: string) => excludeMatcher(path.replaceAll('\\', '/'));
-    const isSupportedFile = (path: string) => {
-      const normalizedPath = path.toLowerCase();
-      return supportedExtensions.some((extension) => normalizedPath.endsWith(extension));
-    };
+    const { isExcluded, isSupported } = createMatchers(library.exclusionPatterns);
 
     let _resolve: () => void;
     const ready$ = new Promise<void>((resolve) => (_resolve = resolve));
 
     const handler = async (event: string, path: string) => {
-      const ignored = !isSupportedFile(path);
+      const ignored = !isSupported(path);
 
       if (ignored) {
         this.logger.verbose(`Ignoring file ${event} event for ${path} in library ${library.id}`);

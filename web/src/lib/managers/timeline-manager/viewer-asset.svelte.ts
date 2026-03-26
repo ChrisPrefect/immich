@@ -4,6 +4,7 @@ import {
   ViewportProximity,
   calculateViewerAssetViewportProximity,
   isInOrNearViewport,
+  isInViewport,
 } from './internal/intersection-support.svelte';
 import type { TimelineDay } from './timeline-day.svelte';
 import type { TimelineAsset } from './types';
@@ -24,6 +25,10 @@ export class ViewerAsset {
 
   get isInOrNearViewport() {
     return isInOrNearViewport(this.#viewportProximity);
+  }
+
+  get isInViewport() {
+    return isInViewport(this.#viewportProximity);
   }
 
   position: CommonPosition | undefined = $state.raw();

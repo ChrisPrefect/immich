@@ -292,7 +292,7 @@
       <GalleryViewer
         assets={searchResultAssets}
         assetInteraction={assetMultiSelectManager}
-        onIntersected={loadNextPage}
+        onReachedEnd={loadNextPage}
         showArchiveIcon={true}
         {viewport}
         onReload={onSearchQueryUpdate}

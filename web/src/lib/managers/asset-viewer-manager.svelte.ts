@@ -43,6 +43,9 @@ class AssetViewerManager extends BaseEventManager<Events> {
   isPlayingMotionPhoto = $state(false);
   isShowEditor = $state(false);
   #isFaceEditMode = $state(false);
+  #isEditFacesPanelOpen = $state(false);
+  #showingHiddenPeople = $state(false);
+
   #viewingAssetStoreState = $state<AssetResponseDto>();
   #viewState = $state<boolean>(false);
   gridScrollTarget = $state<AssetGridRouteSearchParams | null | undefined>();
@@ -171,6 +174,27 @@ class AssetViewerManager extends BaseEventManager<Events> {
 
   closeFaceEditMode() {
     this.#isFaceEditMode = false;
+  }
+
+  get isEditFacesPanelOpen() {
+    return this.#isEditFacesPanelOpen;
+  }
+
+  get showingHiddenPeople() {
+    return this.#showingHiddenPeople;
+  }
+
+  openEditFacesPanel() {
+    this.#isEditFacesPanelOpen = true;
+  }
+
+  closeEditFacesPanel() {
+    this.#isEditFacesPanelOpen = false;
+    this.#showingHiddenPeople = false;
+  }
+
+  toggleShowHiddenPeople() {
+    this.#showingHiddenPeople = !this.#showingHiddenPeople;
   }
 
   setAsset(asset: AssetResponseDto) {

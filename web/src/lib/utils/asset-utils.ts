@@ -435,21 +435,15 @@ export const toggleArchive = async (asset: AssetResponseDto) => {
 
     asset.isArchived = data.isArchived;
     if (asset.isArchived) {
-      toastManager.custom(
+      toastManager.primary(
         {
-          component: ToastAction,
-          props: {
-            title: $t('success'),
-            description: $t('added_to_archive'),
-            color: 'success',
-            button: {
-              color: 'secondary',
-              text: $t('undo'),
-              onClick: () =>
-                undoArchiveAssets([asset.id], () => {
-                  asset.isArchived = false;
-                }),
-            },
+          description: $t('added_to_archive'),
+          button: {
+            label: $t('undo'),
+            onclick: () =>
+              undoArchiveAssets([asset.id], () => {
+                asset.isArchived = false;
+              }),
           },
         },
         { timeout: 5000 },
@@ -498,18 +492,12 @@ export const archiveAssets = async (
     }
 
     if (visibility === AssetVisibility.Archive) {
-      toastManager.custom(
+      toastManager.primary(
         {
-          component: ToastAction,
-          props: {
-            title: $t('success'),
-            description: $t('archived_count', { values: { count: ids.length } }),
-            color: 'success',
-            button: {
-              color: 'secondary',
-              text: $t('undo'),
-              onClick: () => undoArchiveAssets(ids, onUndoArchive),
-            },
+          description: $t('archived_count', { values: { count: ids.length } }),
+          button: {
+            label: $t('undo'),
+            onclick: () => undoArchiveAssets(ids, onUndoArchive),
           },
         },
         { timeout: 5000 },

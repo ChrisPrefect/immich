@@ -4,11 +4,11 @@
   import { shortcuts } from '$lib/actions/shortcut';
   import UserPageLayout from '$lib/components/layouts/user-page-layout.svelte';
   import DuplicatesCompareControl from '$lib/components/utilities-page/duplicates/duplicates-compare-control.svelte';
+  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import DuplicatesInformationModal from '$lib/modals/DuplicatesInformationModal.svelte';
   import ShortcutsModal from '$lib/modals/ShortcutsModal.svelte';
   import { Route } from '$lib/route';
-  import { assetViewingStore } from '$lib/stores/asset-viewing.store';
   import { locale } from '$lib/stores/preferences.store';
   import { stackAssets } from '$lib/utils/asset-utils';
   import { suggestDuplicate } from '$lib/utils/duplicate-utils';
@@ -57,7 +57,6 @@
   };
 
   let duplicates = $state(data.duplicates);
-  const { isViewing: showAssetViewer } = assetViewingStore;
 
   const correctDuplicatesIndex = (index: number) => {
     return Math.max(0, Math.min(index, duplicates.length - 1));
@@ -178,19 +177,7 @@
 
   const handleFirst = () => navigateToIndex(0);
   const handlePrevious = () => navigateToIndex(Math.max(duplicatesIndex - 1, 0));
-  const handlePreviousShortcut = async () => {
-    if ($showAssetViewer) {
-      return;
-    }
-    await handlePrevious();
-  };
   const handleNext = async () => navigateToIndex(Math.min(duplicatesIndex + 1, duplicates.length - 1));
-  const handleNextShortcut = async () => {
-    if ($showAssetViewer) {
-      return;
-    }
-    await handleNext();
-  };
   const handleLast = () => navigateToIndex(duplicates.length - 1);
 
   const navigateToIndex = async (index: number) =>
@@ -198,10 +185,12 @@
 </script>
 
 <svelte:document
-  use:shortcuts={[
-    { shortcut: { key: 'ArrowLeft' }, onShortcut: handlePreviousShortcut },
-    { shortcut: { key: 'ArrowRight' }, onShortcut: handleNextShortcut },
-  ]}
+  use:shortcuts={assetViewerManager.isViewing
+    ? []
+    : [
+        { shortcut: { key: 'ArrowLeft' }, onShortcut: handlePrevious },
+        { shortcut: { key: 'ArrowRight' }, onShortcut: handleNext },
+      ]}
 />
 
 <UserPageLayout title={data.meta.title + ` (${duplicates.length.toLocaleString($locale)})`} scrollbar={true}>

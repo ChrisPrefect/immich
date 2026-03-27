@@ -70,9 +70,7 @@
 
   const toggleArchive = async () => {
     const visibility = assetInteraction.isAllArchived ? AssetVisibility.Timeline : AssetVisibility.Archive;
-    const onUndoArchive = (ids: string[]) =>
-      timelineManager.update(ids, (asset) => (asset.visibility = AssetVisibility.Timeline));
-    const ids = await archiveAssets(assetInteraction.selectedAssets, visibility, onUndoArchive);
+    const ids = await archiveAssets(assetInteraction.selectedAssets, visibility);
     timelineManager.update(ids, (asset) => (asset.visibility = visibility));
     eventManager.emit('AssetsArchive', ids);
     deselectAllAssets();

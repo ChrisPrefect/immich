@@ -23,7 +23,7 @@ import {
   type TimelineDateTime,
   type TimelineYearMonth,
 } from '$lib/utils/timeline-util';
-import { AssetOrder, getAssetInfo, getTimeBuckets, type AssetResponseDto } from '@immich/sdk';
+import { AssetOrder, AssetVisibility, getAssetInfo, getTimeBuckets, type AssetResponseDto } from '@immich/sdk';
 import { clamp, isEqual } from 'lodash-es';
 import { SvelteDate, SvelteSet } from 'svelte/reactivity';
 import { DayGroup } from './day-group.svelte';
@@ -114,6 +114,7 @@ export class TimelineManager extends VirtualScrollManager {
     this.#unsubscribes.push(
       eventManager.on({
         AssetUpdate: (asset: AssetResponseDto) => this.upsertAssets([toTimelineAsset(asset)]),
+        AssetsUnarchive: (ids) => this.update(ids, (asset) => (asset.visibility = AssetVisibility.Timeline)),
       }),
     );
   }

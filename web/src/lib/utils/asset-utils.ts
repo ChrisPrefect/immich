@@ -1,5 +1,6 @@
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { downloadManager } from '$lib/managers/download-manager.svelte';
+import { eventManager } from '$lib/managers/event-manager.svelte';
 import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import type { AssetInteraction } from '$lib/stores/asset-interaction.svelte';
@@ -440,10 +441,7 @@ export const toggleArchive = async (asset: AssetResponseDto) => {
           description: $t('added_to_archive'),
           button: {
             label: $t('undo'),
-            onclick: () =>
-              undoArchiveAssets([asset.id], () => {
-                asset.isArchived = false;
-              }),
+            onclick: () => undoArchiveAssets([asset.id]),
           },
         },
         { timeout: 5000 },
@@ -458,7 +456,7 @@ export const toggleArchive = async (asset: AssetResponseDto) => {
   return asset;
 };
 
-const undoArchiveAssets = async (ids: string[], onUndo: ((ids: string[]) => void) | undefined = undefined) => {
+const undoArchiveAssets = async (ids: string[]) => {
   const $t = get(t);
   try {
     if (ids.length > 0) {
@@ -470,17 +468,13 @@ const undoArchiveAssets = async (ids: string[], onUndo: ((ids: string[]) => void
       });
     }
 
-    onUndo?.(ids);
+    eventManager.emit('AssetsUnarchive', ids);
   } catch (error) {
     handleError(error, $t('errors.unable_to_archive_unarchive', { values: { archived: false } }));
   }
 };
 
-export const archiveAssets = async (
-  assets: { id: string }[],
-  visibility: AssetVisibility,
-  onUndoArchive: ((ids: string[]) => void) | undefined = undefined,
-) => {
+export const archiveAssets = async (assets: { id: string }[], visibility: AssetVisibility) => {
   const ids = assets.map(({ id }) => id);
   const $t = get(t);
 
@@ -497,7 +491,7 @@ export const archiveAssets = async (
           description: $t('archived_count', { values: { count: ids.length } }),
           button: {
             label: $t('undo'),
-            onclick: () => undoArchiveAssets(ids, onUndoArchive),
+            onclick: () => undoArchiveAssets(ids),
           },
         },
         { timeout: 5000 },

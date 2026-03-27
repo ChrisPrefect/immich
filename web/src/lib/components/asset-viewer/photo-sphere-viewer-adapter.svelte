@@ -1,9 +1,8 @@
 <script lang="ts">
   import { shortcuts } from '$lib/actions/shortcut';
   import AssetViewerEvents from '$lib/components/AssetViewerEvents.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
+  import { assetViewerManager, type Faces } from '$lib/managers/asset-viewer-manager.svelte';
   import { ocrManager, type OcrBoundingBox } from '$lib/stores/ocr.svelte';
-  import { boundingBoxesArray, type Faces } from '$lib/stores/people.store';
   import { alwaysLoadOriginalFile } from '$lib/stores/preferences.store';
   import { calculateBoundingBoxMatrix, getOcrBoundingBoxes, type Point } from '$lib/utils/ocr-utils';
   import {
@@ -54,14 +53,9 @@
   let viewer: Viewer;
 
   let animationInProgress: { cancel: () => void } | undefined;
-  let previousFaces: Faces[] = [];
 
-  const boundingBoxesUnsubscribe = boundingBoxesArray.subscribe((faces: Faces[]) => {
-    // Debounce; don't do anything when the data didn't actually change.
-    if (faces === previousFaces) {
-      return;
-    }
-    previousFaces = faces;
+  $effect(() => {
+    const faces: Faces[] = assetViewerManager.highlightedFaces;
 
     if (animationInProgress) {
       animationInProgress.cancel();
@@ -104,7 +98,7 @@
         textureX: x,
         textureY: y,
         zoom: Math.min(viewer.getZoomLevel(), 75),
-        speed: 500, // duration in ms
+        speed: 500,
       });
     }
   });
@@ -246,7 +240,8 @@
     if (viewer) {
       viewer.destroy();
     }
-    boundingBoxesUnsubscribe();
+    assetViewerManager.clearHighlightedFaces();
+    assetViewerManager.hideHiddenPeople();
     assetViewerManager.zoom = 1;
   });
 </script>

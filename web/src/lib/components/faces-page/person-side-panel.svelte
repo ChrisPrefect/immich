@@ -3,7 +3,6 @@
   import { timeBeforeShowLoadingSpinner } from '$lib/constants';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { boundingBoxesArray } from '$lib/stores/people.store';
   import { getPeopleThumbnailUrl, handlePromiseError } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
   import { zoomImageToBase64 } from '$lib/utils/people-utils';
@@ -230,9 +229,9 @@
               role="button"
               tabindex={index}
               class="absolute start-0 top-0 h-22.5 w-22.5 cursor-default"
-              onfocus={() => ($boundingBoxesArray = [peopleWithFaces[index]])}
-              onmouseover={() => ($boundingBoxesArray = [peopleWithFaces[index]])}
-              onmouseleave={() => ($boundingBoxesArray = [])}
+              onfocus={() => assetViewerManager.setHighlightedFaces([peopleWithFaces[index]])}
+              onmouseover={() => assetViewerManager.setHighlightedFaces([peopleWithFaces[index]])}
+              onmouseleave={() => assetViewerManager.clearHighlightedFaces()}
             >
               <div class="relative">
                 {#if selectedPersonToCreate[face.id]}

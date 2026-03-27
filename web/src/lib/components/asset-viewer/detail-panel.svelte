@@ -10,7 +10,6 @@
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import AssetChangeDateModal from '$lib/modals/AssetChangeDateModal.svelte';
   import { Route } from '$lib/route';
-  import { boundingBoxesArray } from '$lib/stores/people.store';
   import { locale } from '$lib/stores/preferences.store';
   import { preferences, user } from '$lib/stores/user.store';
   import { getAssetMediaUrl, getPeopleThumbnailUrl } from '$lib/utils';
@@ -60,7 +59,6 @@
   let isOwner = $derived($user?.id === asset.ownerId);
   let people = $derived(asset.people || []);
   let unassignedFaces = $derived(asset.unassignedFaces || []);
-  let showingHiddenPeople = $state(false);
   let timeZone = $derived(asset.exifInfo?.timeZone ?? undefined);
   let dateTime = $derived(
     timeZone && asset.exifInfo?.dateTimeOriginal
@@ -192,12 +190,12 @@
           {#if people.some((person) => person.isHidden)}
             <IconButton
               aria-label={$t('show_hidden_people')}
-              icon={showingHiddenPeople ? mdiEyeOff : mdiEye}
+              icon={assetViewerManager.isShowingHiddenPeople ? mdiEyeOff : mdiEye}
               size="medium"
               shape="round"
               color="secondary"
               variant="ghost"
-              onclick={() => (showingHiddenPeople = !showingHiddenPeople)}
+              onclick={() => assetViewerManager.toggleHiddenPeople()}
             />
           {/if}
           <IconButton
@@ -226,14 +224,14 @@
 
       <div class="mt-2 flex flex-wrap gap-2">
         {#each people as person, index (person.id)}
-          {#if showingHiddenPeople || !person.isHidden}
+          {#if assetViewerManager.isShowingHiddenPeople || !person.isHidden}
             <a
               class="w-22"
               href={Route.viewPerson(person, { previousRoute })}
-              onfocus={() => ($boundingBoxesArray = people[index].faces)}
-              onblur={() => ($boundingBoxesArray = [])}
-              onmouseover={() => ($boundingBoxesArray = people[index].faces)}
-              onmouseleave={() => ($boundingBoxesArray = [])}
+              onfocus={() => assetViewerManager.setHighlightedFaces(people[index].faces)}
+              onblur={() => assetViewerManager.clearHighlightedFaces()}
+              onpointerenter={() => assetViewerManager.setHighlightedFaces(people[index].faces)}
+              onpointerleave={() => assetViewerManager.clearHighlightedFaces()}
             >
               <div class="relative">
                 <ImageThumbnail

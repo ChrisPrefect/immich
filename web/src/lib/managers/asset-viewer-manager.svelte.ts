@@ -8,6 +8,16 @@ import { getAssetInfo, type AssetResponseDto } from '@immich/sdk';
 import type { ZoomImageWheelState } from '@zoom-image/core';
 import { cubicOut } from 'svelte/easing';
 
+export interface Faces {
+  id: string;
+  imageHeight: number;
+  imageWidth: number;
+  boundingBoxX1: number;
+  boundingBoxX2: number;
+  boundingBoxY1: number;
+  boundingBoxY2: number;
+}
+
 const isShowDetailPanel = new PersistedLocalStorage<boolean>('asset-viewer-state', false);
 
 const createDefaultZoomState = (): ZoomImageWheelState => ({
@@ -45,6 +55,8 @@ class AssetViewerManager extends BaseEventManager<Events> {
   #isFaceEditMode = $state(false);
   #viewingAssetStoreState = $state<AssetResponseDto>();
   #viewState = $state<boolean>(false);
+  #highlightedFaces = $state<Faces[]>([]);
+  #showingHiddenPeople = $state(false);
   gridScrollTarget = $state<AssetGridRouteSearchParams | null | undefined>();
 
   get asset() {
@@ -171,6 +183,30 @@ class AssetViewerManager extends BaseEventManager<Events> {
 
   closeFaceEditMode() {
     this.#isFaceEditMode = false;
+  }
+
+  get highlightedFaces() {
+    return this.#highlightedFaces;
+  }
+
+  setHighlightedFaces(faces: Faces[]) {
+    this.#highlightedFaces = faces;
+  }
+
+  clearHighlightedFaces() {
+    this.#highlightedFaces = [];
+  }
+
+  get isShowingHiddenPeople() {
+    return this.#showingHiddenPeople;
+  }
+
+  toggleHiddenPeople() {
+    this.#showingHiddenPeople = !this.#showingHiddenPeople;
+  }
+
+  hideHiddenPeople() {
+    this.#showingHiddenPeople = false;
   }
 
   setAsset(asset: AssetResponseDto) {

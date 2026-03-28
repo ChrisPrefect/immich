@@ -131,7 +131,7 @@ class _AppBarBackButton extends ConsumerWidget {
         shape: const CircleBorder(),
         iconSize: 22,
         iconColor: showingDetails ? context.colorScheme.onSurface : Colors.white,
-        padding: EdgeInsets.all(showingDetails ? 10 : 0),
+        padding: const EdgeInsets.all(10.0),
         elevation: showingDetails ? 4 : 0,
       ),
       onPressed: context.maybePop,

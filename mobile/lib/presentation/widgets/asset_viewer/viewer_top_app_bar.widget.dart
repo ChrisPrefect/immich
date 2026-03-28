@@ -95,8 +95,7 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
             ),
             SafeArea(
               bottom: false,
-              child: SizedBox(
-                height: preferredSize.height,
+              child: SizedBox.square(
                 child: Theme(
                   data: context.themeData.copyWith(iconTheme: const IconThemeData(size: 22, color: Colors.white)),
                   child: Row(
@@ -132,7 +131,7 @@ class _AppBarBackButton extends ConsumerWidget {
         shape: const CircleBorder(),
         iconSize: 22,
         iconColor: showingDetails ? context.colorScheme.onSurface : Colors.white,
-        padding: EdgeInsets.zero,
+        padding: EdgeInsets.all(showingDetails ? 10 : 0),
         elevation: showingDetails ? 4 : 0,
       ),
       onPressed: context.maybePop,

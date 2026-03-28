@@ -88,8 +88,8 @@ class NetworkApiImpl: NetworkApi {
       }
     }
 
-    if headers != UserDefaults.group.dictionary(forKey: HEADERS_KEY) as? [String: String] {
-      UserDefaults.group.set(headers, forKey: HEADERS_KEY)
+    if headers != UserDefaults.standard.dictionary(forKey: HEADERS_KEY) as? [String: String] {
+      UserDefaults.standard.set(headers, forKey: HEADERS_KEY)
       URLSessionManager.shared.recreateSession()
     }
   }

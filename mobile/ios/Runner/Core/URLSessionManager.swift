@@ -4,7 +4,6 @@ import native_video_player
 let CLIENT_CERT_LABEL = "app.alextran.immich.client_identity"
 let HEADERS_KEY = "immich.request_headers"
 let SERVER_URLS_KEY = "immich.server_urls"
-let APP_GROUP = "group.app.immich.share"
 let COOKIE_EXPIRY_DAYS: TimeInterval = 400
 
 enum AuthCookie: CaseIterable {
@@ -26,10 +25,6 @@ enum AuthCookie: CaseIterable {
   }
 
   static let names: Set<String> = Set(allCases.map(\.name))
-}
-
-extension UserDefaults {
-  static let group = UserDefaults(suiteName: APP_GROUP)!
 }
 
 /// Manages a shared URLSession with SSL configuration support.
@@ -55,7 +50,7 @@ class URLSessionManager: NSObject {
     let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
     return "Immich_iOS_\(version)"
   }()
-  static let cookieStorage = HTTPCookieStorage.sharedCookieStorage(forGroupContainerIdentifier: APP_GROUP)
+  static let cookieStorage = HTTPCookieStorage.shared
   private static var serverUrls: [String] = []
   private static var isSyncing = false
 
@@ -67,7 +62,7 @@ class URLSessionManager: NSObject {
     delegate = URLSessionManagerDelegate()
     session = Self.buildSession(delegate: delegate)
     super.init()
-    Self.serverUrls = UserDefaults.group.stringArray(forKey: SERVER_URLS_KEY) ?? []
+    Self.serverUrls = UserDefaults.standard.stringArray(forKey: SERVER_URLS_KEY) ?? []
     NotificationCenter.default.addObserver(
       Self.self,
       selector: #selector(Self.cookiesDidChange),
@@ -83,7 +78,7 @@ class URLSessionManager: NSObject {
   static func setServerUrls(_ urls: [String]) {
     guard urls != serverUrls else { return }
     serverUrls = urls
-    UserDefaults.group.set(urls, forKey: SERVER_URLS_KEY)
+    UserDefaults.standard.set(urls, forKey: SERVER_URLS_KEY)
     syncAuthCookies()
   }
 
@@ -151,7 +146,7 @@ class URLSessionManager: NSObject {
     config.httpMaximumConnectionsPerHost = 64
     config.timeoutIntervalForRequest = 60
 
-    var headers = UserDefaults.group.dictionary(forKey: HEADERS_KEY) as? [String: String] ?? [:]
+    var headers = UserDefaults.standard.dictionary(forKey: HEADERS_KEY) as? [String: String] ?? [:]
     headers["User-Agent"] = headers["User-Agent"] ?? userAgent
     config.httpAdditionalHeaders = headers
 

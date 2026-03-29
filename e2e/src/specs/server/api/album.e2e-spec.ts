@@ -424,6 +424,7 @@ describe('/albums', () => {
         description: '',
         albumThumbnailAssetId: null,
         shared: false,
+        isFavorite: false,
         albumUsers: [],
         hasSharedLink: false,
         assets: [],
@@ -537,6 +538,44 @@ describe('/albums', () => {
           albumName: 'New album name',
         }),
       );
+    });
+  });
+
+  describe('PATCH /albums/:id/user-metadata', () => {
+    it('should toggle favorite status per user on a shared album', async () => {
+      const before = await getAlbumInfo({ id: user1Albums[3].id }, { headers: asBearerAuth(user2.accessToken) });
+      expect(before.isFavorite).toBe(false);
+
+      const favoriteResponse = await request(app)
+        .patch(`/albums/${user1Albums[3].id}/user-metadata`)
+        .set('Authorization', `Bearer ${user2.accessToken}`)
+        .send({ isFavorite: true });
+
+      expect(favoriteResponse.status).toBe(200);
+      expect(favoriteResponse.body).toMatchObject({ id: user1Albums[3].id, isFavorite: true });
+
+      const favoritedForViewer = await getAlbumInfo(
+        { id: user1Albums[3].id },
+        { headers: asBearerAuth(user2.accessToken) },
+      );
+      const unchangedForOwner = await getAlbumInfo(
+        { id: user1Albums[3].id },
+        { headers: asBearerAuth(user1.accessToken) },
+      );
+
+      expect(favoritedForViewer.isFavorite).toBe(true);
+      expect(unchangedForOwner.isFavorite).toBe(false);
+
+      const unfavoriteResponse = await request(app)
+        .patch(`/albums/${user1Albums[3].id}/user-metadata`)
+        .set('Authorization', `Bearer ${user2.accessToken}`)
+        .send({ isFavorite: false });
+
+      expect(unfavoriteResponse.status).toBe(200);
+      expect(unfavoriteResponse.body).toMatchObject({ id: user1Albums[3].id, isFavorite: false });
+
+      const after = await getAlbumInfo({ id: user1Albums[3].id }, { headers: asBearerAuth(user2.accessToken) });
+      expect(after.isFavorite).toBe(false);
     });
   });
 

@@ -427,6 +427,7 @@ export function getAlbum(
     albumUsers: [], // Empty array for non-shared album
     shared: false,
     hasSharedLink: false,
+    isFavorite: false,
     isActivityEnabled: true,
     assetCount: albumAssets.length,
     assets: albumAssets,

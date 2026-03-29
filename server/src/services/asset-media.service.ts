@@ -361,7 +361,7 @@ export class AssetMediaService extends BaseService {
         await this.addToSharedLink(auth.sharedLink, duplicate.id);
       }
 
-      this.logger.debug(`Duplicate asset upload rejected: existing asset ${duplicateId}`);
+      this.logger.debug(`Duplicate asset upload rejected: existing asset ${duplicate.id}`);
       return { status: AssetMediaStatus.DUPLICATE, id: duplicate.id };
     }
 

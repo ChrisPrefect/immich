@@ -6579,9 +6579,6 @@ export function getUploadOptions(opts?: Oazapfts.RequestOpts) {
         method: "OPTIONS"
     }));
 }
-/**
- * This endpoint requires the `asset.upload` permission.
- */
 export function startUpload({ contentLength, key, reprDigest, slug, uploadComplete, uploadDraftInteropVersion, xImmichAssetData }: {
     contentLength: string;
     key?: string;
@@ -6611,9 +6608,6 @@ export function startUpload({ contentLength, key, reprDigest, slug, uploadComple
         })
     }));
 }
-/**
- * This endpoint requires the `asset.upload` permission.
- */
 export function cancelUpload({ id, key, slug }: {
     id: string;
     key?: string;
@@ -6627,9 +6621,6 @@ export function cancelUpload({ id, key, slug }: {
         method: "DELETE"
     }));
 }
-/**
- * This endpoint requires the `asset.upload` permission.
- */
 export function getUploadStatus({ id, key, slug, uploadDraftInteropVersion }: {
     id: string;
     key?: string;
@@ -6647,9 +6638,6 @@ export function getUploadStatus({ id, key, slug, uploadDraftInteropVersion }: {
         })
     }));
 }
-/**
- * This endpoint requires the `asset.upload` permission.
- */
 export function resumeUpload({ contentLength, id, key, slug, uploadComplete, uploadDraftInteropVersion, uploadOffset }: {
     contentLength: string;
     id: string;
@@ -7315,6 +7303,8 @@ export enum JobName {
     AssetFileMigration = "AssetFileMigration",
     AssetGenerateThumbnailsQueueAll = "AssetGenerateThumbnailsQueueAll",
     AssetGenerateThumbnails = "AssetGenerateThumbnails",
+    PartialAssetCleanup = "PartialAssetCleanup",
+    PartialAssetCleanupQueueAll = "PartialAssetCleanupQueueAll",
     AuditLogCleanup = "AuditLogCleanup",
     AuditTableCleanup = "AuditTableCleanup",
     DatabaseBackup = "DatabaseBackup",

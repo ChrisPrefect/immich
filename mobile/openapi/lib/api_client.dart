@@ -674,6 +674,10 @@ class ApiClient {
           return SyncAlbumToAssetV1.fromJson(value);
         case 'SyncAlbumUserDeleteV1':
           return SyncAlbumUserDeleteV1.fromJson(value);
+        case 'SyncAlbumUserMetadataDeleteV1':
+          return SyncAlbumUserMetadataDeleteV1.fromJson(value);
+        case 'SyncAlbumUserMetadataV1':
+          return SyncAlbumUserMetadataV1.fromJson(value);
         case 'SyncAlbumUserV1':
           return SyncAlbumUserV1.fromJson(value);
         case 'SyncAlbumV1':
@@ -834,6 +838,8 @@ class ApiClient {
           return UpdateAlbumDto.fromJson(value);
         case 'UpdateAlbumUserDto':
           return UpdateAlbumUserDto.fromJson(value);
+        case 'UpdateAlbumUserMetadataDto':
+          return UpdateAlbumUserMetadataDto.fromJson(value);
         case 'UpdateAssetDto':
           return UpdateAssetDto.fromJson(value);
         case 'UpdateLibraryDto':

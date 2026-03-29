@@ -21,6 +21,18 @@ select
           "user"."id" = "album"."ownerId"
       ) as obj
   ) as "owner",
+  coalesce(
+    (
+      select
+        "album_user_metadata"."isFavorite"
+      from
+        "album_user_metadata"
+      where
+        "album_user_metadata"."albumId" = "album"."id"
+        and "album_user_metadata"."userId" = $1
+    ),
+    false
+  ) as "isFavorite",
   (
     select
       coalesce(json_agg(agg), '[]')
@@ -88,12 +100,24 @@ select
 from
   "album"
 where
-  "album"."id" = $1
+  "album"."id" = $2
   and "album"."deletedAt" is null
 
 -- AlbumRepository.getByAssetId
 select
   "album".*,
+  coalesce(
+    (
+      select
+        "album_user_metadata"."isFavorite"
+      from
+        "album_user_metadata"
+      where
+        "album_user_metadata"."albumId" = "album"."id"
+        and "album_user_metadata"."userId" = $1
+    ),
+    false
+  ) as "isFavorite",
   (
     select
       to_json(obj)
@@ -148,17 +172,17 @@ from
   inner join "album_asset" on "album_asset"."albumId" = "album"."id"
 where
   (
-    "album"."ownerId" = $1
+    "album"."ownerId" = $2
     or exists (
       select
       from
         "album_user"
       where
         "album_user"."albumId" = "album"."id"
-        and "album_user"."userId" = $2
+        and "album_user"."userId" = $3
     )
   )
-  and "album_asset"."assetId" = $3
+  and "album_asset"."assetId" = $4
   and "album"."deletedAt" is null
 order by
   "album"."createdAt" desc,
@@ -210,6 +234,18 @@ group by
 -- AlbumRepository.getOwned
 select
   "album".*,
+  coalesce(
+    (
+      select
+        "album_user_metadata"."isFavorite"
+      from
+        "album_user_metadata"
+      where
+        "album_user_metadata"."albumId" = "album"."id"
+        and "album_user_metadata"."userId" = $1
+    ),
+    false
+  ) as "isFavorite",
   (
     select
       to_json(obj)
@@ -275,7 +311,7 @@ select
 from
   "album"
 where
-  "album"."ownerId" = $1
+  "album"."ownerId" = $2
   and "album"."deletedAt" is null
 order by
   "album"."createdAt" desc
@@ -283,6 +319,18 @@ order by
 -- AlbumRepository.getShared
 select
   "album".*,
+  coalesce(
+    (
+      select
+        "album_user_metadata"."isFavorite"
+      from
+        "album_user_metadata"
+      where
+        "album_user_metadata"."albumId" = "album"."id"
+        and "album_user_metadata"."userId" = $1
+    ),
+    false
+  ) as "isFavorite",
   (
     select
       coalesce(json_agg(agg), '[]')
@@ -356,8 +404,8 @@ where
       where
         "album_user"."albumId" = "album"."id"
         and (
-          "album"."ownerId" = $1
-          or "album_user"."userId" = $2
+          "album"."ownerId" = $2
+          or "album_user"."userId" = $3
         )
     )
     or exists (
@@ -366,7 +414,7 @@ where
         "shared_link"
       where
         "shared_link"."albumId" = "album"."id"
-        and "shared_link"."userId" = $3
+        and "shared_link"."userId" = $4
     )
   )
   and "album"."deletedAt" is null
@@ -376,6 +424,18 @@ order by
 -- AlbumRepository.getNotShared
 select
   "album".*,
+  coalesce(
+    (
+      select
+        "album_user_metadata"."isFavorite"
+      from
+        "album_user_metadata"
+      where
+        "album_user_metadata"."albumId" = "album"."id"
+        and "album_user_metadata"."userId" = $1
+    ),
+    false
+  ) as "isFavorite",
   (
     select
       to_json(obj)
@@ -397,7 +457,7 @@ select
 from
   "album"
 where
-  "album"."ownerId" = $1
+  "album"."ownerId" = $2
   and "album"."deletedAt" is null
   and not exists (
     select

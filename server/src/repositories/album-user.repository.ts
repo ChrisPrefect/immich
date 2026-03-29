@@ -17,11 +17,21 @@ export class AlbumUserRepository {
 
   @GenerateSql({ params: [{ userId: DummyValue.UUID, albumId: DummyValue.UUID }] })
   create(albumUser: Insertable<AlbumUserTable>) {
-    return this.db
-      .insertInto('album_user')
-      .values(albumUser)
-      .returning(['userId', 'albumId', 'role'])
-      .executeTakeFirstOrThrow();
+    return this.db.transaction().execute(async (tx) => {
+      const result = await tx
+        .insertInto('album_user')
+        .values(albumUser)
+        .returning(['userId', 'albumId', 'role'])
+        .executeTakeFirstOrThrow();
+
+      await tx
+        .insertInto('album_user_metadata')
+        .values({ albumId: albumUser.albumId, userId: albumUser.userId, isFavorite: false })
+        .onConflict((oc) => oc.columns(['albumId', 'userId']).doNothing())
+        .execute();
+
+      return result;
+    });
   }
 
   @GenerateSql({ params: [{ userId: DummyValue.UUID, albumId: DummyValue.UUID }, { role: AlbumUserRole.Viewer }] })
@@ -36,6 +46,9 @@ export class AlbumUserRepository {
 
   @GenerateSql({ params: [{ userId: DummyValue.UUID, albumId: DummyValue.UUID }] })
   async delete({ userId, albumId }: AlbumPermissionId): Promise<void> {
-    await this.db.deleteFrom('album_user').where('userId', '=', userId).where('albumId', '=', albumId).execute();
+    await this.db.transaction().execute(async (tx) => {
+      await tx.deleteFrom('album_user_metadata').where('userId', '=', userId).where('albumId', '=', albumId).execute();
+      await tx.deleteFrom('album_user').where('userId', '=', userId).where('albumId', '=', albumId).execute();
+    });
   }
 }

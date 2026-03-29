@@ -79,6 +79,21 @@ describe(AlbumController.name, () => {
     });
   });
 
+  describe('PATCH /albums/:id/user-metadata', () => {
+    it('should be an authenticated route', async () => {
+      await request(ctx.getHttpServer()).patch(`/albums/${factory.uuid()}/user-metadata`).send({ isFavorite: true });
+      expect(ctx.authenticate).toHaveBeenCalled();
+    });
+
+    it('should reject an invalid favorite payload', async () => {
+      const { status, body } = await request(ctx.getHttpServer())
+        .patch(`/albums/${factory.uuid()}/user-metadata`)
+        .send({ isFavorite: 'invalid' });
+      expect(status).toEqual(400);
+      expect(body).toEqual(factory.responses.badRequest(['isFavorite must be a boolean value']));
+    });
+  });
+
   describe('DELETE /albums/:id/assets', () => {
     it('should be an authenticated route', async () => {
       await request(ctx.getHttpServer()).delete(`/albums/${factory.uuid()}/assets`);

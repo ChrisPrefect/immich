@@ -656,6 +656,8 @@ export type AlbumResponseDto = {
     id: string;
     /** Activity feed enabled */
     isActivityEnabled: boolean;
+    /** Is favorite */
+    isFavorite: boolean;
     /** Last modified asset timestamp */
     lastModifiedAssetTimestamp?: string;
     /** Asset sort order */
@@ -730,6 +732,10 @@ export type BulkIdResponseDto = {
     id: string;
     /** Whether operation succeeded */
     success: boolean;
+};
+export type UpdateAlbumUserMetadataDto = {
+    /** Favorite status */
+    isFavorite: boolean;
 };
 export type UpdateAlbumUserDto = {
     /** Album user role */
@@ -2950,6 +2956,20 @@ export type SyncAlbumUserDeleteV1 = {
     /** User ID */
     userId: string;
 };
+export type SyncAlbumUserMetadataDeleteV1 = {
+    /** Album ID */
+    albumId: string;
+    /** User ID */
+    userId: string;
+};
+export type SyncAlbumUserMetadataV1 = {
+    /** Album ID */
+    albumId: string;
+    /** Is favorite */
+    isFavorite: boolean;
+    /** User ID */
+    userId: string;
+};
 export type SyncAlbumUserV1 = {
     /** Album ID */
     albumId: string;
@@ -3822,6 +3842,22 @@ export function addAssetsToAlbum({ id, key, slug, bulkIdsDto }: {
         ...opts,
         method: "PUT",
         body: bulkIdsDto
+    })));
+}
+/**
+ * Update album user metadata
+ */
+export function updateAlbumUserMetadata({ id, updateAlbumUserMetadataDto }: {
+    id: string;
+    updateAlbumUserMetadataDto: UpdateAlbumUserMetadataDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AlbumResponseDto;
+    }>(`/albums/${encodeURIComponent(id)}/user-metadata`, oazapfts.json({
+        ...opts,
+        method: "PATCH",
+        body: updateAlbumUserMetadataDto
     })));
 }
 /**
@@ -7289,6 +7325,8 @@ export enum SyncEntityType {
     AlbumUserV1 = "AlbumUserV1",
     AlbumUserBackfillV1 = "AlbumUserBackfillV1",
     AlbumUserDeleteV1 = "AlbumUserDeleteV1",
+    AlbumUserMetadataV1 = "AlbumUserMetadataV1",
+    AlbumUserMetadataDeleteV1 = "AlbumUserMetadataDeleteV1",
     AlbumAssetCreateV1 = "AlbumAssetCreateV1",
     AlbumAssetUpdateV1 = "AlbumAssetUpdateV1",
     AlbumAssetBackfillV1 = "AlbumAssetBackfillV1",
@@ -7318,6 +7356,7 @@ export enum SyncEntityType {
 export enum SyncRequestType {
     AlbumsV1 = "AlbumsV1",
     AlbumUsersV1 = "AlbumUsersV1",
+    AlbumUserMetadataV1 = "AlbumUserMetadataV1",
     AlbumToAssetsV1 = "AlbumToAssetsV1",
     AlbumAssetsV1 = "AlbumAssetsV1",
     AlbumAssetExifsV1 = "AlbumAssetExifsV1",

@@ -1,5 +1,6 @@
 import { AccessRepository } from 'src/repositories/access.repository';
 import { ActivityRepository } from 'src/repositories/activity.repository';
+import { AlbumUserMetadataRepository } from 'src/repositories/album-user-metadata.repository';
 import { AlbumUserRepository } from 'src/repositories/album-user.repository';
 import { AlbumRepository } from 'src/repositories/album.repository';
 import { ApiKeyRepository } from 'src/repositories/api-key.repository';
@@ -55,6 +56,7 @@ export const repositories = [
   AccessRepository,
   ActivityRepository,
   AlbumRepository,
+  AlbumUserMetadataRepository,
   AlbumUserRepository,
   AuditRepository,
   ApiKeyRepository,

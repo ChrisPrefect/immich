@@ -12,6 +12,7 @@ import {
   GetAlbumsDto,
   UpdateAlbumDto,
   UpdateAlbumUserDto,
+  UpdateAlbumUserMetadataDto,
 } from 'src/dtos/album.dto';
 import { BulkIdResponseDto, BulkIdsDto } from 'src/dtos/asset-ids.response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
@@ -87,6 +88,21 @@ export class AlbumController {
     @Body() dto: UpdateAlbumDto,
   ): Promise<AlbumResponseDto> {
     return this.service.update(auth, id, dto);
+  }
+
+  @Patch(':id/user-metadata')
+  @Authenticated({ permission: Permission.AlbumRead })
+  @Endpoint({
+    summary: 'Update album user metadata',
+    description: 'Update metadata for the authenticated user on a specific album.',
+    history: new HistoryBuilder().added('v2.7.0').beta('v2.7.0'),
+  })
+  updateAlbumUserMetadata(
+    @Auth() auth: AuthDto,
+    @Param() { id }: UUIDParamDto,
+    @Body() dto: UpdateAlbumUserMetadataDto,
+  ): Promise<AlbumResponseDto> {
+    return this.service.updateAlbumUserMetadata(auth, id, dto);
   }
 
   @Delete(':id')

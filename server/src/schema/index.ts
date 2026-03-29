@@ -4,6 +4,7 @@ import {
   album_delete_audit,
   album_user_after_insert,
   album_user_delete_audit,
+  album_user_metadata_audit,
   asset_delete_audit,
   asset_face_audit,
   asset_metadata_audit,
@@ -25,6 +26,8 @@ import { AlbumAssetAuditTable } from 'src/schema/tables/album-asset-audit.table'
 import { AlbumAssetTable } from 'src/schema/tables/album-asset.table';
 import { AlbumAuditTable } from 'src/schema/tables/album-audit.table';
 import { AlbumUserAuditTable } from 'src/schema/tables/album-user-audit.table';
+import { AlbumUserMetadataAuditTable } from 'src/schema/tables/album-user-metadata-audit.table';
+import { AlbumUserMetadataTable } from 'src/schema/tables/album-user-metadata.table';
 import { AlbumUserTable } from 'src/schema/tables/album-user.table';
 import { AlbumTable } from 'src/schema/tables/album.table';
 import { ApiKeyTable } from 'src/schema/tables/api-key.table';
@@ -83,6 +86,8 @@ export class ImmichDatabase {
     AlbumAssetTable,
     AlbumAssetAuditTable,
     AlbumAuditTable,
+    AlbumUserMetadataAuditTable,
+    AlbumUserMetadataTable,
     AlbumUserAuditTable,
     AlbumUserTable,
     AlbumTable,
@@ -150,6 +155,7 @@ export class ImmichDatabase {
     asset_delete_audit,
     album_delete_audit,
     album_user_after_insert,
+    album_user_metadata_audit,
     album_user_delete_audit,
     memory_delete_audit,
     memory_asset_delete_audit,
@@ -178,6 +184,8 @@ export interface DB {
   album_audit: AlbumAuditTable;
   album_asset: AlbumAssetTable;
   album_asset_audit: AlbumAssetAuditTable;
+  album_user_metadata: AlbumUserMetadataTable;
+  album_user_metadata_audit: AlbumUserMetadataAuditTable;
   album_user: AlbumUserTable;
   album_user_audit: AlbumUserAuditTable;
 

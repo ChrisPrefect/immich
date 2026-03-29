@@ -95,6 +95,7 @@ Class | Method | HTTP request | Description
 *AlbumsApi* | [**removeUserFromAlbum**](doc//AlbumsApi.md#removeuserfromalbum) | **DELETE** /albums/{id}/user/{userId} | Remove user from album
 *AlbumsApi* | [**updateAlbumInfo**](doc//AlbumsApi.md#updatealbuminfo) | **PATCH** /albums/{id} | Update an album
 *AlbumsApi* | [**updateAlbumUser**](doc//AlbumsApi.md#updatealbumuser) | **PUT** /albums/{id}/user/{userId} | Update user role
+*AlbumsApi* | [**updateAlbumUserMetadata**](doc//AlbumsApi.md#updatealbumusermetadata) | **PATCH** /albums/{id}/user-metadata | Update album user metadata
 *AssetsApi* | [**checkBulkUpload**](doc//AssetsApi.md#checkbulkupload) | **POST** /assets/bulk-upload-check | Check bulk upload
 *AssetsApi* | [**checkExistingAssets**](doc//AssetsApi.md#checkexistingassets) | **POST** /assets/exist | Check existing assets
 *AssetsApi* | [**copyAsset**](doc//AssetsApi.md#copyasset) | **PUT** /assets/copy | Copy asset
@@ -576,6 +577,8 @@ Class | Method | HTTP request | Description
  - [SyncAlbumToAssetDeleteV1](doc//SyncAlbumToAssetDeleteV1.md)
  - [SyncAlbumToAssetV1](doc//SyncAlbumToAssetV1.md)
  - [SyncAlbumUserDeleteV1](doc//SyncAlbumUserDeleteV1.md)
+ - [SyncAlbumUserMetadataDeleteV1](doc//SyncAlbumUserMetadataDeleteV1.md)
+ - [SyncAlbumUserMetadataV1](doc//SyncAlbumUserMetadataV1.md)
  - [SyncAlbumUserV1](doc//SyncAlbumUserV1.md)
  - [SyncAlbumV1](doc//SyncAlbumV1.md)
  - [SyncAssetDeleteV1](doc//SyncAssetDeleteV1.md)
@@ -656,6 +659,7 @@ Class | Method | HTTP request | Description
  - [TrashResponseDto](doc//TrashResponseDto.md)
  - [UpdateAlbumDto](doc//UpdateAlbumDto.md)
  - [UpdateAlbumUserDto](doc//UpdateAlbumUserDto.md)
+ - [UpdateAlbumUserMetadataDto](doc//UpdateAlbumUserMetadataDto.md)
  - [UpdateAssetDto](doc//UpdateAssetDto.md)
  - [UpdateLibraryDto](doc//UpdateLibraryDto.md)
  - [UsageByUserDto](doc//UsageByUserDto.md)

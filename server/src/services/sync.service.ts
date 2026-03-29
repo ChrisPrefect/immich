@@ -78,6 +78,7 @@ export const SYNC_TYPES_ORDER = [
   SyncRequestType.AlbumAssetsV1,
   SyncRequestType.AlbumsV1,
   SyncRequestType.AlbumUsersV1,
+  SyncRequestType.AlbumUserMetadataV1,
   SyncRequestType.AlbumToAssetsV1,
   SyncRequestType.AssetExifsV1,
   SyncRequestType.AlbumAssetExifsV1,
@@ -183,6 +184,7 @@ export class SyncService extends BaseService {
         this.syncPartnerAssetExifsV1(options, response, checkpointMap, session.id),
       [SyncRequestType.AlbumsV1]: () => this.syncAlbumsV1(options, response, checkpointMap),
       [SyncRequestType.AlbumUsersV1]: () => this.syncAlbumUsersV1(options, response, checkpointMap, session.id),
+      [SyncRequestType.AlbumUserMetadataV1]: () => this.syncAlbumUserMetadataV1(options, response, checkpointMap),
       [SyncRequestType.AlbumAssetsV1]: () => this.syncAlbumAssetsV1(options, response, checkpointMap, session.id),
       [SyncRequestType.AlbumToAssetsV1]: () => this.syncAlbumToAssetsV1(options, response, checkpointMap, session.id),
       [SyncRequestType.AlbumAssetExifsV1]: () =>
@@ -213,6 +215,7 @@ export class SyncService extends BaseService {
 
     await this.syncRepository.album.cleanupAuditTable(pruneThreshold);
     await this.syncRepository.albumUser.cleanupAuditTable(pruneThreshold);
+    await this.syncRepository.albumUserMetadata.cleanupAuditTable(pruneThreshold);
     await this.syncRepository.albumToAsset.cleanupAuditTable(pruneThreshold);
     await this.syncRepository.asset.cleanupAuditTable(pruneThreshold);
     await this.syncRepository.assetFace.cleanupAuditTable(pruneThreshold);
@@ -484,6 +487,20 @@ export class SyncService extends BaseService {
     }
 
     const upserts = this.syncRepository.albumUser.getUpserts({ ...options, ack: checkpointMap[upsertType] });
+    for await (const { updateId, ...data } of upserts) {
+      send(response, { type: upsertType, ids: [updateId], data });
+    }
+  }
+
+  private async syncAlbumUserMetadataV1(options: SyncQueryOptions, response: Writable, checkpointMap: CheckpointMap) {
+    const deleteType = SyncEntityType.AlbumUserMetadataDeleteV1;
+    const deletes = this.syncRepository.albumUserMetadata.getDeletes({ ...options, ack: checkpointMap[deleteType] });
+    for await (const { id, ...data } of deletes) {
+      send(response, { type: deleteType, ids: [id], data });
+    }
+
+    const upsertType = SyncEntityType.AlbumUserMetadataV1;
+    const upserts = this.syncRepository.albumUserMetadata.getUpserts({ ...options, ack: checkpointMap[upsertType] });
     for await (const { updateId, ...data } of upserts) {
       send(response, { type: upsertType, ids: [updateId], data });
     }

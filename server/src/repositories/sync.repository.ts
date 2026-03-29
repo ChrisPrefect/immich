@@ -49,6 +49,7 @@ export class SyncRepository {
   album: AlbumSync;
   albumAsset: AlbumAssetSync;
   albumAssetExif: AlbumAssetExifSync;
+  albumUserMetadata: AlbumUserMetadataSync;
   albumToAsset: AlbumToAssetSync;
   albumUser: AlbumUserSync;
   asset: AssetSync;
@@ -72,6 +73,7 @@ export class SyncRepository {
     this.album = new AlbumSync(this.db);
     this.albumAsset = new AlbumAssetSync(this.db);
     this.albumAssetExif = new AlbumAssetExifSync(this.db);
+    this.albumUserMetadata = new AlbumUserMetadataSync(this.db);
     this.albumToAsset = new AlbumToAssetSync(this.db);
     this.albumUser = new AlbumUserSync(this.db);
     this.asset = new AssetSync(this.db);
@@ -381,6 +383,29 @@ class AlbumUserSync extends BaseSync {
             ),
         ),
       )
+      .stream();
+  }
+}
+
+class AlbumUserMetadataSync extends BaseSync {
+  @GenerateSql({ params: [dummyQueryOptions], stream: true })
+  getDeletes(options: SyncQueryOptions) {
+    return this.auditQuery('album_user_metadata_audit', options)
+      .select(['id', 'albumId', 'userId'])
+      .where('userId', '=', options.userId)
+      .stream();
+  }
+
+  cleanupAuditTable(daysAgo: number) {
+    return this.auditCleanup('album_user_metadata_audit', daysAgo);
+  }
+
+  @GenerateSql({ params: [dummyQueryOptions], stream: true })
+  getUpserts(options: SyncQueryOptions) {
+    return this.upsertQuery('album_user_metadata', options)
+      .select(columns.syncAlbumUserMetadata)
+      .select('album_user_metadata.updateId')
+      .where('userId', '=', options.userId)
       .stream();
   }
 }

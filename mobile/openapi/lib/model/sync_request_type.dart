@@ -25,6 +25,7 @@ class SyncRequestType {
 
   static const albumsV1 = SyncRequestType._(r'AlbumsV1');
   static const albumUsersV1 = SyncRequestType._(r'AlbumUsersV1');
+  static const albumUserMetadataV1 = SyncRequestType._(r'AlbumUserMetadataV1');
   static const albumToAssetsV1 = SyncRequestType._(r'AlbumToAssetsV1');
   static const albumAssetsV1 = SyncRequestType._(r'AlbumAssetsV1');
   static const albumAssetExifsV1 = SyncRequestType._(r'AlbumAssetExifsV1');
@@ -50,6 +51,7 @@ class SyncRequestType {
   static const values = <SyncRequestType>[
     albumsV1,
     albumUsersV1,
+    albumUserMetadataV1,
     albumToAssetsV1,
     albumAssetsV1,
     albumAssetExifsV1,
@@ -110,6 +112,7 @@ class SyncRequestTypeTypeTransformer {
       switch (data) {
         case r'AlbumsV1': return SyncRequestType.albumsV1;
         case r'AlbumUsersV1': return SyncRequestType.albumUsersV1;
+        case r'AlbumUserMetadataV1': return SyncRequestType.albumUserMetadataV1;
         case r'AlbumToAssetsV1': return SyncRequestType.albumToAssetsV1;
         case r'AlbumAssetsV1': return SyncRequestType.albumAssetsV1;
         case r'AlbumAssetExifsV1': return SyncRequestType.albumAssetExifsV1;

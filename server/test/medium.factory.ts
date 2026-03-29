@@ -20,6 +20,7 @@ import {
 } from 'src/enum';
 import { AccessRepository } from 'src/repositories/access.repository';
 import { ActivityRepository } from 'src/repositories/activity.repository';
+import { AlbumUserMetadataRepository } from 'src/repositories/album-user-metadata.repository';
 import { AlbumUserRepository } from 'src/repositories/album-user.repository';
 import { AlbumRepository } from 'src/repositories/album.repository';
 import { AssetEditRepository } from 'src/repositories/asset-edit.repository';
@@ -401,6 +402,7 @@ const newRealRepository = <T>(key: ClassConstructor<T>, db: Kysely<DB>): T => {
   switch (key) {
     case AccessRepository:
     case AlbumRepository:
+    case AlbumUserMetadataRepository:
     case AlbumUserRepository:
     case ActivityRepository:
     case AssetRepository:
@@ -465,6 +467,7 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
   switch (key) {
     case ActivityRepository:
     case AlbumRepository:
+    case AlbumUserMetadataRepository:
     case AssetRepository:
     case AssetJobRepository:
     case ConfigRepository:

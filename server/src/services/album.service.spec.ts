@@ -112,6 +112,23 @@ describe(AlbumService.name, () => {
       expect(mocks.album.getShared).toHaveBeenCalledTimes(1);
     });
 
+    it('includes favorite status in album lists', async () => {
+      const album = AlbumFactory.create();
+      mocks.album.getOwned.mockResolvedValue([{ ...getForAlbum(album), isFavorite: true }]);
+      mocks.album.getMetadataForIds.mockResolvedValue([
+        {
+          albumId: album.id,
+          assetCount: 0,
+          startDate: null,
+          endDate: null,
+          lastModifiedAssetTimestamp: null,
+        },
+      ]);
+
+      const result = await sut.getAll(AuthFactory.create(album.owner), {});
+      expect(result[0].isFavorite).toBe(true);
+    });
+
     it('gets list of albums that are NOT shared', async () => {
       const album = AlbumFactory.create();
       mocks.album.getNotShared.mockResolvedValue([getForAlbum(album)]);
@@ -337,11 +354,41 @@ describe(AlbumService.name, () => {
       mocks.access.album.checkOwnerAccess.mockResolvedValue(new Set([album.id]));
       mocks.album.getById.mockResolvedValue(getForAlbum(album));
       mocks.album.update.mockResolvedValue(getForAlbum(album));
+      mocks.album.getById.mockResolvedValue(getForAlbum(album));
+      mocks.album.getMetadataForIds.mockResolvedValue([
+        {
+          albumId: album.id,
+          assetCount: 0,
+          startDate: null,
+          endDate: null,
+          lastModifiedAssetTimestamp: null,
+        },
+      ]);
 
       await sut.update(AuthFactory.create(album.owner), album.id, { albumName: 'new album name' });
 
       expect(mocks.album.update).toHaveBeenCalledTimes(1);
       expect(mocks.album.update).toHaveBeenCalledWith(album.id, { id: album.id, albumName: 'new album name' });
+    });
+
+    it('should preserve favorite status in the response', async () => {
+      const album = AlbumFactory.create();
+      mocks.access.album.checkOwnerAccess.mockResolvedValue(new Set([album.id]));
+      mocks.album.getById.mockResolvedValue(getForAlbum(album));
+      mocks.album.update.mockResolvedValue(getForAlbum(album));
+      mocks.album.getById.mockResolvedValue({ ...getForAlbum(album), isFavorite: true });
+      mocks.album.getMetadataForIds.mockResolvedValue([
+        {
+          albumId: album.id,
+          assetCount: 0,
+          startDate: null,
+          endDate: null,
+          lastModifiedAssetTimestamp: null,
+        },
+      ]);
+
+      const result = await sut.update(AuthFactory.create(album.owner), album.id, { albumName: 'new album name' });
+      expect(result.isFavorite).toBe(true);
     });
   });
 
@@ -430,7 +477,16 @@ describe(AlbumService.name, () => {
       const user = UserFactory.create();
       mocks.access.album.checkOwnerAccess.mockResolvedValue(new Set([album.id]));
       mocks.album.getById.mockResolvedValue(getForAlbum(album));
-      mocks.album.update.mockResolvedValue(getForAlbum(album));
+      mocks.album.getById.mockResolvedValue(getForAlbum(album));
+      mocks.album.getMetadataForIds.mockResolvedValue([
+        {
+          albumId: album.id,
+          assetCount: 0,
+          startDate: null,
+          endDate: null,
+          lastModifiedAssetTimestamp: null,
+        },
+      ]);
       mocks.user.get.mockResolvedValue(user);
       mocks.albumUser.create.mockResolvedValue(AlbumUserFactory.from().album(album).user(user).build());
 
@@ -468,7 +524,7 @@ describe(AlbumService.name, () => {
 
       expect(mocks.albumUser.delete).toHaveBeenCalledTimes(1);
       expect(mocks.albumUser.delete).toHaveBeenCalledWith({ albumId: album.id, userId });
-      expect(mocks.album.getById).toHaveBeenCalledWith(album.id, { withAssets: false });
+      expect(mocks.album.getById).toHaveBeenCalledWith(album.id, { withAssets: false }, undefined);
     });
 
     it('should prevent removing a shared user from a not-owned album (shared with auth user)', async () => {
@@ -565,8 +621,26 @@ describe(AlbumService.name, () => {
 
       await sut.get(AuthFactory.create(album.owner), album.id, {});
 
-      expect(mocks.album.getById).toHaveBeenCalledWith(album.id, { withAssets: true });
+      expect(mocks.album.getById).toHaveBeenCalledWith(album.id, { withAssets: true }, album.owner.id);
       expect(mocks.access.album.checkOwnerAccess).toHaveBeenCalledWith(album.owner.id, new Set([album.id]));
+    });
+
+    it('should include favorite status for the authenticated user', async () => {
+      const album = AlbumFactory.create();
+      mocks.album.getById.mockResolvedValue({ ...getForAlbum(album), isFavorite: true });
+      mocks.access.album.checkOwnerAccess.mockResolvedValue(new Set([album.id]));
+      mocks.album.getMetadataForIds.mockResolvedValue([
+        {
+          albumId: album.id,
+          assetCount: 1,
+          startDate: new Date('1970-01-01'),
+          endDate: new Date('1970-01-01'),
+          lastModifiedAssetTimestamp: new Date('1970-01-01'),
+        },
+      ]);
+
+      const result = await sut.get(AuthFactory.create(album.owner), album.id, {});
+      expect(result.isFavorite).toBe(true);
     });
 
     it('should get a shared album via a shared link', async () => {
@@ -586,7 +660,7 @@ describe(AlbumService.name, () => {
       const auth = AuthFactory.from().sharedLink().build();
       await sut.get(auth, album.id, {});
 
-      expect(mocks.album.getById).toHaveBeenCalledWith(album.id, { withAssets: true });
+      expect(mocks.album.getById).toHaveBeenCalledWith(album.id, { withAssets: true }, auth.user.id);
       expect(mocks.access.album.checkSharedLinkAccess).toHaveBeenCalledWith(auth.sharedLink!.id, new Set([album.id]));
     });
 
@@ -607,12 +681,32 @@ describe(AlbumService.name, () => {
 
       await sut.get(AuthFactory.create(user), album.id, {});
 
-      expect(mocks.album.getById).toHaveBeenCalledWith(album.id, { withAssets: true });
+      expect(mocks.album.getById).toHaveBeenCalledWith(album.id, { withAssets: true }, user.id);
       expect(mocks.access.album.checkSharedAlbumAccess).toHaveBeenCalledWith(
         user.id,
         new Set([album.id]),
         AlbumUserRole.Viewer,
       );
+    });
+
+    it('should not expose favorite status over shared links', async () => {
+      const album = AlbumFactory.create();
+      mocks.album.getById.mockResolvedValue(getForAlbum(album));
+      mocks.access.album.checkSharedLinkAccess.mockResolvedValue(new Set([album.id]));
+      mocks.album.getMetadataForIds.mockResolvedValue([
+        {
+          albumId: album.id,
+          assetCount: 1,
+          startDate: new Date('1970-01-01'),
+          endDate: new Date('1970-01-01'),
+          lastModifiedAssetTimestamp: new Date('1970-01-01'),
+        },
+      ]);
+
+      const auth = AuthFactory.from().sharedLink().build();
+      const result = await sut.get(auth, album.id, {});
+
+      expect(result.isFavorite).toBe(false);
     });
 
     it('should throw an error for no access', async () => {
@@ -625,6 +719,53 @@ describe(AlbumService.name, () => {
         new Set(['album-123']),
         AlbumUserRole.Viewer,
       );
+    });
+  });
+
+  describe('updateAlbumUserMetadata', () => {
+    it('should update favorite status for an owned album', async () => {
+      const album = AlbumFactory.create();
+      mocks.access.album.checkOwnerAccess.mockResolvedValue(new Set([album.id]));
+      mocks.albumUserMetadata.upsert.mockResolvedValue();
+      mocks.album.getById.mockResolvedValue({ ...getForAlbum(album), isFavorite: true });
+      mocks.album.getMetadataForIds.mockResolvedValue([
+        {
+          albumId: album.id,
+          assetCount: 0,
+          startDate: null,
+          endDate: null,
+          lastModifiedAssetTimestamp: null,
+        },
+      ]);
+
+      const result = await sut.updateAlbumUserMetadata(AuthFactory.create(album.owner), album.id, { isFavorite: true });
+
+      expect(mocks.albumUserMetadata.upsert).toHaveBeenCalledWith({
+        albumId: album.id,
+        userId: album.owner.id,
+        isFavorite: true,
+      });
+      expect(result.isFavorite).toBe(true);
+    });
+
+    it('should allow shared viewers to update favorite status', async () => {
+      const viewer = UserFactory.create();
+      const album = AlbumFactory.from().albumUser({ userId: viewer.id, role: AlbumUserRole.Viewer }).build();
+      mocks.access.album.checkSharedAlbumAccess.mockResolvedValue(new Set([album.id]));
+      mocks.albumUserMetadata.upsert.mockResolvedValue();
+      mocks.album.getById.mockResolvedValue({ ...getForAlbum(album), isFavorite: true });
+      mocks.album.getMetadataForIds.mockResolvedValue([
+        {
+          albumId: album.id,
+          assetCount: 0,
+          startDate: null,
+          endDate: null,
+          lastModifiedAssetTimestamp: null,
+        },
+      ]);
+
+      const result = await sut.updateAlbumUserMetadata(AuthFactory.create(viewer), album.id, { isFavorite: true });
+      expect(result.isFavorite).toBe(true);
     });
   });
 

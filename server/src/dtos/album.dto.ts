@@ -102,6 +102,11 @@ export class UpdateAlbumDto {
   order?: AssetOrder;
 }
 
+export class UpdateAlbumUserMetadataDto {
+  @ValidateBoolean({ description: 'Favorite status' })
+  isFavorite!: boolean;
+}
+
 export class GetAlbumsDto {
   @ValidateBoolean({
     optional: true,
@@ -183,6 +188,8 @@ export class AlbumResponseDto {
   endDate?: string;
   @ApiProperty({ description: 'Activity feed enabled' })
   isActivityEnabled!: boolean;
+  @ApiProperty({ description: 'Is favorite' })
+  isFavorite!: boolean;
   @ValidateEnum({ enum: AssetOrder, name: 'AssetOrder', description: 'Asset sort order', optional: true })
   order?: AssetOrder;
 
@@ -205,6 +212,7 @@ export type MapAlbumDto = {
   ownerId: string;
   owner: ShallowDehydrateObject<User>;
   isActivityEnabled: boolean;
+  isFavorite?: boolean;
   order: AssetOrder;
 };
 
@@ -256,6 +264,7 @@ export const mapAlbum = (
     assets: (withAssets ? assets : []).map((asset) => mapAsset(asset, { auth })),
     assetCount: entity.assets?.length || 0,
     isActivityEnabled: entity.isActivityEnabled,
+    isFavorite: auth?.sharedLink ? false : (entity.isFavorite ?? false),
     order: entity.order,
   };
 };

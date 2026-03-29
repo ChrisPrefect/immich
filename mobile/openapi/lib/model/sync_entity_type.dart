@@ -48,6 +48,8 @@ class SyncEntityType {
   static const albumUserV1 = SyncEntityType._(r'AlbumUserV1');
   static const albumUserBackfillV1 = SyncEntityType._(r'AlbumUserBackfillV1');
   static const albumUserDeleteV1 = SyncEntityType._(r'AlbumUserDeleteV1');
+  static const albumUserMetadataV1 = SyncEntityType._(r'AlbumUserMetadataV1');
+  static const albumUserMetadataDeleteV1 = SyncEntityType._(r'AlbumUserMetadataDeleteV1');
   static const albumAssetCreateV1 = SyncEntityType._(r'AlbumAssetCreateV1');
   static const albumAssetUpdateV1 = SyncEntityType._(r'AlbumAssetUpdateV1');
   static const albumAssetBackfillV1 = SyncEntityType._(r'AlbumAssetBackfillV1');
@@ -101,6 +103,8 @@ class SyncEntityType {
     albumUserV1,
     albumUserBackfillV1,
     albumUserDeleteV1,
+    albumUserMetadataV1,
+    albumUserMetadataDeleteV1,
     albumAssetCreateV1,
     albumAssetUpdateV1,
     albumAssetBackfillV1,
@@ -189,6 +193,8 @@ class SyncEntityTypeTypeTransformer {
         case r'AlbumUserV1': return SyncEntityType.albumUserV1;
         case r'AlbumUserBackfillV1': return SyncEntityType.albumUserBackfillV1;
         case r'AlbumUserDeleteV1': return SyncEntityType.albumUserDeleteV1;
+        case r'AlbumUserMetadataV1': return SyncEntityType.albumUserMetadataV1;
+        case r'AlbumUserMetadataDeleteV1': return SyncEntityType.albumUserMetadataDeleteV1;
         case r'AlbumAssetCreateV1': return SyncEntityType.albumAssetCreateV1;
         case r'AlbumAssetUpdateV1': return SyncEntityType.albumAssetUpdateV1;
         case r'AlbumAssetBackfillV1': return SyncEntityType.albumAssetBackfillV1;

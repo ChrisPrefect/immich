@@ -165,6 +165,19 @@ export const album_user_delete_audit = registerFunction({
     END`,
 });
 
+export const album_user_metadata_audit = registerFunction({
+  name: 'album_user_metadata_audit',
+  returnType: 'TRIGGER',
+  language: 'PLPGSQL',
+  body: `
+    BEGIN
+      INSERT INTO album_user_metadata_audit ("albumId", "userId")
+      SELECT "albumId", "userId"
+      FROM OLD;
+      RETURN NULL;
+    END`,
+});
+
 export const memory_delete_audit = registerFunction({
   name: 'memory_delete_audit',
   returnType: 'TRIGGER',

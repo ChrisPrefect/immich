@@ -14,6 +14,7 @@ import {
   mapAlbumWithoutAssets,
   UpdateAlbumDto,
   UpdateAlbumUserDto,
+  UpdateAlbumUserMetadataDto,
 } from 'src/dtos/album.dto';
 import { BulkIdErrorReason, BulkIdResponseDto, BulkIdsDto } from 'src/dtos/asset-ids.response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
@@ -77,7 +78,7 @@ export class AlbumService extends BaseService {
     await this.requireAccess({ auth, permission: Permission.AlbumRead, ids: [id] });
     await this.albumRepository.updateThumbnails();
     const withAssets = dto.withoutAssets === undefined ? true : !dto.withoutAssets;
-    const album = await this.findOrFail(id, { withAssets });
+    const album = await this.findOrFail(id, { withAssets }, auth.user.id);
     const [albumMetadataForIds] = await this.albumRepository.getMetadataForIds([album.id]);
 
     const hasSharedUsers = album.albumUsers && album.albumUsers.length > 0;
@@ -147,7 +148,7 @@ export class AlbumService extends BaseService {
         throw new BadRequestException('Invalid album thumbnail');
       }
     }
-    const updatedAlbum = await this.albumRepository.update(album.id, {
+    await this.albumRepository.update(album.id, {
       id: album.id,
       albumName: dto.albumName,
       description: dto.description,
@@ -156,7 +157,15 @@ export class AlbumService extends BaseService {
       order: dto.order,
     });
 
-    return mapAlbumWithoutAssets({ ...updatedAlbum, assets: album.assets });
+    return this.get(auth, id, { withoutAssets: true });
+  }
+
+  async updateAlbumUserMetadata(auth: AuthDto, id: string, dto: UpdateAlbumUserMetadataDto): Promise<AlbumResponseDto> {
+    await this.requireAccess({ auth, permission: Permission.AlbumRead, ids: [id] });
+
+    await this.albumUserMetadataRepository.upsert({ albumId: id, userId: auth.user.id, isFavorite: dto.isFavorite });
+
+    return this.get(auth, id, { withoutAssets: true });
   }
 
   async delete(auth: AuthDto, id: string): Promise<void> {
@@ -306,7 +315,7 @@ export class AlbumService extends BaseService {
       await this.eventRepository.emit('AlbumInvite', { id, userId });
     }
 
-    return this.findOrFail(id, { withAssets: true }).then(mapAlbumWithoutAssets);
+    return this.get(auth, id, { withoutAssets: true });
   }
 
   async removeUser(auth: AuthDto, id: string, userId: string | 'me'): Promise<void> {
@@ -338,8 +347,8 @@ export class AlbumService extends BaseService {
     await this.albumUserRepository.update({ albumId: id, userId }, { role: dto.role });
   }
 
-  private async findOrFail(id: string, options: AlbumInfoOptions) {
-    const album = await this.albumRepository.getById(id, options);
+  private async findOrFail(id: string, options: AlbumInfoOptions, userId?: string) {
+    const album = await this.albumRepository.getById(id, options, userId);
     if (!album) {
       throw new BadRequestException('Album not found');
     }

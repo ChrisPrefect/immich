@@ -20,4 +20,14 @@ describe('mapAlbum', () => {
     expect(dto.startDate).toBeUndefined();
     expect(dto.endDate).toBeUndefined();
   });
+
+  it('should default isFavorite to false', () => {
+    const dto = mapAlbum(getForAlbum(AlbumFactory.create()), false);
+    expect(dto.isFavorite).toBe(false);
+  });
+
+  it('should preserve a provided favorite state', () => {
+    const dto = mapAlbum({ ...getForAlbum(AlbumFactory.create()), isFavorite: true }, false);
+    expect(dto.isFavorite).toBe(true);
+  });
 });

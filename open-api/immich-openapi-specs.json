@@ -2221,6 +2221,72 @@
         "x-immich-state": "Stable"
       }
     },
+    "/albums/{id}/user-metadata": {
+      "patch": {
+        "description": "Update metadata for the authenticated user on a specific album.",
+        "operationId": "updateAlbumUserMetadata",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAlbumUserMetadataDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Update album user metadata",
+        "tags": [
+          "Albums"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2.7.0",
+            "state": "Added"
+          },
+          {
+            "version": "v2.7.0",
+            "state": "Beta"
+          }
+        ],
+        "x-immich-permission": "album.read",
+        "x-immich-state": "Beta"
+      }
+    },
     "/albums/{id}/user/{userId}": {
       "delete": {
         "description": "Remove a user from an album. Use an ID of \"me\" to leave a shared album.",
@@ -15670,6 +15736,10 @@
             "description": "Activity feed enabled",
             "type": "boolean"
           },
+          "isFavorite": {
+            "description": "Is favorite",
+            "type": "boolean"
+          },
           "lastModifiedAssetTimestamp": {
             "description": "Last modified asset timestamp",
             "format": "date-time",
@@ -15716,6 +15786,7 @@
           "hasSharedLink",
           "id",
           "isActivityEnabled",
+          "isFavorite",
           "owner",
           "ownerId",
           "shared",
@@ -22745,6 +22816,45 @@
         ],
         "type": "object"
       },
+      "SyncAlbumUserMetadataDeleteV1": {
+        "properties": {
+          "albumId": {
+            "description": "Album ID",
+            "type": "string"
+          },
+          "userId": {
+            "description": "User ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "albumId",
+          "userId"
+        ],
+        "type": "object"
+      },
+      "SyncAlbumUserMetadataV1": {
+        "properties": {
+          "albumId": {
+            "description": "Album ID",
+            "type": "string"
+          },
+          "isFavorite": {
+            "description": "Is favorite",
+            "type": "boolean"
+          },
+          "userId": {
+            "description": "User ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "albumId",
+          "isFavorite",
+          "userId"
+        ],
+        "type": "object"
+      },
       "SyncAlbumUserV1": {
         "properties": {
           "albumId": {
@@ -23451,6 +23561,8 @@
           "AlbumUserV1",
           "AlbumUserBackfillV1",
           "AlbumUserDeleteV1",
+          "AlbumUserMetadataV1",
+          "AlbumUserMetadataDeleteV1",
           "AlbumAssetCreateV1",
           "AlbumAssetUpdateV1",
           "AlbumAssetBackfillV1",
@@ -23726,6 +23838,7 @@
         "enum": [
           "AlbumsV1",
           "AlbumUsersV1",
+          "AlbumUserMetadataV1",
           "AlbumToAssetsV1",
           "AlbumAssetsV1",
           "AlbumAssetExifsV1",
@@ -25404,6 +25517,18 @@
         },
         "required": [
           "role"
+        ],
+        "type": "object"
+      },
+      "UpdateAlbumUserMetadataDto": {
+        "properties": {
+          "isFavorite": {
+            "description": "Favorite status",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "isFavorite"
         ],
         "type": "object"
       },

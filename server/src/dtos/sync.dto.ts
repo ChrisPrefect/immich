@@ -280,6 +280,24 @@ export class SyncAlbumUserV1 {
 }
 
 @ExtraModel()
+export class SyncAlbumUserMetadataDeleteV1 {
+  @ApiProperty({ description: 'Album ID' })
+  albumId!: string;
+  @ApiProperty({ description: 'User ID' })
+  userId!: string;
+}
+
+@ExtraModel()
+export class SyncAlbumUserMetadataV1 {
+  @ApiProperty({ description: 'Album ID' })
+  albumId!: string;
+  @ApiProperty({ description: 'User ID' })
+  userId!: string;
+  @ApiProperty({ description: 'Is favorite' })
+  isFavorite!: boolean;
+}
+
+@ExtraModel()
 export class SyncAlbumV1 {
   @ApiProperty({ description: 'Album ID' })
   id!: string;
@@ -511,6 +529,8 @@ export type SyncItem = {
   [SyncEntityType.AlbumUserV1]: SyncAlbumUserV1;
   [SyncEntityType.AlbumUserBackfillV1]: SyncAlbumUserV1;
   [SyncEntityType.AlbumUserDeleteV1]: SyncAlbumUserDeleteV1;
+  [SyncEntityType.AlbumUserMetadataV1]: SyncAlbumUserMetadataV1;
+  [SyncEntityType.AlbumUserMetadataDeleteV1]: SyncAlbumUserMetadataDeleteV1;
   [SyncEntityType.AlbumAssetCreateV1]: SyncAssetV1;
   [SyncEntityType.AlbumAssetUpdateV1]: SyncAssetV1;
   [SyncEntityType.AlbumAssetBackfillV1]: SyncAssetV1;

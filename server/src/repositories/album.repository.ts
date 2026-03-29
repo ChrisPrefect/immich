@@ -31,6 +31,18 @@ export interface AlbumInfoOptions {
   withAssets: boolean;
 }
 
+const withFavorite = (eb: ExpressionBuilder<DB, 'album'>, userId?: string) => {
+  if (!userId) {
+    return sql<boolean>`false`.as('isFavorite');
+  }
+
+  return sql<boolean>`coalesce(${eb
+    .selectFrom('album_user_metadata')
+    .select('album_user_metadata.isFavorite')
+    .whereRef('album_user_metadata.albumId', '=', 'album.id')
+    .where('album_user_metadata.userId', '=', userId)}, false)`.as('isFavorite');
+};
+
 const withOwner = (eb: ExpressionBuilder<DB, 'album'>) => {
   return jsonObjectFrom(eb.selectFrom('user').select(columns.user).whereRef('user.id', '=', 'album.ownerId'))
     .$notNull()
@@ -84,14 +96,15 @@ const withAssets = (eb: ExpressionBuilder<DB, 'album'>) => {
 export class AlbumRepository {
   constructor(@InjectKysely() private db: Kysely<DB>) {}
 
-  @GenerateSql({ params: [DummyValue.UUID, { withAssets: true }] })
-  async getById(id: string, options: AlbumInfoOptions) {
+  @GenerateSql({ params: [DummyValue.UUID, { withAssets: true }, DummyValue.UUID] })
+  async getById(id: string, options: AlbumInfoOptions, userId?: string) {
     return this.db
       .selectFrom('album')
       .selectAll('album')
       .where('album.id', '=', id)
       .where('album.deletedAt', 'is', null)
       .select(withOwner)
+      .select((eb) => withFavorite(eb, userId))
       .select(withAlbumUsers)
       .select(withSharedLink)
       .$if(options.withAssets, (eb) => eb.select(withAssets))
@@ -119,6 +132,7 @@ export class AlbumRepository {
       .where('album_asset.assetId', '=', assetId)
       .where('album.deletedAt', 'is', null)
       .orderBy('album.createdAt', 'desc')
+      .select((eb) => withFavorite(eb, ownerId))
       .select(withOwner)
       .select(withAlbumUsers)
       .orderBy('album.createdAt', 'desc')
@@ -194,6 +208,7 @@ export class AlbumRepository {
     return this.db
       .selectFrom('album')
       .selectAll('album')
+      .select((eb) => withFavorite(eb, ownerId))
       .select(withOwner)
       .select(withAlbumUsers)
       .select(withSharedLink)
@@ -211,6 +226,7 @@ export class AlbumRepository {
     return this.db
       .selectFrom('album')
       .selectAll('album')
+      .select((eb) => withFavorite(eb, ownerId))
       .where((eb) =>
         eb.or([
           eb.exists(
@@ -243,6 +259,7 @@ export class AlbumRepository {
     return this.db
       .selectFrom('album')
       .selectAll('album')
+      .select((eb) => withFavorite(eb, ownerId))
       .where('album.ownerId', '=', ownerId)
       .where('album.deletedAt', 'is', null)
       .where((eb) => eb.not(eb.exists(eb.selectFrom('album_user').whereRef('album_user.albumId', '=', 'album.id'))))
@@ -318,6 +335,15 @@ export class AlbumRepository {
         throw new Error('Failed to create album');
       }
 
+      await tx
+        .insertInto('album_user_metadata')
+        .values([
+          { albumId: newAlbum.id, userId: album.ownerId, isFavorite: false },
+          ...albumUsers.map((albumUser) => ({ albumId: newAlbum.id, userId: albumUser.userId, isFavorite: false })),
+        ])
+        .onConflict((oc) => oc.columns(['albumId', 'userId']).doNothing())
+        .execute();
+
       if (assetIds.length > 0) {
         await this.addAssets(tx, newAlbum.id, assetIds);
       }
@@ -335,6 +361,7 @@ export class AlbumRepository {
         .selectFrom('album')
         .selectAll('album')
         .where('id', '=', newAlbum.id)
+        .select((eb) => withFavorite(eb, album.ownerId))
         .select(withOwner)
         .select(withAssets)
         .select(withAlbumUsers)

@@ -285,6 +285,35 @@ where
 order by
   "album_asset"."updateId" asc
 
+-- SyncRepository.albumUserMetadata.getDeletes
+select
+  "id",
+  "albumId",
+  "userId"
+from
+  "album_user_metadata_audit" as "album_user_metadata_audit"
+where
+  "album_user_metadata_audit"."id" < $1
+  and "album_user_metadata_audit"."id" > $2
+  and "userId" = $3
+order by
+  "album_user_metadata_audit"."id" asc
+
+-- SyncRepository.albumUserMetadata.getUpserts
+select
+  "album_user_metadata"."albumId" as "albumId",
+  "album_user_metadata"."userId" as "userId",
+  "album_user_metadata"."isFavorite",
+  "album_user_metadata"."updateId"
+from
+  "album_user_metadata" as "album_user_metadata"
+where
+  "album_user_metadata"."updateId" < $1
+  and "album_user_metadata"."updateId" > $2
+  and "userId" = $3
+order by
+  "album_user_metadata"."updateId" asc
+
 -- SyncRepository.albumToAsset.getBackfill
 select
   "album_asset"."assetId" as "assetId",

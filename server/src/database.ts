@@ -403,6 +403,11 @@ export const columns = {
     'asset.isEdited',
   ],
   syncAlbumUser: ['album_user.albumId as albumId', 'album_user.userId as userId', 'album_user.role'],
+  syncAlbumUserMetadata: [
+    'album_user_metadata.albumId as albumId',
+    'album_user_metadata.userId as userId',
+    'album_user_metadata.isFavorite',
+  ],
   syncStack: ['stack.id', 'stack.createdAt', 'stack.updatedAt', 'stack.primaryAssetId', 'stack.ownerId'],
   syncUser: ['id', 'name', 'email', 'avatarColor', 'deletedAt', 'updateId', 'profileImagePath', 'profileChangedAt'],
   stack: ['stack.id', 'stack.primaryAssetId', 'ownerId'],

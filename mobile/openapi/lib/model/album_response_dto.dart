@@ -25,6 +25,7 @@ class AlbumResponseDto {
     required this.hasSharedLink,
     required this.id,
     required this.isActivityEnabled,
+    required this.isFavorite,
     this.lastModifiedAssetTimestamp,
     this.order,
     required this.owner,
@@ -72,6 +73,9 @@ class AlbumResponseDto {
 
   /// Activity feed enabled
   bool isActivityEnabled;
+
+  /// Is favorite
+  bool isFavorite;
 
   /// Last modified asset timestamp
   ///
@@ -125,6 +129,7 @@ class AlbumResponseDto {
     other.hasSharedLink == hasSharedLink &&
     other.id == id &&
     other.isActivityEnabled == isActivityEnabled &&
+    other.isFavorite == isFavorite &&
     other.lastModifiedAssetTimestamp == lastModifiedAssetTimestamp &&
     other.order == order &&
     other.owner == owner &&
@@ -148,6 +153,7 @@ class AlbumResponseDto {
     (hasSharedLink.hashCode) +
     (id.hashCode) +
     (isActivityEnabled.hashCode) +
+    (isFavorite.hashCode) +
     (lastModifiedAssetTimestamp == null ? 0 : lastModifiedAssetTimestamp!.hashCode) +
     (order == null ? 0 : order!.hashCode) +
     (owner.hashCode) +
@@ -157,7 +163,7 @@ class AlbumResponseDto {
     (updatedAt.hashCode);
 
   @override
-  String toString() => 'AlbumResponseDto[albumName=$albumName, albumThumbnailAssetId=$albumThumbnailAssetId, albumUsers=$albumUsers, assetCount=$assetCount, assets=$assets, contributorCounts=$contributorCounts, createdAt=$createdAt, description=$description, endDate=$endDate, hasSharedLink=$hasSharedLink, id=$id, isActivityEnabled=$isActivityEnabled, lastModifiedAssetTimestamp=$lastModifiedAssetTimestamp, order=$order, owner=$owner, ownerId=$ownerId, shared=$shared, startDate=$startDate, updatedAt=$updatedAt]';
+  String toString() => 'AlbumResponseDto[albumName=$albumName, albumThumbnailAssetId=$albumThumbnailAssetId, albumUsers=$albumUsers, assetCount=$assetCount, assets=$assets, contributorCounts=$contributorCounts, createdAt=$createdAt, description=$description, endDate=$endDate, hasSharedLink=$hasSharedLink, id=$id, isActivityEnabled=$isActivityEnabled, isFavorite=$isFavorite, lastModifiedAssetTimestamp=$lastModifiedAssetTimestamp, order=$order, owner=$owner, ownerId=$ownerId, shared=$shared, startDate=$startDate, updatedAt=$updatedAt]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -181,6 +187,7 @@ class AlbumResponseDto {
       json[r'hasSharedLink'] = this.hasSharedLink;
       json[r'id'] = this.id;
       json[r'isActivityEnabled'] = this.isActivityEnabled;
+      json[r'isFavorite'] = this.isFavorite;
     if (this.lastModifiedAssetTimestamp != null) {
       json[r'lastModifiedAssetTimestamp'] = this.lastModifiedAssetTimestamp!.toUtc().toIso8601String();
     } else {
@@ -224,6 +231,7 @@ class AlbumResponseDto {
         hasSharedLink: mapValueOfType<bool>(json, r'hasSharedLink')!,
         id: mapValueOfType<String>(json, r'id')!,
         isActivityEnabled: mapValueOfType<bool>(json, r'isActivityEnabled')!,
+        isFavorite: mapValueOfType<bool>(json, r'isFavorite')!,
         lastModifiedAssetTimestamp: mapDateTime(json, r'lastModifiedAssetTimestamp', r''),
         order: AssetOrder.fromJson(json[r'order']),
         owner: UserResponseDto.fromJson(json[r'owner'])!,
@@ -288,6 +296,7 @@ class AlbumResponseDto {
     'hasSharedLink',
     'id',
     'isActivityEnabled',
+    'isFavorite',
     'owner',
     'ownerId',
     'shared',

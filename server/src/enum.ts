@@ -723,6 +723,7 @@ export enum ExitCode {
 export enum SyncRequestType {
   AlbumsV1 = 'AlbumsV1',
   AlbumUsersV1 = 'AlbumUsersV1',
+  AlbumUserMetadataV1 = 'AlbumUserMetadataV1',
   AlbumToAssetsV1 = 'AlbumToAssetsV1',
   AlbumAssetsV1 = 'AlbumAssetsV1',
   AlbumAssetExifsV1 = 'AlbumAssetExifsV1',
@@ -777,6 +778,8 @@ export enum SyncEntityType {
   AlbumUserV1 = 'AlbumUserV1',
   AlbumUserBackfillV1 = 'AlbumUserBackfillV1',
   AlbumUserDeleteV1 = 'AlbumUserDeleteV1',
+  AlbumUserMetadataV1 = 'AlbumUserMetadataV1',
+  AlbumUserMetadataDeleteV1 = 'AlbumUserMetadataDeleteV1',
 
   AlbumAssetCreateV1 = 'AlbumAssetCreateV1',
   AlbumAssetUpdateV1 = 'AlbumAssetUpdateV1',

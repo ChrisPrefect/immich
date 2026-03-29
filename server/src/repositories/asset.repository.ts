@@ -380,7 +380,11 @@ export class AssetRepository {
     return this.db.insertInto('asset').values(asset).returningAll().executeTakeFirstOrThrow();
   }
 
-  createWithMetadata(asset: Insertable<AssetTable> & { id: string }, size: number, metadata?: Omit<Insertable<AssetMetadataTable>, 'assetId'>[]) {
+  createWithMetadata(
+    asset: Insertable<AssetTable> & { id: string },
+    size: number,
+    metadata?: Omit<Insertable<AssetMetadataTable>, 'assetId'>[],
+  ) {
     let query = this.db;
     if (asset.livePhotoVideoId) {
       (query as any) = query.with('motion_asset', (qb) =>

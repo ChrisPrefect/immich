@@ -49,6 +49,58 @@ returning
   "dateTimeOriginal",
   "timeZone"
 
+-- AssetRepository.unlockProperties
+update "asset_exif"
+set
+  "lockedProperties" = nullif(
+    array(
+      select distinct
+        property
+      from
+        unnest("asset_exif"."lockedProperties") property
+      where
+        not property = any ($1)
+    ),
+    '{}'
+  )
+where
+  "assetId" = $2
+
+-- AssetRepository.getMetadata
+select
+  "key",
+  "value",
+  "updatedAt"
+from
+  "asset_metadata"
+where
+  "assetId" = $1
+
+-- AssetRepository.getMetadataByKey
+select
+  "key",
+  "value",
+  "updatedAt"
+from
+  "asset_metadata"
+where
+  "assetId" = $1
+  and "key" = $2
+
+-- AssetRepository.deleteMetadataByKey
+delete from "asset_metadata"
+where
+  "assetId" = $1
+  and "key" = $2
+
+-- AssetRepository.deleteBulkMetadata
+begin
+delete from "asset_metadata"
+where
+  "assetId" = $1
+  and "key" = $2
+commit
+
 -- AssetRepository.getCompletionMetadata
 select
   "originalPath" as "path",
@@ -110,58 +162,6 @@ from
   "asset"
 where
   "user"."id" = "asset"."ownerId"
-
--- AssetRepository.unlockProperties
-update "asset_exif"
-set
-  "lockedProperties" = nullif(
-    array(
-      select distinct
-        property
-      from
-        unnest("asset_exif"."lockedProperties") property
-      where
-        not property = any ($1)
-    ),
-    '{}'
-  )
-where
-  "assetId" = $2
-
--- AssetRepository.getMetadata
-select
-  "key",
-  "value",
-  "updatedAt"
-from
-  "asset_metadata"
-where
-  "assetId" = $1
-
--- AssetRepository.getMetadataByKey
-select
-  "key",
-  "value",
-  "updatedAt"
-from
-  "asset_metadata"
-where
-  "assetId" = $1
-  and "key" = $2
-
--- AssetRepository.deleteMetadataByKey
-delete from "asset_metadata"
-where
-  "assetId" = $1
-  and "key" = $2
-
--- AssetRepository.deleteBulkMetadata
-begin
-delete from "asset_metadata"
-where
-  "assetId" = $1
-  and "key" = $2
-commit
 
 -- AssetRepository.getByDayOfYear
 with

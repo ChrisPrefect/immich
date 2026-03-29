@@ -719,6 +719,7 @@ where
       "assetId" = "asset"."id"
       and "asset_file"."type" = $2
   )
+  and "asset"."status" != 'partial'
 order by
   "asset"."fileCreatedAt" desc
 

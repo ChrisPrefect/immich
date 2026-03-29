@@ -24,9 +24,8 @@ export class OAuthRepository {
   }
 
   async authorize(config: OAuthConfig, redirectUrl: string, state?: string, codeChallenge?: string) {
-    const { buildAuthorizationUrl, randomState, randomPKCECodeVerifier, calculatePKCECodeChallenge } = await import(
-      'openid-client'
-    );
+    const { buildAuthorizationUrl, randomState, randomPKCECodeVerifier, calculatePKCECodeChallenge } =
+      await import('openid-client');
     const client = await this.getClient(config);
     state ??= randomState();
 
@@ -71,7 +70,16 @@ export class OAuthRepository {
 
     try {
       const tokens = await authorizationCodeGrant(client, new URL(url), { expectedState, pkceCodeVerifier });
-      const profile = await fetchUserInfo(client, tokens.access_token, oidc.skipSubjectCheck);
+
+      let profile: OAuthProfile;
+      const tokenClaims = tokens.claims();
+      if (tokenClaims && 'email' in tokenClaims) {
+        this.logger.debug('Using ID token claims instead of userinfo endpoint');
+        profile = tokenClaims as OAuthProfile;
+      } else {
+        profile = await fetchUserInfo(client, tokens.access_token, oidc.skipSubjectCheck);
+      }
+
       if (!profile.sub) {
         throw new Error('Unexpected profile response, no `sub`');
       }

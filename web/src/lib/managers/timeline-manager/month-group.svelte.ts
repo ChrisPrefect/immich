@@ -17,16 +17,20 @@ import {
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 
+import {
+  ViewportProximity,
+  isInOrNearViewport as isInOrNearViewportUtil,
+  isInViewport as isInViewportUtil,
+} from '$lib/managers/timeline-manager/internal/intersection-support.svelte';
 import { SvelteSet } from 'svelte/reactivity';
 import { DayGroup } from './day-group.svelte';
 import { GroupInsertionCache } from './group-insertion-cache.svelte';
 import type { TimelineManager } from './timeline-manager.svelte';
-import type { AssetDescriptor, AssetOperation, Direction, MoveAsset, TimelineAsset } from './types';
+import type { AssetDescriptor, Direction, MoveAsset, TimelineAsset } from './types';
 import { ViewerAsset } from './viewer-asset.svelte';
 
 export class MonthGroup {
-  #intersecting: boolean = $state(false);
-  actuallyIntersecting: boolean = $state(false);
+  #viewportProximity: ViewportProximity = $state(ViewportProximity.FarFromViewport);
   isLoaded: boolean = $state(false);
   dayGroups: DayGroup[] = $state([]);
   readonly timelineManager: TimelineManager;
@@ -50,16 +54,17 @@ export class MonthGroup {
   readonly yearMonth: TimelineYearMonth;
 
   constructor(
-    store: TimelineManager,
+    timelineManager: TimelineManager,
     yearMonth: TimelineYearMonth,
     initialCount: number,
+    loaded: boolean,
     order: AssetOrder = AssetOrder.Desc,
   ) {
-    this.timelineManager = store;
+    this.timelineManager = timelineManager;
     this.#initialCount = initialCount;
     this.#sortOrder = order;
 
-    this.yearMonth = yearMonth;
+    this.yearMonth = { year: yearMonth.year, month: yearMonth.month };
     this.monthGroupTitle = formatMonthGroupTitle(fromTimelinePlainYearMonth(yearMonth));
 
     this.loader = new CancellableTask(
@@ -72,23 +77,30 @@ export class MonthGroup {
       },
       this.#handleLoadError,
     );
+    if (loaded) {
+      this.isLoaded = true;
+    }
   }
 
-  set intersecting(newValue: boolean) {
-    const old = this.#intersecting;
+  set viewportProximity(newValue: ViewportProximity) {
+    const old = this.#viewportProximity;
     if (old === newValue) {
       return;
     }
-    this.#intersecting = newValue;
-    if (newValue) {
+    this.#viewportProximity = newValue;
+    if (isInOrNearViewportUtil(newValue)) {
       void this.timelineManager.loadMonthGroup(this.yearMonth);
     } else {
       this.cancel();
     }
   }
 
-  get intersecting() {
-    return this.#intersecting;
+  get isInOrNearViewport() {
+    return isInOrNearViewportUtil(this.#viewportProximity);
+  }
+
+  get isInViewport() {
+    return isInViewportUtil(this.#viewportProximity);
   }
 
   get lastDayGroup() {
@@ -112,7 +124,7 @@ export class MonthGroup {
     return this.dayGroups.sort((a, b) => b.day - a.day);
   }
 
-  runAssetOperation(ids: Set<string>, operation: AssetOperation) {
+  runAssetCallback(ids: Set<string>, callback: (asset: TimelineAsset) => void | { remove?: boolean }) {
     if (ids.size === 0) {
       return {
         moveAssets: [] as MoveAsset[],
@@ -130,7 +142,7 @@ export class MonthGroup {
     while (index--) {
       if (idsToProcess.size > 0) {
         const group = dayGroups[index];
-        const { moveAssets, processedIds, changedGeometry } = group.runAssetOperation(ids, operation);
+        const { moveAssets, processedIds, changedGeometry } = group.runAssetCallback(ids, callback);
         if (moveAssets.length > 0) {
           combinedMoveAssets.push(moveAssets);
         }
@@ -153,7 +165,7 @@ export class MonthGroup {
     };
   }
 
-  addAssets(bucketAssets: TimeBucketAssetResponseDto) {
+  addAssets(bucketAssets: TimeBucketAssetResponseDto, preSorted: boolean) {
     const addContext = new GroupInsertionCache();
     for (let i = 0; i < bucketAssets.id.length; i++) {
       const { localDateTime, fileCreatedAt } = getTimes(
@@ -192,7 +204,15 @@ export class MonthGroup {
         timelineAsset.latitude = bucketAssets.latitude?.[i];
         timelineAsset.longitude = bucketAssets.longitude?.[i];
       }
+
+      if (this.timelineManager.isExcluded(timelineAsset)) {
+        continue;
+      }
+
       this.addTimelineAsset(timelineAsset, addContext);
+    }
+    if (preSorted) {
+      return addContext.unprocessedAssets;
     }
 
     for (const group of addContext.existingDayGroups) {

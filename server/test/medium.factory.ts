@@ -3,13 +3,16 @@ import { Insertable, Kysely } from 'kysely';
 import { DateTime } from 'luxon';
 import { createHash, randomBytes } from 'node:crypto';
 import { Stats } from 'node:fs';
+import { resolve } from 'node:path';
 import { Writable } from 'node:stream';
 import { AssetFace } from 'src/database';
 import { AuthDto, LoginResponseDto } from 'src/dtos/auth.dto';
+import { AssetEditActionItem, AssetEditsCreateDto } from 'src/dtos/editing.dto';
 import {
   AlbumUserRole,
   AssetType,
   AssetVisibility,
+  ChecksumAlgorithm,
   MemoryType,
   SourceType,
   SyncEntityType,
@@ -19,6 +22,7 @@ import { AccessRepository } from 'src/repositories/access.repository';
 import { ActivityRepository } from 'src/repositories/activity.repository';
 import { AlbumUserRepository } from 'src/repositories/album-user.repository';
 import { AlbumRepository } from 'src/repositories/album.repository';
+import { AssetEditRepository } from 'src/repositories/asset-edit.repository';
 import { AssetJobRepository } from 'src/repositories/asset-job.repository';
 import { AssetRepository } from 'src/repositories/asset.repository';
 import { ConfigRepository } from 'src/repositories/config.repository';
@@ -36,6 +40,7 @@ import { NotificationRepository } from 'src/repositories/notification.repository
 import { OcrRepository } from 'src/repositories/ocr.repository';
 import { PartnerRepository } from 'src/repositories/partner.repository';
 import { PersonRepository } from 'src/repositories/person.repository';
+import { PluginRepository } from 'src/repositories/plugin.repository';
 import { SearchRepository } from 'src/repositories/search.repository';
 import { SessionRepository } from 'src/repositories/session.repository';
 import { SharedLinkAssetRepository } from 'src/repositories/shared-link-asset.repository';
@@ -49,11 +54,13 @@ import { TagRepository } from 'src/repositories/tag.repository';
 import { TelemetryRepository } from 'src/repositories/telemetry.repository';
 import { UserRepository } from 'src/repositories/user.repository';
 import { VersionHistoryRepository } from 'src/repositories/version-history.repository';
+import { WorkflowRepository } from 'src/repositories/workflow.repository';
 import { DB } from 'src/schema';
 import { AlbumTable } from 'src/schema/tables/album.table';
 import { AssetExifTable } from 'src/schema/tables/asset-exif.table';
 import { AssetFileTable } from 'src/schema/tables/asset-file.table';
 import { AssetJobStatusTable } from 'src/schema/tables/asset-job-status.table';
+import { AssetMetadataTable } from 'src/schema/tables/asset-metadata.table';
 import { AssetTable } from 'src/schema/tables/asset.table';
 import { FaceSearchTable } from 'src/schema/tables/face-search.table';
 import { MemoryTable } from 'src/schema/tables/memory.table';
@@ -66,11 +73,15 @@ import { UserTable } from 'src/schema/tables/user.table';
 import { BASE_SERVICE_DEPENDENCIES, BaseService } from 'src/services/base.service';
 import { MetadataService } from 'src/services/metadata.service';
 import { SyncService } from 'src/services/sync.service';
+import { UploadFile } from 'src/types';
 import { mockEnvData } from 'test/repositories/config.repository.mock';
 import { newTelemetryRepositoryMock } from 'test/repositories/telemetry.repository.mock';
 import { factory, newDate, newEmbedding, newUuid } from 'test/small.factory';
 import { automock, wait } from 'test/utils';
 import { Mocked } from 'vitest';
+
+// eslint-disable-next-line unicorn/prefer-module
+export const testAssetsDir = resolve(__dirname, '../../e2e/test-assets');
 
 interface ClassConstructor<T = any> extends Function {
   new (...args: any[]): T;
@@ -177,6 +188,12 @@ export class MediumTestContext<S extends BaseService = BaseService> {
     return { asset, result };
   }
 
+  async newMetadata(dto: Insertable<AssetMetadataTable>) {
+    const { assetId, ...item } = dto;
+    const result = await this.get(AssetRepository).upsertMetadata(assetId, [item]);
+    return { metadata: dto, result };
+  }
+
   async newAssetFile(dto: Insertable<AssetFileTable>) {
     const result = await this.get(AssetRepository).upsertFile(dto);
     return { result };
@@ -200,13 +217,13 @@ export class MediumTestContext<S extends BaseService = BaseService> {
   }
 
   async newExif(dto: Insertable<AssetExifTable>) {
-    const result = await this.get(AssetRepository).upsertExif(dto);
+    const result = await this.get(AssetRepository).upsertExif(dto, { lockedPropertiesBehavior: 'override' });
     return { result };
   }
 
-  async newAlbum(dto: Insertable<AlbumTable>) {
+  async newAlbum(dto: Insertable<AlbumTable>, assetIds?: string[]) {
     const album = mediumFactory.albumInsert(dto);
-    const result = await this.get(AlbumRepository).create(album, [], []);
+    const result = await this.get(AlbumRepository).create(album, assetIds ?? [], []);
     return { album, result };
   }
 
@@ -219,6 +236,14 @@ export class MediumTestContext<S extends BaseService = BaseService> {
     const { albumId, userId, role = AlbumUserRole.Editor } = dto;
     const result = await this.get(AlbumUserRepository).create({ albumId, userId, role });
     return { albumUser: { albumId, userId, role }, result };
+  }
+
+  async softDeleteAsset(assetId: string) {
+    await this.database.updateTable('asset').set({ deletedAt: new Date() }).where('id', '=', assetId).execute();
+  }
+
+  async softDeleteAlbum(albumId: string) {
+    await this.database.updateTable('album').set({ deletedAt: new Date() }).where('id', '=', albumId).execute();
   }
 
   async newJobStatus(dto: Partial<Insertable<AssetJobStatusTable>> & { assetId: string }) {
@@ -268,6 +293,11 @@ export class MediumTestContext<S extends BaseService = BaseService> {
 
     const result = await this.get(TagRepository).upsertAssetIds(tagsAssets);
     return { tagsAssets, result };
+  }
+
+  async newEdits(assetId: string, dto: AssetEditsCreateDto) {
+    const edits = await this.get(AssetEditRepository).replaceAll(assetId, dto.edits as AssetEditActionItem[]);
+    return { edits };
   }
 }
 
@@ -374,12 +404,14 @@ const newRealRepository = <T>(key: ClassConstructor<T>, db: Kysely<DB>): T => {
     case AlbumUserRepository:
     case ActivityRepository:
     case AssetRepository:
+    case AssetEditRepository:
     case AssetJobRepository:
     case MemoryRepository:
     case NotificationRepository:
     case OcrRepository:
     case PartnerRepository:
     case PersonRepository:
+    case PluginRepository:
     case SearchRepository:
     case SessionRepository:
     case SharedLinkRepository:
@@ -389,7 +421,8 @@ const newRealRepository = <T>(key: ClassConstructor<T>, db: Kysely<DB>): T => {
     case SyncCheckpointRepository:
     case SystemMetadataRepository:
     case UserRepository:
-    case VersionHistoryRepository: {
+    case VersionHistoryRepository:
+    case WorkflowRepository: {
       return new key(db);
     }
 
@@ -441,13 +474,15 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
     case OcrRepository:
     case PartnerRepository:
     case PersonRepository:
+    case PluginRepository:
     case SessionRepository:
     case SyncRepository:
     case SyncCheckpointRepository:
     case SystemMetadataRepository:
     case UserRepository:
     case VersionHistoryRepository:
-    case TagRepository: {
+    case TagRepository:
+    case WorkflowRepository: {
       return automock(key);
     }
 
@@ -513,6 +548,7 @@ const assetInsert = (asset: Partial<Insertable<AssetTable>> = {}) => {
     deviceId: '',
     originalFileName: '',
     checksum: randomBytes(32),
+    checksumAlgorithm: ChecksumAlgorithm.sha1File,
     type: AssetType.Image,
     originalPath: '/path/to/something.jpg',
     ownerId: 'not-a-valid-uuid',
@@ -521,6 +557,7 @@ const assetInsert = (asset: Partial<Insertable<AssetTable>> = {}) => {
     fileModifiedAt: now,
     localDateTime: now,
     visibility: AssetVisibility.Timeline,
+    isEdited: false,
   };
 
   return {
@@ -567,6 +604,7 @@ const assetFaceInsert = (assetFace: Partial<AssetFace> & { assetId: string }) =>
     imageWidth: assetFace.imageWidth ?? 10,
     personId: assetFace.personId ?? null,
     sourceType: assetFace.sourceType ?? SourceType.MachineLearning,
+    isVisible: assetFace.isVisible ?? true,
   };
 
   return {
@@ -583,8 +621,6 @@ const assetJobStatusInsert = (
     duplicatesDetectedAt: date,
     facesRecognizedAt: date,
     metadataExtractedAt: date,
-    previewAt: date,
-    thumbnailAt: date,
   };
 
   return {
@@ -612,7 +648,7 @@ const personInsert = (person: Partial<Insertable<PersonTable>> & { ownerId: stri
   };
 };
 
-const sha256 = (value: string) => createHash('sha256').update(value).digest('base64');
+const sha256 = (value: string) => createHash('sha256').update(value).digest();
 
 const sessionInsert = ({
   id = newUuid(),
@@ -733,6 +769,17 @@ const loginResponse = (): LoginResponseDto => {
   };
 };
 
+const uploadFile = (file: Partial<UploadFile> = {}) => {
+  return {
+    uuid: newUuid(),
+    checksum: randomBytes(32),
+    originalPath: '/path/to/file.jpg',
+    originalName: 'file.jpg',
+    size: 123_456,
+    ...file,
+  };
+};
+
 export const mediumFactory = {
   assetInsert,
   assetFaceInsert,
@@ -747,4 +794,5 @@ export const mediumFactory = {
   loginDetails,
   loginResponse,
   tagInsert,
+  uploadFile,
 };

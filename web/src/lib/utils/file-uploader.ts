@@ -1,10 +1,10 @@
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { uploadManager } from '$lib/managers/upload-manager.svelte';
-import { UploadState } from '$lib/models/upload-asset';
+import { addAssetsToAlbums } from '$lib/services/album.service';
 import { uploadAssetsStore } from '$lib/stores/upload';
 import { user } from '$lib/stores/user.store';
+import { UploadState } from '$lib/types';
 import { uploadRequest } from '$lib/utils';
-import { addAssetsToAlbum } from '$lib/utils/asset-utils';
 import { ExecutorQueue } from '$lib/utils/executor-queue';
 import { asQueryString } from '$lib/utils/shared-links';
 import {
@@ -12,10 +12,10 @@ import {
   AssetMediaStatus,
   AssetVisibility,
   checkBulkUpload,
-  getAssetOriginalPath,
   getBaseUrl,
   type AssetMediaResponseDto,
 } from '@immich/sdk';
+import { toastManager } from '@immich/ui';
 import { tick } from 'svelte';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
@@ -44,21 +44,23 @@ export const addDummyItems = () => {
 
 export const uploadExecutionQueue = new ExecutorQueue({ concurrency: 2 });
 
-type FileUploadParam = { multiple?: boolean } & (
-  | { albumId?: string; assetId?: never }
-  | { albumId?: never; assetId?: string }
-);
-export const openFileUploadDialog = async (options: FileUploadParam = {}) => {
-  const { albumId, multiple = true, assetId } = options;
-  const extensions = uploadManager.getExtensions();
+type FilePickerParam = { multiple?: boolean; extensions?: string[] };
+type FileUploadParam = { multiple?: boolean; albumId?: string };
 
-  return new Promise<string[]>((resolve, reject) => {
+export const openFilePicker = async (options: FilePickerParam = {}) => {
+  const { multiple = true, extensions } = options;
+
+  return new Promise<File[]>((resolve, reject) => {
     try {
       const fileSelector = document.createElement('input');
 
       fileSelector.type = 'file';
       fileSelector.multiple = multiple;
-      fileSelector.accept = extensions.join(',');
+
+      if (extensions) {
+        fileSelector.accept = extensions.join(',');
+      }
+
       fileSelector.addEventListener(
         'change',
         (e: Event) => {
@@ -66,9 +68,9 @@ export const openFileUploadDialog = async (options: FileUploadParam = {}) => {
           if (!target.files) {
             return;
           }
-          const files = Array.from(target.files);
 
-          resolve(fileUploadHandler({ files, albumId, replaceAssetId: assetId }));
+          const files = Array.from(target.files);
+          resolve(files);
         },
         { passive: true },
       );
@@ -81,6 +83,17 @@ export const openFileUploadDialog = async (options: FileUploadParam = {}) => {
   });
 };
 
+export const openFileUploadDialog = async (options: FileUploadParam = {}) => {
+  const { albumId, multiple = true } = options;
+  const extensions = uploadManager.getExtensions();
+  const files = await openFilePicker({
+    multiple,
+    extensions,
+  });
+
+  return fileUploadHandler({ files, albumId });
+};
+
 type FileUploadHandlerParams = Omit<FileUploaderParams, 'deviceAssetId' | 'assetFile'> & {
   files: File[];
 };
@@ -88,7 +101,6 @@ type FileUploadHandlerParams = Omit<FileUploaderParams, 'deviceAssetId' | 'asset
 export const fileUploadHandler = async ({
   files,
   albumId,
-  replaceAssetId,
   isLockedAssets = false,
 }: FileUploadHandlerParams): Promise<string[]> => {
   const extensions = uploadManager.getExtensions();
@@ -99,10 +111,12 @@ export const fileUploadHandler = async ({
       const deviceAssetId = getDeviceAssetId(file);
       uploadAssetsStore.addItem({ id: deviceAssetId, file, albumId });
       promises.push(
-        uploadExecutionQueue.addTask(() =>
-          fileUploader({ assetFile: file, deviceAssetId, albumId, replaceAssetId, isLockedAssets }),
-        ),
+        uploadExecutionQueue.addTask(() => fileUploader({ assetFile: file, deviceAssetId, albumId, isLockedAssets })),
       );
+    } else {
+      toastManager.warning(get(t)('unsupported_file_type', { values: { file: file.name, type: file.type } }), {
+        timeout: 10_000,
+      });
     }
   }
 
@@ -127,11 +141,11 @@ async function fileUploader({
   assetFile,
   deviceAssetId,
   albumId,
-  replaceAssetId,
   isLockedAssets = false,
 }: FileUploaderParams): Promise<string | undefined> {
   const fileCreatedAt = new Date(assetFile.lastModified).toISOString();
   const $t = get(t);
+  const wasInitiallyLoggedIn = !!get(user);
 
   uploadAssetsStore.markStarted(deviceAssetId);
 
@@ -183,27 +197,17 @@ async function fileUploader({
       const queryParams = asQueryString(authManager.params);
 
       uploadAssetsStore.updateItem(deviceAssetId, { message: $t('asset_uploading') });
-      if (replaceAssetId) {
-        const response = await uploadRequest<AssetMediaResponseDto>({
-          url: getBaseUrl() + getAssetOriginalPath(replaceAssetId) + (queryParams ? `?${queryParams}` : ''),
-          method: 'PUT',
-          data: formData,
-          onUploadProgress: (event) => uploadAssetsStore.updateProgress(deviceAssetId, event.loaded, event.total),
-        });
-        responseData = response.data;
-      } else {
-        const response = await uploadRequest<AssetMediaResponseDto>({
-          url: getBaseUrl() + '/assets' + (queryParams ? `?${queryParams}` : ''),
-          data: formData,
-          onUploadProgress: (event) => uploadAssetsStore.updateProgress(deviceAssetId, event.loaded, event.total),
-        });
+      const response = await uploadRequest<AssetMediaResponseDto>({
+        url: getBaseUrl() + '/assets' + (queryParams ? `?${queryParams}` : ''),
+        data: formData,
+        onUploadProgress: (event) => uploadAssetsStore.updateProgress(deviceAssetId, event.loaded, event.total),
+      });
 
-        if (![200, 201].includes(response.status)) {
-          throw new Error($t('errors.unable_to_upload_file'));
-        }
-
-        responseData = response.data;
+      if (![200, 201].includes(response.status)) {
+        throw new Error($t('errors.unable_to_upload_file'));
       }
+
+      responseData = response.data;
     }
 
     if (responseData.status === AssetMediaStatus.Duplicate) {
@@ -212,9 +216,9 @@ async function fileUploader({
       uploadAssetsStore.track('success');
     }
 
-    if (albumId) {
+    if (albumId && !authManager.isSharedLink) {
       uploadAssetsStore.updateItem(deviceAssetId, { message: $t('asset_adding_to_album') });
-      await addAssetsToAlbum(albumId, [responseData.id], false);
+      await addAssetsToAlbums([albumId], [responseData.id], { notify: false });
       uploadAssetsStore.updateItem(deviceAssetId, { message: $t('asset_added_to_album') });
     }
 
@@ -232,8 +236,9 @@ async function fileUploader({
 
     return responseData.id;
   } catch (error) {
-    // ignore errors if the user logs out during uploads
-    if (!get(user)) {
+    // If the user store no longer holds a user, it means they have logged out
+    // In this case don't bother reporting any errors.
+    if (wasInitiallyLoggedIn && !get(user)) {
       return;
     }
 

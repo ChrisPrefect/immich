@@ -2,7 +2,6 @@
   import UserPageLayout from '$lib/components/layouts/user-page-layout.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/button-context-menu.svelte';
   import EmptyPlaceholder from '$lib/components/shared-components/empty-placeholder.svelte';
-  import AddToAlbum from '$lib/components/timeline/actions/AddToAlbumAction.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
@@ -16,11 +15,12 @@
   import TagAction from '$lib/components/timeline/actions/TagAction.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
-  import { AssetAction } from '$lib/constants';
+  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import { AssetInteraction } from '$lib/stores/asset-interaction.svelte';
+  import { getAssetBulkActions } from '$lib/services/asset.service';
   import { preferences } from '$lib/stores/user.store';
-  import { mdiDotsVertical, mdiPlus } from '@mdi/js';
+  import { ActionButton, CommandPaletteDefaultProvider } from '@immich/ui';
+  import { mdiDotsVertical } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -33,50 +33,43 @@
   let timelineManager = $state<TimelineManager>() as TimelineManager;
   const options = { isFavorite: true, withStacked: true };
 
-  const assetInteraction = new AssetInteraction();
-
   const handleEscape = () => {
-    if (assetInteraction.selectionActive) {
-      assetInteraction.clearMultiselect();
+    if (assetMultiSelectManager.selectionActive) {
+      assetMultiSelectManager.clear();
       return;
     }
   };
 
   const handleSetVisibility = (assetIds: string[]) => {
     timelineManager.removeAssets(assetIds);
-    assetInteraction.clearMultiselect();
+    assetMultiSelectManager.clear();
   };
 </script>
 
-<UserPageLayout hideNavbar={assetInteraction.selectionActive} title={data.meta.title} scrollbar={false}>
+<UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} title={data.meta.title} scrollbar={false}>
   <Timeline
     enableRouting={true}
     withStacked={true}
     bind:timelineManager
     {options}
-    {assetInteraction}
-    removeAction={AssetAction.UNFAVORITE}
+    assetInteraction={assetMultiSelectManager}
     onEscape={handleEscape}
   >
     {#snippet empty()}
-      <EmptyPlaceholder text={$t('no_favorites_message')} />
+      <EmptyPlaceholder text={$t('no_favorites_message')} class="mt-10 mx-auto" />
     {/snippet}
   </Timeline>
 </UserPageLayout>
 
 <!-- Multiselection mode app bar -->
-{#if assetInteraction.selectionActive}
-  <AssetSelectControlBar
-    assets={assetInteraction.selectedAssets}
-    clearSelect={() => assetInteraction.clearMultiselect()}
-  >
+{#if assetMultiSelectManager.selectionActive}
+  <AssetSelectControlBar>
+    {@const Actions = getAssetBulkActions($t, assetMultiSelectManager.asControlContext())}
+    <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
     <FavoriteAction removeFavorite onFavorite={(assetIds) => timelineManager.removeAssets(assetIds)} />
     <CreateSharedLink />
-    <SelectAllAssets {timelineManager} {assetInteraction} />
-    <ButtonContextMenu icon={mdiPlus} title={$t('add_to')}>
-      <AddToAlbum />
-      <AddToAlbum shared />
-    </ButtonContextMenu>
+    <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
+    <ActionButton action={Actions.AddToAlbum} />
     <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
       <DownloadAction menuItem />
       <ChangeDate menuItem />
@@ -84,8 +77,8 @@
       <ChangeLocation menuItem />
       <ArchiveAction
         menuItem
-        unarchive={assetInteraction.isAllArchived}
-        onArchive={(assetIds) => timelineManager.removeAssets(assetIds)}
+        unarchive={assetMultiSelectManager.isAllArchived}
+        onArchive={(ids, visibility) => timelineManager.update(ids, (asset) => (asset.visibility = visibility))}
       />
       {#if $preferences.tags.enabled}
         <TagAction menuItem />
@@ -94,7 +87,7 @@
       <DeleteAssets
         menuItem
         onAssetDelete={(assetIds) => timelineManager.removeAssets(assetIds)}
-        onUndoDelete={(assets) => timelineManager.addAssets(assets)}
+        onUndoDelete={(assets) => timelineManager.upsertAssets(assets)}
       />
     </ButtonContextMenu>
   </AssetSelectControlBar>

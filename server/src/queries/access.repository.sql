@@ -160,6 +160,16 @@ where
   "session"."userId" = $1
   and "session"."id" in ($2)
 
+-- AccessRepository.duplicate.checkOwnerAccess
+select
+  "asset"."duplicateId"
+from
+  "asset"
+where
+  "asset"."duplicateId" in ($1)
+  and "asset"."ownerId" = $2
+  and "asset"."deletedAt" is null
+
 -- AccessRepository.memory.checkOwnerAccess
 select
   "memory"."id"
@@ -243,3 +253,12 @@ from
 where
   "partner"."sharedById" in ($1)
   and "partner"."sharedWithId" = $2
+
+-- AccessRepository.workflow.checkOwnerAccess
+select
+  "workflow"."id"
+from
+  "workflow"
+where
+  "workflow"."id" in ($1)
+  and "workflow"."ownerId" = $2

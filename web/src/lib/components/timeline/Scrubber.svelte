@@ -1,7 +1,7 @@
 <script lang="ts">
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { ScrubberMonth, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
-  import { mobileDevice } from '$lib/stores/mobile-device.svelte';
+  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { getTabbable } from '$lib/utils/focus-util';
   import { type ScrubberListener } from '$lib/utils/timeline-util';
   import { Icon } from '@immich/ui';
@@ -50,6 +50,7 @@
     onScrubKeyDown = undefined,
     startScrub = undefined,
     stopScrub = undefined,
+    // eslint-disable-next-line no-useless-assignment
     scrubberWidth = $bindable(),
   }: Props = $props();
 
@@ -65,7 +66,7 @@
   const toScrollY = (percent: number) => percent * (height - (PADDING_TOP + PADDING_BOTTOM));
   const toTimelineY = (scrollY: number) => scrollY / (height - (PADDING_TOP + PADDING_BOTTOM));
 
-  const usingMobileDevice = $derived(mobileDevice.pointerCoarse);
+  const usingMobileDevice = $derived(mediaQueryManager.pointerCoarse);
 
   const MOBILE_WIDTH = 20;
   const DESKTOP_WIDTH = 60;
@@ -351,7 +352,10 @@
     void onScrub?.(scrubData);
   };
   const getTouch = (event: TouchEvent) => {
+    // desktop safari does not support this since Apple does not have desktop touch devices
+    // eslint-disable-next-line tscompat/tscompat
     if (event.touches.length === 1) {
+      // eslint-disable-next-line tscompat/tscompat
       return event.touches[0];
     }
     return null;
@@ -362,6 +366,8 @@
       isHover = false;
       return;
     }
+    // desktop safari does not support this since Apple does not have desktop touch devices
+    // eslint-disable-next-line tscompat/tscompat
     const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
     const isHoverScrollbar =
       findElementBestY(elements, 0, 'scrubber', 'time-label', 'lead-in', 'lead-out') !== undefined;
@@ -370,6 +376,7 @@
 
     if (isHoverScrollbar) {
       handleMouseEvent({
+        // eslint-disable-next-line tscompat/tscompat
         clientY: touch.clientY,
         isDragging: true,
       });
@@ -388,6 +395,7 @@
     const touch = getTouch(event);
     if (touch && isDragging) {
       handleMouseEvent({
+        // eslint-disable-next-line tscompat/tscompat
         clientY: touch.clientY,
       });
     } else {
@@ -536,7 +544,7 @@
       in:fade={{ duration: 200 }}
       out:fade={{ duration: 200 }}
     >
-      <Icon icon={mdiPlay} size="20" class="-rotate-90 relative top-[9px] -end-0.5" />
+      <Icon icon={mdiPlay} size="20" class="-rotate-90 relative top-2.25 -end-0.5" />
       <Icon icon={mdiPlay} size="20" class="rotate-90 relative top-px -end-0.5" />
       {#if (timelineManager.scrolling && scrollHoverLabel) || isHover || isDragging}
         <p
@@ -581,7 +589,7 @@
     >
       {#if !usingMobileDevice}
         {#if segment.hasLabel}
-          <div class="absolute end-5 text-[12px] dark:text-immich-dark-fg font-immich-mono bottom-0">
+          <div class="absolute end-5 text-[13px] dark:text-immich-dark-fg font-mono bottom-0">
             {segment.year}
           </div>
         {/if}

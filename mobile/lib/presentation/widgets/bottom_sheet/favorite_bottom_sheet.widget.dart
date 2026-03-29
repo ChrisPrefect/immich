@@ -17,7 +17,6 @@ import 'package:immich_mobile/presentation/widgets/action_buttons/stack_action_b
 import 'package:immich_mobile/presentation/widgets/action_buttons/trash_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/unfavorite_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/unstack_action_button.widget.dart';
-import 'package:immich_mobile/presentation/widgets/action_buttons/upload_action_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/album/album_selector.widget.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/base_bottom_sheet.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
@@ -76,7 +75,7 @@ class FavoriteBottomSheet extends ConsumerWidget {
           const ShareLinkActionButton(source: ActionSource.timeline),
           const UnFavoriteActionButton(source: ActionSource.timeline),
           const ArchiveActionButton(source: ActionSource.timeline),
-          const DownloadActionButton(source: ActionSource.timeline),
+          if (multiselect.onlyRemote) const DownloadActionButton(source: ActionSource.timeline),
           isTrashEnable
               ? const TrashActionButton(source: ActionSource.timeline)
               : const DeletePermanentActionButton(source: ActionSource.timeline),
@@ -86,10 +85,7 @@ class FavoriteBottomSheet extends ConsumerWidget {
           if (multiselect.selectedAssets.length > 1) const StackActionButton(source: ActionSource.timeline),
           if (multiselect.hasStacked) const UnStackActionButton(source: ActionSource.timeline),
         ],
-        if (multiselect.hasLocal) ...[
-          const DeleteLocalActionButton(source: ActionSource.timeline),
-          const UploadActionButton(source: ActionSource.timeline),
-        ],
+        if (multiselect.hasMerged) const DeleteLocalActionButton(source: ActionSource.timeline),
       ],
       slivers: multiselect.hasRemote
           ? [const AddToAlbumHeader(), AlbumSelector(onAlbumSelected: addAssetsToAlbum)]

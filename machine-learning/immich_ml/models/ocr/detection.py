@@ -6,7 +6,7 @@ from numpy.typing import NDArray
 from PIL import Image
 from rapidocr.ch_ppocr_det.utils import DBPostProcess
 from rapidocr.inference_engine.base import FileInfo, InferSession
-from rapidocr.utils import DownloadFile, DownloadFileInput
+from rapidocr.utils.download_file import DownloadFile, DownloadFileInput
 from rapidocr.utils.typings import EngineType, LangDet, OCRVersion, TaskType
 from rapidocr.utils.typings import ModelType as RapidModelType
 
@@ -22,8 +22,8 @@ class TextDetector(InferenceModel):
     depends = []
     identity = (ModelType.DETECTION, ModelTask.OCR)
 
-    def __init__(self, model_name: str, **model_kwargs: Any) -> None:
-        super().__init__(model_name, **model_kwargs, model_format=ModelFormat.ONNX)
+    def __init__(self, model_name: str, min_score: float = 0.5, **model_kwargs: Any) -> None:
+        super().__init__(model_name.split("__")[-1], **model_kwargs, model_format=ModelFormat.ONNX)
         self.max_resolution = 736
         self.mean = np.array([0.5, 0.5, 0.5], dtype=np.float32)
         self.std_inv = np.float32(1.0) / (np.array([0.5, 0.5, 0.5], dtype=np.float32) * 255.0)
@@ -33,7 +33,7 @@ class TextDetector(InferenceModel):
         }
         self.postprocess = DBPostProcess(
             thresh=0.3,
-            box_thresh=model_kwargs.get("minScore", 0.5),
+            box_thresh=model_kwargs.get("minScore", min_score),
             max_candidates=1000,
             unclip_ratio=1.6,
             use_dilation=True,
@@ -82,6 +82,7 @@ class TextDetector(InferenceModel):
             ratio = float(self.max_resolution) / img.height
         else:
             ratio = float(self.max_resolution) / img.width
+        ratio = min(ratio, 1.0)
 
         resize_h = int(img.height * ratio)
         resize_w = int(img.width * ratio)

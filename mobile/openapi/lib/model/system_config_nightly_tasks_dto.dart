@@ -22,18 +22,23 @@ class SystemConfigNightlyTasksDto {
     required this.syncQuotaUsage,
   });
 
+  /// Cluster new faces
   bool clusterNewFaces;
 
+  /// Database cleanup
   bool databaseCleanup;
 
+  /// Generate memories
   bool generateMemories;
 
+  /// Missing thumbnails
   bool missingThumbnails;
 
   bool removeStaleUploads;
 
   String startTime;
 
+  /// Sync quota usage
   bool syncQuotaUsage;
 
   @override

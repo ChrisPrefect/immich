@@ -1,4 +1,3 @@
-import ToastAction from '$lib/components/ToastAction.svelte';
 import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import type { StackResponse } from '$lib/utils/asset-utils';
@@ -32,24 +31,15 @@ export const deleteAssets = async (
     await deleteBulk({ assetBulkDeleteDto: { ids, force } });
     onAssetDelete(ids);
 
-    toastManager.custom(
+    toastManager.primary(
       {
-        component: ToastAction,
-        props: {
-          title: $t('success'),
-          description: force
-            ? $t('assets_permanently_deleted_count', { values: { count: ids.length } })
-            : $t('assets_trashed_count', { values: { count: ids.length } }),
-          color: 'success',
-          button:
-            onUndoDelete && !force
-              ? {
-                  color: 'secondary',
-                  text: $t('undo'),
-                  onClick: () => undoDeleteAssets(onUndoDelete, assets),
-                }
-              : undefined,
-        },
+        description: force
+          ? $t('assets_permanently_deleted_count', { values: { count: ids.length } })
+          : $t('assets_trashed_count', { values: { count: ids.length } }),
+        button:
+          onUndoDelete && !force
+            ? { label: $t('undo'), color: 'secondary', onclick: () => undoDeleteAssets(onUndoDelete, assets) }
+            : undefined,
       },
       { timeout: 5000 },
     );
@@ -79,14 +69,15 @@ const undoDeleteAssets = async (onUndoDelete: OnUndoDelete, assets: TimelineAsse
  */
 export function updateStackedAssetInTimeline(timelineManager: TimelineManager, { stack, toDeleteIds }: StackResponse) {
   if (stack != undefined) {
-    timelineManager.updateAssetOperation([stack.primaryAssetId], (asset) => {
-      asset.stack = {
-        id: stack.id,
-        primaryAssetId: stack.primaryAssetId,
-        assetCount: stack.assets.length,
-      };
-      return { remove: false };
-    });
+    timelineManager.update(
+      [stack.primaryAssetId],
+      (asset) =>
+        (asset.stack = {
+          id: stack.id,
+          primaryAssetId: stack.primaryAssetId,
+          assetCount: stack.assets.length,
+        }),
+    );
 
     timelineManager.removeAssets(toDeleteIds);
   }
@@ -101,7 +92,7 @@ export function updateStackedAssetInTimeline(timelineManager: TimelineManager, {
  * @param assets - The array of asset response DTOs to update in the timeline manager.
  */
 export function updateUnstackedAssetInTimeline(timelineManager: TimelineManager, assets: TimelineAsset[]) {
-  timelineManager.updateAssetOperation(
+  timelineManager.update(
     assets.map((asset) => asset.id),
     (asset) => {
       asset.stack = null;
@@ -109,5 +100,5 @@ export function updateUnstackedAssetInTimeline(timelineManager: TimelineManager,
     },
   );
 
-  timelineManager.addAssets(assets);
+  timelineManager.upsertAssets(assets);
 }

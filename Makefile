@@ -17,6 +17,9 @@ dev-docs:
 e2e:
 	@trap 'make e2e-down' EXIT; COMPOSE_BAKE=true docker compose -f ./e2e/docker-compose.yml up --remove-orphans
 
+e2e-dev:
+	@trap 'make e2e-down' EXIT; COMPOSE_BAKE=true docker compose -f ./e2e/docker-compose.dev.yml up --remove-orphans
+
 e2e-update:
 	@trap 'make e2e-down' EXIT; COMPOSE_BAKE=true docker compose -f ./e2e/docker-compose.yml up --build -V --remove-orphans
 
@@ -49,7 +52,7 @@ attach-server:
 	docker exec -it docker_immich-server_1 sh
 
 renovate:
-  LOG_LEVEL=debug npx renovate --platform=local --repository-cache=reset
+  LOG_LEVEL=debug pnpm exec renovate --platform=local --repository-cache=reset
 
 # Directories that need to be created for volumes or build output
 VOLUME_DIRS = \

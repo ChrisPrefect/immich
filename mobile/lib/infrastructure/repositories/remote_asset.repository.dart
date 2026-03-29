@@ -12,6 +12,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 class RemoteAssetRepository extends DriftDatabaseRepository {
   final Drift _db;
+
   const RemoteAssetRepository(this._db) : super(_db);
 
   /// For testing purposes
@@ -251,6 +252,12 @@ class RemoteAssetRepository extends DriftDatabaseRepository {
   Future<void> updateDescription(String assetId, String description) async {
     await (_db.remoteExifEntity.update()..where((row) => row.assetId.equals(assetId))).write(
       RemoteExifEntityCompanion(description: Value(description)),
+    );
+  }
+
+  Future<void> updateRating(String assetId, int rating) async {
+    await (_db.remoteExifEntity.update()..where((row) => row.assetId.equals(assetId))).write(
+      RemoteExifEntityCompanion(rating: Value(rating)),
     );
   }
 

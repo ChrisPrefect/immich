@@ -1,5 +1,5 @@
 import type { MonthGroup } from '../month-group.svelte';
-import type { TimelineManager } from '../timeline-manager.svelte';
+import { TimelineManager } from '../timeline-manager.svelte';
 import type { UpdateGeometryOptions } from '../types';
 
 export function updateGeometry(timelineManager: TimelineManager, month: MonthGroup, options: UpdateGeometryOptions) {
@@ -12,7 +12,7 @@ export function updateGeometry(timelineManager: TimelineManager, month: MonthGro
     if (!month.isHeightActual) {
       const unwrappedWidth = (3 / 2) * month.assetsCount * timelineManager.rowHeight * (7 / 10);
       const rows = Math.ceil(unwrappedWidth / viewportWidth);
-      const height = 51 + Math.max(1, rows) * timelineManager.rowHeight;
+      const height = timelineManager.headerHeight + Math.max(1, rows) * timelineManager.rowHeight;
       month.height = height;
     }
     return;
@@ -39,7 +39,7 @@ export function layoutMonthGroup(timelineManager: TimelineManager, month: MonthG
     if (fitsInCurrentRow) {
       dayGroup.row = dayGroupRow;
       dayGroup.col = dayGroupCol++;
-      dayGroup.left = cumulativeWidth;
+      dayGroup.start = cumulativeWidth;
       dayGroup.top = cumulativeHeight;
 
       cumulativeWidth += dayGroup.width + timelineManager.gap;
@@ -53,7 +53,7 @@ export function layoutMonthGroup(timelineManager: TimelineManager, month: MonthG
       // Position at start of new row
       dayGroup.row = dayGroupRow;
       dayGroup.col = dayGroupCol;
-      dayGroup.left = 0;
+      dayGroup.start = 0;
       dayGroup.top = cumulativeHeight;
 
       dayGroupCol++;

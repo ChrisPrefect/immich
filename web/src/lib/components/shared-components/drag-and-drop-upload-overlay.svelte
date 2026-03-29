@@ -5,14 +5,15 @@
   import { dragAndDropFilesStore } from '$lib/stores/drag-and-drop-files.store';
   import { fileUploadHandler } from '$lib/utils/file-uploader';
   import { isAlbumsRoute, isLockedFolderRoute } from '$lib/utils/navigation';
+  import { Logo } from '@immich/ui';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
-  import ImmichLogo from './immich-logo.svelte';
 
   let albumId = $derived(isAlbumsRoute(page.route?.id) ? page.params.albumId : undefined);
   let isInLockedFolder = $derived(isLockedFolderRoute(page.route.id));
 
   let dragStartTarget: EventTarget | null = $state(null);
+  let isInternalDrag = false;
 
   const onDragEnter = (e: DragEvent) => {
     if (e.dataTransfer && e.dataTransfer.types.includes('Files')) {
@@ -133,7 +134,19 @@
     }
   };
 
+  const ondragstart = () => {
+    isInternalDrag = true;
+  };
+
+  const ondragend = () => {
+    isInternalDrag = false;
+  };
+
   const ondragenter = (e: DragEvent) => {
+    if (isInternalDrag) {
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
     onDragEnter(e);
@@ -146,6 +159,10 @@
   };
 
   const ondrop = async (e: DragEvent) => {
+    if (isInternalDrag) {
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
     await onDrop(e);
@@ -159,7 +176,7 @@
 
 <svelte:window onpaste={onPaste} />
 
-<svelte:body {ondragenter} {ondragleave} {ondrop} />
+<svelte:body {ondragstart} {ondragend} {ondragenter} {ondragleave} {ondrop} />
 
 {#if dragStartTarget}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -168,7 +185,7 @@
     transition:fade={{ duration: 250 }}
     ondragover={onDragOver}
   >
-    <ImmichLogo noText class="m-16 h-48 animate-bounce" />
+    <Logo variant="icon" size="giant" class="m-16 animate-bounce" />
     <div class="text-2xl">{$t('drop_files_to_upload')}</div>
   </div>
 {/if}

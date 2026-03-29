@@ -3,15 +3,15 @@ import CryptoKit
 
 struct AssetWrapper: Hashable, Equatable {
   let asset: PlatformAsset
-  
+
   init(with asset: PlatformAsset) {
     self.asset = asset
   }
-  
+
   func hash(into hasher: inout Hasher) {
     hasher.combine(self.asset.id)
   }
-  
+
   static func == (lhs: AssetWrapper, rhs: AssetWrapper) -> Bool {
     return lhs.asset.id == rhs.asset.id
   }
@@ -173,7 +173,8 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
             type: 0,
             durationInSeconds: 0,
             orientation: 0,
-            isFavorite: false
+            isFavorite: false,
+            playbackStyle: .unknown
           )
           if (updatedAssets.contains(AssetWrapper(with: predicate))) {
             continue
@@ -378,6 +379,10 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
     })
   }
   
+  func getTrashedAssets() throws -> [String: [PlatformAsset]] {
+    throw PigeonError(code: "UNSUPPORTED_OS", message: "This feature not supported on iOS.", details: nil)
+  }
+  
   private func getAssetsFromAlbum(in album: PHAssetCollection, options: PHFetchOptions) -> PHFetchResult<PHAsset> {
     // Ensure to actually getting all assets for the Recents album
     if (album.assetCollectionSubtype == .smartAlbumUserLibrary) {
@@ -385,5 +390,29 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
     } else {
       return PHAsset.fetchAssets(in: album, options: options)
     }
+  }
+  
+  func getCloudIdForAssetIds(assetIds: [String]) throws -> [CloudIdResult] {
+    guard #available(iOS 16, *) else {
+      return assetIds.map { CloudIdResult(assetId: $0) }
+    }
+    
+    var mappings: [CloudIdResult] = []
+    let result = PHPhotoLibrary.shared().cloudIdentifierMappings(forLocalIdentifiers: assetIds)
+    for (key, value) in result {
+      switch value {
+      case .success(let cloudIdentifier):
+        let cloudId = cloudIdentifier.stringValue
+        // Ignores invalid cloud ids of the format "GUID:ID:". Valid Ids are of the form "GUID:ID:HASH"
+        if !cloudId.hasSuffix(":") {
+          mappings.append(CloudIdResult(assetId: key, cloudId: cloudId))
+        } else {
+          mappings.append(CloudIdResult(assetId: key, error: "Incomplete Cloud Id: \(cloudId)"))
+        }
+      case .failure(let error):
+        mappings.append(CloudIdResult(assetId: key, error: "Error getting Cloud Id: \(error.localizedDescription)"))
+      }
+    }
+    return mappings;
   }
 }

@@ -21,7 +21,6 @@ limit
 -- AssetJobRepository.getForSidecarWriteJob
 select
   "id",
-  "sidecarPath",
   "originalPath",
   (
     select
@@ -29,39 +28,31 @@ select
     from
       (
         select
-          "tag"."value"
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type",
+          "asset_file"."isEdited"
         from
-          "tag"
-          inner join "tag_asset" on "tag"."id" = "tag_asset"."tagId"
+          "asset_file"
         where
-          "asset"."id" = "tag_asset"."assetId"
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
       ) as agg
-  ) as "tags"
+  ) as "files",
+  to_json("asset_exif") as "exifInfo"
 from
   "asset"
+  inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
 where
-  "asset"."id" = $1::uuid
+  "asset"."id" = $2::uuid
   and "asset"."status" != 'partial'
 limit
-  $2
+  $3
 
 -- AssetJobRepository.getForSidecarCheckJob
 select
   "id",
-  "sidecarPath",
-  "originalPath"
-from
-  "asset"
-where
-  "asset"."id" = $1::uuid
-  and "asset"."status" != 'partial'
-limit
-  $2
-
--- AssetJobRepository.streamForThumbnailJob
-select
-  "asset"."id",
-  "asset"."thumbhash",
+  "originalPath",
   (
     select
       coalesce(json_agg(agg), '[]')
@@ -70,31 +61,124 @@ select
         select
           "asset_file"."id",
           "asset_file"."path",
-          "asset_file"."type"
+          "asset_file"."type",
+          "asset_file"."isEdited"
         from
           "asset_file"
         where
           "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
       ) as agg
   ) as "files"
+from
+  "asset"
+where
+  "asset"."id" = $2::uuid
+  and "asset"."status" != 'partial'
+limit
+  $3
+
+-- AssetJobRepository.streamForThumbnailJob
+select
+  "asset"."id",
+  "asset"."isEdited"
 from
   "asset"
   inner join "asset_job_status" on "asset_job_status"."assetId" = "asset"."id"
 where
   "asset"."status" != 'partial'
   and "asset"."deletedAt" is null
-  and "asset"."visibility" != $1
+  and "asset"."visibility" != 'hidden'
   and (
-    "asset_job_status"."previewAt" is null
-    or "asset_job_status"."thumbnailAt" is null
+    not exists (
+      select
+      from
+        "asset_file"
+      where
+        "assetId" = "asset"."id"
+        and "type" = 'thumbnail'
+    )
+    or not exists (
+      select
+      from
+        "asset_file"
+      where
+        "assetId" = "asset"."id"
+        and "type" = 'preview'
+    )
+    or (
+      "asset"."isEdited" = true
+      and not exists (
+        select
+        from
+          "asset_file"
+        where
+          "assetId" = "asset"."id"
+          and "type" = 'fullsize'
+          and "asset_file"."isEdited" = true
+      )
+    )
     or "asset"."thumbhash" is null
+    or (
+      not exists (
+        select
+        from
+          "asset_file"
+        where
+          "assetId" = "asset"."id"
+          and "type" = 'fullsize'
+      )
+      and f_unaccent (asset."originalFileName") like any (
+        array[
+          '%.3fr',
+          '%.ari',
+          '%.arw',
+          '%.cap',
+          '%.cin',
+          '%.cr2',
+          '%.cr3',
+          '%.crw',
+          '%.dcr',
+          '%.dng',
+          '%.erf',
+          '%.fff',
+          '%.iiq',
+          '%.k25',
+          '%.kdc',
+          '%.mrw',
+          '%.nef',
+          '%.nrw',
+          '%.orf',
+          '%.ori',
+          '%.pef',
+          '%.psd',
+          '%.raf',
+          '%.raw',
+          '%.rw2',
+          '%.rwl',
+          '%.sr2',
+          '%.srf',
+          '%.srw',
+          '%.x3f',
+          '%.heic',
+          '%.heif',
+          '%.hif',
+          '%.insp',
+          '%.jp2',
+          '%.jpe',
+          '%.jxl',
+          '%.svg',
+          '%.tif',
+          '%.tiff'
+        ]::text[]
+      )
+    )
   )
 
 -- AssetJobRepository.getForMigrationJob
 select
   "asset"."id",
   "asset"."ownerId",
-  "asset"."encodedVideoPath",
   (
     select
       coalesce(json_agg(agg), '[]')
@@ -103,7 +187,8 @@ select
         select
           "asset_file"."id",
           "asset_file"."path",
-          "asset_file"."type"
+          "asset_file"."type",
+          "asset_file"."isEdited"
         from
           "asset_file"
         where
@@ -133,25 +218,44 @@ select
         select
           "asset_file"."id",
           "asset_file"."path",
-          "asset_file"."type"
+          "asset_file"."type",
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
           "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" in ($1, $2, $3)
       ) as agg
   ) as "files",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_edit"."action",
+          "asset_edit"."parameters"
+        from
+          "asset_edit"
+        where
+          "asset_edit"."assetId" = "asset"."id"
+      ) as agg
+  ) as "edits",
   to_json("asset_exif") as "exifInfo"
 from
   "asset"
   inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
 where
-  "asset"."id" = $1
+  "asset"."id" = $4
   and "asset"."status" != 'partial'
 
 -- AssetJobRepository.getForMetadataExtraction
 select
   "asset"."id",
   "asset"."checksum",
+  "asset"."checksumAlgorithm",
   "asset"."deviceAssetId",
   "asset"."deviceId",
   "asset"."fileCreatedAt",
@@ -164,8 +268,10 @@ select
   "asset"."originalFileName",
   "asset"."originalPath",
   "asset"."ownerId",
-  "asset"."sidecarPath",
   "asset"."type",
+  "asset"."width",
+  "asset"."height",
+  "asset"."isEdited",
   (
     select
       coalesce(json_agg(agg), '[]')
@@ -178,19 +284,46 @@ select
         where
           "asset_face"."assetId" = "asset"."id"
           and "asset_face"."deletedAt" is null
+          and "asset_face"."isVisible" = $1
       ) as agg
-  ) as "faces"
+  ) as "faces",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type",
+          "asset_file"."isEdited"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $2
+      ) as agg
+  ) as "files"
 from
   "asset"
 where
-  "asset"."id" = $1
+  "asset"."id" = $3
   and "asset"."status" != 'partial'
+
+-- AssetJobRepository.getLockedPropertiesForMetadataExtraction
+select
+  "asset_exif"."lockedProperties"
+from
+  "asset_exif"
+where
+  "asset_exif"."assetId" = $1
 
 -- AssetJobRepository.getAlbumThumbnailFiles
 select
   "asset_file"."id",
   "asset_file"."path",
-  "asset_file"."type"
+  "asset_file"."type",
+  "asset_file"."isEdited"
 from
   "asset_file"
 where
@@ -220,7 +353,14 @@ where
   "asset"."visibility" != $1
   and "asset"."status" != 'partial'
   and "asset"."deletedAt" is null
-  and "job_status"."previewAt" is not null
+  and exists (
+    select
+    from
+      "asset_file"
+    where
+      "assetId" = "asset"."id"
+      and "asset_file"."type" = $2
+  )
   and not exists (
     select
     from
@@ -241,7 +381,8 @@ select
         select
           "asset_file"."id",
           "asset_file"."path",
-          "asset_file"."type"
+          "asset_file"."type",
+          "asset_file"."isEdited"
         from
           "asset_file"
         where
@@ -281,7 +422,8 @@ select
         select
           "asset_file"."id",
           "asset_file"."path",
-          "asset_file"."type"
+          "asset_file"."type",
+          "asset_file"."isEdited"
         from
           "asset_file"
         where
@@ -333,33 +475,9 @@ select
   "asset"."libraryId",
   "asset"."ownerId",
   "asset"."livePhotoVideoId",
-  "asset"."sidecarPath",
-  "asset"."encodedVideoPath",
   "asset"."originalPath",
+  "asset"."isOffline",
   to_json("asset_exif") as "exifInfo",
-  (
-    select
-      coalesce(json_agg(agg), '[]')
-    from
-      (
-        select
-          "asset_face".*,
-          "person" as "person"
-        from
-          "asset_face"
-          left join lateral (
-            select
-              "person".*
-            from
-              "person"
-            where
-              "asset_face"."personId" = "person"."id"
-          ) as "person" on true
-        where
-          "asset_face"."assetId" = "asset"."id"
-          and "asset_face"."deletedAt" is null
-      ) as agg
-  ) as "faces",
   (
     select
       coalesce(json_agg(agg), '[]')
@@ -368,34 +486,45 @@ select
         select
           "asset_file"."id",
           "asset_file"."path",
-          "asset_file"."type"
+          "asset_file"."type",
+          "asset_file"."isEdited"
         from
           "asset_file"
         where
           "asset_file"."assetId" = "asset"."id"
       ) as agg
   ) as "files",
-  to_json("stacked_assets") as "stack"
+  to_json("stack_result") as "stack"
 from
   "asset"
   left join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
-  left join "stack" on "stack"."id" = "asset"."stackId"
   left join lateral (
     select
       "stack"."id",
       "stack"."primaryAssetId",
-      array_agg("stacked") as "assets"
+      (
+        select
+          coalesce(json_agg(agg), '[]')
+        from
+          (
+            select
+              "stack_asset"."id"
+            from
+              "asset" as "stack_asset"
+            where
+              "stack_asset"."stackId" = "stack"."id"
+              and "stack_asset"."id" != "stack"."primaryAssetId"
+              and "stack_asset"."visibility" = $1
+              and "stack_asset"."status" != $2
+          ) as agg
+      ) as "assets"
     from
-      "asset" as "stacked"
+      "stack"
     where
-      "stacked"."deletedAt" is not null
-      and "stacked"."visibility" = $1
-      and "stacked"."stackId" = "stack"."id"
-    group by
-      "stack"."id"
-  ) as "stacked_assets" on "stack"."id" is not null
+      "stack"."id" = "asset"."stackId"
+  ) as "stack_result" on true
 where
-  "asset"."id" = $2
+  "asset"."id" = $3
   and "asset"."status" != 'partial'
 
 -- AssetJobRepository.streamForVideoConversion
@@ -404,12 +533,17 @@ select
 from
   "asset"
 where
-  "asset"."type" = $1
-  and (
-    "asset"."encodedVideoPath" is null
-    or "asset"."encodedVideoPath" = $2
+  "asset"."type" = 'VIDEO'
+  and not exists (
+    select
+      "asset_file"."id"
+    from
+      "asset_file"
+    where
+      "asset_file"."assetId" = "asset"."id"
+      and "asset_file"."type" = 'encoded_video'
   )
-  and "asset"."visibility" != $3
+  and "asset"."visibility" != 'hidden'
   and "asset"."status" != 'partial'
   and "asset"."deletedAt" is null
 
@@ -418,12 +552,27 @@ select
   "asset"."id",
   "asset"."ownerId",
   "asset"."originalPath",
-  "asset"."encodedVideoPath"
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type",
+          "asset_file"."isEdited"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+      ) as agg
+  ) as "files"
 from
   "asset"
 where
   "asset"."id" = $1
-  and "asset"."type" = $2
+  and "asset"."type" = 'VIDEO'
   and "asset"."status" != 'partial'
 
 -- AssetJobRepository.streamForMetadataExtraction
@@ -448,19 +597,40 @@ select
   "asset"."checksum",
   "asset"."originalPath",
   "asset"."isExternal",
-  "asset"."sidecarPath",
+  "asset"."visibility",
   "asset"."originalFileName",
   "asset"."livePhotoVideoId",
   "asset"."fileCreatedAt",
   "asset_exif"."timeZone",
-  "asset_exif"."fileSizeInByte"
+  "asset_exif"."fileSizeInByte",
+  "asset_exif"."make",
+  "asset_exif"."model",
+  "asset_exif"."lensModel",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type",
+          "asset_file"."isEdited"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
+      ) as agg
+  ) as "files"
 from
   "asset"
   inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
 where
   "asset"."status" != 'partial'
   and "asset"."deletedAt" is null
-  and "asset"."id" = $1
+  and "asset"."id" = $2
+  and "asset"."visibility" != $3
 
 -- AssetJobRepository.streamForStorageTemplateJob
 select
@@ -470,18 +640,39 @@ select
   "asset"."checksum",
   "asset"."originalPath",
   "asset"."isExternal",
-  "asset"."sidecarPath",
+  "asset"."visibility",
   "asset"."originalFileName",
   "asset"."livePhotoVideoId",
   "asset"."fileCreatedAt",
   "asset_exif"."timeZone",
-  "asset_exif"."fileSizeInByte"
+  "asset_exif"."fileSizeInByte",
+  "asset_exif"."make",
+  "asset_exif"."model",
+  "asset_exif"."lensModel",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type",
+          "asset_file"."isEdited"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
+      ) as agg
+  ) as "files"
 from
   "asset"
   inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
 where
   "asset"."status" != 'partial'
   and "asset"."deletedAt" is null
+  and "asset"."visibility" != $2
 
 -- AssetJobRepository.streamForDeletedJob
 select
@@ -499,11 +690,15 @@ select
 from
   "asset"
 where
-  (
-    "asset"."sidecarPath" = $1
-    or "asset"."sidecarPath" is null
+  not exists (
+    select
+      "asset_file"."id"
+    from
+      "asset_file"
+    where
+      "asset_file"."assetId" = "asset"."id"
+      and "asset_file"."type" = $1
   )
-  and "asset"."visibility" != $2
   and "asset"."status" != 'partial'
 
 -- AssetJobRepository.streamForDetectFacesJob
@@ -516,8 +711,14 @@ where
   "asset"."visibility" != $1
   and "asset"."status" != 'partial'
   and "asset"."deletedAt" is null
-  and "job_status"."previewAt" is not null
-  and "asset"."status" != 'partial'
+  and exists (
+    select
+    from
+      "asset_file"
+    where
+      "assetId" = "asset"."id"
+      and "asset_file"."type" = $2
+  )
 order by
   "asset"."fileCreatedAt" desc
 

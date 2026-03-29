@@ -114,6 +114,15 @@ export class NotificationService extends BaseService {
     this.websocketRepository.serverSend('ConfigUpdate', { oldConfig, newConfig });
   }
 
+  @OnEvent({ name: 'AppRestart' })
+  onAppRestart(state: ArgOf<'AppRestart'>) {
+    this.websocketRepository.clientBroadcast('AppRestartV1', {
+      isMaintenanceMode: state.isMaintenanceMode,
+    });
+
+    this.websocketRepository.serverSend('AppRestart', state);
+  }
+
   @OnEvent({ name: 'ConfigValidate', priority: -100 })
   async onConfigValidate({ oldConfig, newConfig }: ArgOf<'ConfigValidate'>) {
     try {
@@ -125,7 +134,7 @@ export class NotificationService extends BaseService {
       }
     } catch (error: Error | any) {
       this.logger.error(`Failed to validate SMTP configuration: ${error}`, error?.stack);
-      throw new Error(`Invalid SMTP configuration: ${error}`);
+      throw new Error('Invalid SMTP configuration', { cause: error });
     }
   }
 

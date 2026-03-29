@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { getAssetControlContext } from '$lib/components/timeline/AssetSelectControlBar.svelte';
+  import MenuOption from '$lib/components/shared-components/context-menu/menu-option.svelte';
   import type { OnArchive } from '$lib/utils/actions';
   import { archiveAssets } from '$lib/utils/asset-utils';
+  import { getAssetControlContext } from '$lib/utils/context';
   import { AssetVisibility } from '@immich/sdk';
   import { IconButton } from '@immich/ui';
   import { mdiArchiveArrowDownOutline, mdiArchiveArrowUpOutline, mdiTimerSand } from '@mdi/js';
   import { t } from 'svelte-i18n';
-  import MenuOption from '../../shared-components/context-menu/menu-option.svelte';
 
   interface Props {
     onArchive?: OnArchive;
@@ -24,12 +24,12 @@
   const { clearSelect, getOwnedAssets } = getAssetControlContext();
 
   const handleArchive = async () => {
-    const isArchived = unarchive ? AssetVisibility.Timeline : AssetVisibility.Archive;
-    const assets = [...getOwnedAssets()].filter((asset) => asset.visibility !== isArchived);
+    const visibility = unarchive ? AssetVisibility.Timeline : AssetVisibility.Archive;
+    const assets = [...getOwnedAssets()].filter((asset) => asset.visibility !== visibility);
     loading = true;
-    const ids = await archiveAssets(assets, isArchived as AssetVisibility);
+    const ids = await archiveAssets(assets, visibility as AssetVisibility);
     if (ids) {
-      onArchive?.(ids, isArchived ? AssetVisibility.Archive : AssetVisibility.Timeline);
+      onArchive?.(ids, visibility);
       clearSelect();
     }
     loading = false;

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotAcceptableException } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { NextFunction, Request, Response } from 'express';
 import { readFileSync } from 'node:fs';
@@ -7,12 +7,11 @@ import { ONE_HOUR } from 'src/constants';
 import { ConfigRepository } from 'src/repositories/config.repository';
 import { LoggingRepository } from 'src/repositories/logging.repository';
 import { AuthService } from 'src/services/auth.service';
-import { JobService } from 'src/services/job.service';
 import { SharedLinkService } from 'src/services/shared-link.service';
 import { VersionService } from 'src/services/version.service';
 import { OpenGraphTags } from 'src/utils/misc';
 
-const render = (index: string, meta: OpenGraphTags) => {
+export const render = (index: string, meta: OpenGraphTags) => {
   const [title, description, imageUrl] = [meta.title, meta.description, meta.imageUrl].map((item) =>
     item ? sanitizeHtml(item, { allowedTags: [] }) : '',
   );
@@ -40,7 +39,6 @@ const render = (index: string, meta: OpenGraphTags) => {
 export class ApiService {
   constructor(
     private authService: AuthService,
-    private jobService: JobService,
     private sharedLinkService: SharedLinkService,
     private versionService: VersionService,
     private configRepository: ConfigRepository,
@@ -65,12 +63,20 @@ export class ApiService {
     }
 
     return async (request: Request, res: Response, next: NextFunction) => {
+      const method = request.method.toLowerCase();
       if (
         request.url.startsWith('/api') ||
-        request.method.toLowerCase() !== 'get' ||
+        (method !== 'get' && method !== 'head') ||
         excludePaths.some((item) => request.url.startsWith(item))
       ) {
         return next();
+      }
+
+      const responseType = request.accepts('text/html');
+      if (!responseType) {
+        throw new NotAcceptableException(
+          `The route ${request.path} was requested as ${request.header('accept')}, but only returns text/html`,
+        );
       }
 
       let status = 200;
@@ -106,7 +112,7 @@ export class ApiService {
         html = render(index, meta);
       }
 
-      res.status(status).type('text/html').header('Cache-Control', 'no-store').send(html);
+      res.status(status).type(responseType).header('Cache-Control', 'no-store').send(html);
     };
   }
 }

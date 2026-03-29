@@ -16,10 +16,7 @@ class UploadApi {
 
   final ApiClient apiClient;
 
-  /// This endpoint requires the `asset.upload` permission.
-  ///
-  /// Note: This method returns the HTTP [Response].
-  ///
+  /// Performs an HTTP 'DELETE /upload/{id}' operation and returns the [Response].
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -60,8 +57,6 @@ class UploadApi {
     );
   }
 
-  /// This endpoint requires the `asset.upload` permission.
-  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -109,10 +104,7 @@ class UploadApi {
     }
   }
 
-  /// This endpoint requires the `asset.upload` permission.
-  ///
-  /// Note: This method returns the HTTP [Response].
-  ///
+  /// Performs an HTTP 'HEAD /upload/{id}' operation and returns the [Response].
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -158,8 +150,6 @@ class UploadApi {
     );
   }
 
-  /// This endpoint requires the `asset.upload` permission.
-  ///
   /// Parameters:
   ///
   /// * [String] id (required):
@@ -177,10 +167,7 @@ class UploadApi {
     }
   }
 
-  /// This endpoint requires the `asset.upload` permission.
-  ///
-  /// Note: This method returns the HTTP [Response].
-  ///
+  /// Performs an HTTP 'PATCH /upload/{id}' operation and returns the [Response].
   /// Parameters:
   ///
   /// * [String] contentLength (required):
@@ -238,8 +225,6 @@ class UploadApi {
     );
   }
 
-  /// This endpoint requires the `asset.upload` permission.
-  ///
   /// Parameters:
   ///
   /// * [String] contentLength (required):
@@ -274,10 +259,7 @@ class UploadApi {
     return null;
   }
 
-  /// This endpoint requires the `asset.upload` permission.
-  ///
-  /// Note: This method returns the HTTP [Response].
-  ///
+  /// Performs an HTTP 'POST /upload' operation and returns the [Response].
   /// Parameters:
   ///
   /// * [String] contentLength (required):
@@ -340,8 +322,6 @@ class UploadApi {
     );
   }
 
-  /// This endpoint requires the `asset.upload` permission.
-  ///
   /// Parameters:
   ///
   /// * [String] contentLength (required):

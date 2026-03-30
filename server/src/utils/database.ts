@@ -116,13 +116,14 @@ export function withFaces(eb: ExpressionBuilder<DB, 'asset'>, withHidden?: boole
   ).as('faces');
 }
 
-export function withFiles(eb: ExpressionBuilder<DB, 'asset'>, type?: AssetFileType) {
+export function withFiles(eb: ExpressionBuilder<DB, 'asset'>, type?: AssetFileType | AssetFileType[]) {
   return jsonArrayFrom(
     eb
       .selectFrom('asset_file')
       .select(columns.assetFiles)
       .whereRef('asset_file.assetId', '=', 'asset.id')
-      .$if(!!type, (qb) => qb.where('asset_file.type', '=', type!)),
+      .$if(!!type && typeof type === 'string', (qb) => qb.where('asset_file.type', '=', type!))
+      .$if(!!type && Array.isArray(type), (qb) => qb.where('asset_file.type', 'in', type as AssetFileType[])),
   ).as('files');
 }
 

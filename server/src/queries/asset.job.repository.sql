@@ -30,7 +30,9 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
@@ -60,7 +62,9 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
@@ -184,7 +188,9 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
@@ -245,6 +251,55 @@ from
 where
   "asset"."id" = $4
 
+-- AssetJobRepository.getForAssetEditProcessing
+select
+  "asset"."id",
+  "asset"."visibility",
+  "asset"."originalFileName",
+  "asset"."originalPath",
+  "asset"."ownerId",
+  "asset"."thumbhash",
+  "asset"."type",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_file"."id",
+          "asset_file"."path",
+          "asset_file"."type",
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
+        from
+          "asset_file"
+        where
+          "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" in ($1, $2, $3, $4)
+      ) as agg
+  ) as "files",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_edit"."action",
+          "asset_edit"."parameters"
+        from
+          "asset_edit"
+        where
+          "asset_edit"."assetId" = "asset"."id"
+      ) as agg
+  ) as "edits",
+  to_json("asset_exif") as "exifInfo"
+from
+  "asset"
+  inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
+where
+  "asset"."id" = $5
+
 -- AssetJobRepository.getForMetadataExtraction
 select
   "asset"."id",
@@ -288,7 +343,9 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
@@ -314,7 +371,9 @@ select
   "asset_file"."id",
   "asset_file"."path",
   "asset_file"."type",
-  "asset_file"."isEdited"
+  "asset_file"."isEdited",
+  "asset_file"."isProgressive",
+  "asset_file"."isTransparent"
 from
   "asset_file"
 where
@@ -371,7 +430,9 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
@@ -411,7 +472,9 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
@@ -436,11 +499,12 @@ select
     where
       "asset_file"."assetId" = "asset"."id"
       and "asset_file"."type" = $1
+      and "asset_file"."isEdited" = $2
   ) as "previewFile"
 from
   "asset"
 where
-  "asset"."id" = $2
+  "asset"."id" = $3
 
 -- AssetJobRepository.getForSyncAssets
 select
@@ -474,7 +538,9 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
@@ -515,7 +581,8 @@ where
 
 -- AssetJobRepository.streamForVideoConversion
 select
-  "asset"."id"
+  "asset"."id",
+  "asset"."isEdited"
 from
   "asset"
 where
@@ -546,17 +613,34 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
           "asset_file"."assetId" = "asset"."id"
+          and "asset_file"."type" = $1
       ) as agg
-  ) as "files"
+  ) as "files",
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select
+          "asset_edit"."action",
+          "asset_edit"."parameters"
+        from
+          "asset_edit"
+        where
+          "asset_edit"."assetId" = "asset"."id"
+      ) as agg
+  ) as "edits"
 from
   "asset"
 where
-  "asset"."id" = $1
+  "asset"."id" = $2
   and "asset"."type" = 'VIDEO'
 
 -- AssetJobRepository.streamForMetadataExtraction
@@ -598,7 +682,9 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
@@ -640,7 +726,9 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where

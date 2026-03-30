@@ -123,15 +123,7 @@ export class AssetJobRepository {
         'asset.thumbhash',
         'asset.type',
       ])
-      .select((eb) =>
-        jsonArrayFrom(
-          eb
-            .selectFrom('asset_file')
-            .select(columns.assetFilesForThumbnail)
-            .whereRef('asset_file.assetId', '=', 'asset.id')
-            .where('asset_file.type', 'in', [AssetFileType.Thumbnail, AssetFileType.Preview, AssetFileType.FullSize]),
-        ).as('files'),
-      )
+      .select((eb) => withFiles(eb, [AssetFileType.Thumbnail, AssetFileType.Preview, AssetFileType.FullSize]))
       .select(withEdits)
       .$call(withExifInner)
       .where('asset.id', '=', id)
@@ -152,19 +144,14 @@ export class AssetJobRepository {
         'asset.type',
       ])
       .select((eb) =>
-        jsonArrayFrom(
-          eb
-            .selectFrom('asset_file')
-            .select(columns.assetFilesForThumbnail)
-            .whereRef('asset_file.assetId', '=', 'asset.id')
-            .where('asset_file.type', 'in', [
-              AssetFileType.Thumbnail,
-              AssetFileType.Preview,
-              AssetFileType.FullSize,
-              AssetFileType.EncodedVideo,
-            ]),
-        ).as('files'),
+        withFiles(eb, [
+          AssetFileType.Thumbnail,
+          AssetFileType.Preview,
+          AssetFileType.FullSize,
+          AssetFileType.EncodedVideo,
+        ]),
       )
+
       .select(withEdits)
       .$call(withExifInner)
       .where('asset.id', '=', id)
@@ -367,15 +354,7 @@ export class AssetJobRepository {
     return this.db
       .selectFrom('asset')
       .select(['asset.id', 'asset.ownerId', 'asset.originalPath'])
-      .select((eb) =>
-        jsonArrayFrom(
-          eb
-            .selectFrom('asset_file')
-            .select(columns.assetFilesForThumbnail)
-            .whereRef('asset_file.assetId', '=', 'asset.id')
-            .where('asset_file.type', '=', sql.lit(AssetFileType.EncodedVideo)),
-        ).as('files'),
-      )
+      .select((eb) => withFiles(eb, AssetFileType.EncodedVideo))
       .select(withEdits)
       .where('asset.id', '=', id)
       .where('asset.type', '=', sql.lit(AssetType.Video))

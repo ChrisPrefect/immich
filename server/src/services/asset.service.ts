@@ -615,7 +615,7 @@ export class AssetService extends BaseService {
       }
 
       const { width: liveWidth, height: liveHeight } = getDimensions(liveAsset);
-      console.log(liveWidth, liveHeight);
+
       const scaledEdits = scaleEdits(
         edits,
         { width: liveWidth, height: liveHeight },

@@ -285,7 +285,9 @@ select
           "asset_file"."id",
           "asset_file"."path",
           "asset_file"."type",
-          "asset_file"."isEdited"
+          "asset_file"."isEdited",
+          "asset_file"."isProgressive",
+          "asset_file"."isTransparent"
         from
           "asset_file"
         where
@@ -638,12 +640,13 @@ select
     where
       "asset_file"."assetId" = "asset"."id"
       and "asset_file"."type" = $1
+      and "asset_file"."isEdited" = $2
   ) as "encodedVideoPath"
 from
   "asset"
 where
-  "asset"."id" = $2
-  and "asset"."type" = $3
+  "asset"."id" = $3
+  and "asset"."type" = $4
 
 -- AssetRepository.getForOcr
 select

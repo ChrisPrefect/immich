@@ -29,7 +29,7 @@ const probe = (input: string, options: string[]): Promise<FfprobeData> =>
 sharp.concurrency(0);
 sharp.cache({ files: 0 });
 
-export type ProgressEvent = {
+type ProgressEvent = {
   frames: number;
   currentFps: number;
   currentKbps: number;
@@ -327,7 +327,7 @@ export class MediaRepository {
 
     const { frameCount, percentInterval } = options.progress;
     const frameInterval = Math.ceil(frameCount / (100 / percentInterval));
-    if (frameCount && frameInterval) {
+    if (this.logger.isLevelEnabled(LogLevel.Debug) && frameCount && frameInterval) {
       let lastProgressFrame: number = 0;
       ffmpegCall.on('progress', (progress: ProgressEvent) => {
         if (progress.frames - lastProgressFrame < frameInterval) {
@@ -336,17 +336,12 @@ export class MediaRepository {
 
         lastProgressFrame = progress.frames;
         const percent = ((progress.frames / frameCount) * 100).toFixed(2);
-
-        options.progress.callback?.(progress.frames / frameCount, progress.frames);
-
-        if (this.logger.isLevelEnabled(LogLevel.Debug)) {
-          const ms = progress.currentFps ? Math.floor((frameCount - progress.frames) / progress.currentFps) * 1000 : 0;
-          const duration = ms ? Duration.fromMillis(ms).rescale().toHuman({ unitDisplay: 'narrow' }) : '';
-          const outputText = output instanceof Writable ? 'stream' : output.split('/').pop();
-          this.logger.debug(
-            `Transcoding ${percent}% done${duration ? `, estimated ${duration} remaining` : ''} for output ${outputText}`,
-          );
-        }
+        const ms = progress.currentFps ? Math.floor((frameCount - progress.frames) / progress.currentFps) * 1000 : 0;
+        const duration = ms ? Duration.fromMillis(ms).rescale().toHuman({ unitDisplay: 'narrow' }) : '';
+        const outputText = output instanceof Writable ? 'stream' : output.split('/').pop();
+        this.logger.debug(
+          `Transcoding ${percent}% done${duration ? `, estimated ${duration} remaining` : ''} for output ${outputText}`,
+        );
       });
     }
 

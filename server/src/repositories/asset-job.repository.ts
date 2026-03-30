@@ -151,7 +151,6 @@ export class AssetJobRepository {
           AssetFileType.EncodedVideo,
         ]),
       )
-
       .select(withEdits)
       .$call(withExifInner)
       .where('asset.id', '=', id)

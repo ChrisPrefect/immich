@@ -127,8 +127,16 @@ export class EditManager {
 
     try {
       // Setup the websocket listener before sending the edit request
-      const editCompleted = waitForWebsocketEvent('AssetEditReadyV1', (event) => event.asset.id === assetId, 10_000);
+      const editEvents = [waitForWebsocketEvent('AssetEditReadyV1', (event) => event.asset.id === assetId, 10_000)];
+
       if (this.currentAsset.livePhotoVideoId) {
+        editEvents.push(
+          waitForWebsocketEvent(
+            'AssetEditReadyV1',
+            (event) => event.asset.id === this.currentAsset!.livePhotoVideoId,
+            10_000,
+          ),
+        );
       }
 
       await (edits.length === 0
@@ -140,7 +148,7 @@ export class EditManager {
             },
           }));
 
-      await editCompleted;
+      await Promise.all(editEvents);
 
       eventManager.emit('AssetEditsApplied', assetId);
 

@@ -1004,10 +1004,13 @@ class AssetsApi {
   ///
   /// * [String] id (required):
   ///
+  /// * [bool] edited:
+  ///   Return edited asset if available
+  ///
   /// * [String] key:
   ///
   /// * [String] slug:
-  Future<Response> playAssetVideoWithHttpInfo(String id, { String? key, String? slug, }) async {
+  Future<Response> playAssetVideoWithHttpInfo(String id, { bool? edited, String? key, String? slug, }) async {
     // ignore: prefer_const_declarations
     final apiPath = r'/assets/{id}/video/playback'
       .replaceAll('{id}', id);
@@ -1019,6 +1022,9 @@ class AssetsApi {
     final headerParams = <String, String>{};
     final formParams = <String, String>{};
 
+    if (edited != null) {
+      queryParams.addAll(_queryParams('', 'edited', edited));
+    }
     if (key != null) {
       queryParams.addAll(_queryParams('', 'key', key));
     }
@@ -1048,11 +1054,14 @@ class AssetsApi {
   ///
   /// * [String] id (required):
   ///
+  /// * [bool] edited:
+  ///   Return edited asset if available
+  ///
   /// * [String] key:
   ///
   /// * [String] slug:
-  Future<MultipartFile?> playAssetVideo(String id, { String? key, String? slug, }) async {
-    final response = await playAssetVideoWithHttpInfo(id,  key: key, slug: slug, );
+  Future<MultipartFile?> playAssetVideo(String id, { bool? edited, String? key, String? slug, }) async {
+    final response = await playAssetVideoWithHttpInfo(id,  edited: edited, key: key, slug: slug, );
     if (response.statusCode >= HttpStatus.badRequest) {
       throw ApiException(response.statusCode, await _decodeBodyBytes(response));
     }

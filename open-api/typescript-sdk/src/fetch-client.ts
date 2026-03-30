@@ -4316,7 +4316,8 @@ export function viewAsset({ edited, id, key, size, slug }: {
 /**
  * Play asset video
  */
-export function playAssetVideo({ id, key, slug }: {
+export function playAssetVideo({ edited, id, key, slug }: {
+    edited?: boolean;
     id: string;
     key?: string;
     slug?: string;
@@ -4325,6 +4326,7 @@ export function playAssetVideo({ id, key, slug }: {
         status: 200;
         data: Blob;
     }>(`/assets/${encodeURIComponent(id)}/video/playback${QS.query(QS.explode({
+        edited,
         key,
         slug
     }))}`, {
@@ -7164,7 +7166,6 @@ export enum JobName {
     AssetDetectFaces = "AssetDetectFaces",
     AssetDetectDuplicatesQueueAll = "AssetDetectDuplicatesQueueAll",
     AssetDetectDuplicates = "AssetDetectDuplicates",
-    AssetEditThumbnailGeneration = "AssetEditThumbnailGeneration",
     AssetEncodeVideoQueueAll = "AssetEncodeVideoQueueAll",
     AssetEncodeVideo = "AssetEncodeVideo",
     AssetEmptyTrash = "AssetEmptyTrash",
@@ -7173,6 +7174,7 @@ export enum JobName {
     AssetFileMigration = "AssetFileMigration",
     AssetGenerateThumbnailsQueueAll = "AssetGenerateThumbnailsQueueAll",
     AssetGenerateThumbnails = "AssetGenerateThumbnails",
+    AssetProcessEdit = "AssetProcessEdit",
     AuditLogCleanup = "AuditLogCleanup",
     AuditTableCleanup = "AuditTableCleanup",
     DatabaseBackup = "DatabaseBackup",

@@ -8,10 +8,10 @@
 
   interface Props {
     asset: AssetResponseDto;
-    isOwner: boolean;
+    allowExifUpdate: boolean;
   }
 
-  let { asset, isOwner }: Props = $props();
+  let { asset, allowExifUpdate }: Props = $props();
 
   let description = $derived(asset.exifInfo?.description ?? '');
 
@@ -29,7 +29,7 @@
   };
 </script>
 
-{#if isOwner}
+{#if allowExifUpdate}
   <section class="px-4 mt-10">
     <Textarea
       bind:value={description}

@@ -12,6 +12,7 @@ import {
   GetAlbumsDto,
   UpdateAlbumDto,
   UpdateAlbumUserDto,
+  UpdateSharingPermissions,
 } from 'src/dtos/album.dto';
 import { BulkIdResponseDto, BulkIdsDto } from 'src/dtos/asset-ids.response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
@@ -156,6 +157,33 @@ export class AlbumController {
     @Body() dto: AddUsersDto,
   ): Promise<AlbumResponseDto> {
     return this.service.addUsers(auth, id, dto);
+  }
+
+  @Get(':id/user/self')
+  @Authenticated({ permission: Permission.AlbumAssetCreate })
+  @Endpoint({
+    summary: 'Get own sharing permissions',
+    description: 'Get the own sharing permissions in a specific album.',
+    history: new HistoryBuilder().added('v3').stable('v3'),
+  })
+  getOwnAlbumUser(@Auth() auth: AuthDto, @Param() { id }: UUIDParamDto) {
+    return this.service.getSelf(auth, id);
+  }
+
+  @Put(':id/user/self')
+  @Authenticated({ permission: Permission.AlbumAssetCreate })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Endpoint({
+    summary: 'Update own sharing permissions',
+    description: 'Change the own sharing permissions in a specific album.',
+    history: new HistoryBuilder().added('v3').stable('v3'),
+  })
+  updateOwnAlbumUser(
+    @Auth() auth: AuthDto,
+    @Param() { id }: UUIDParamDto,
+    @Body() dto: UpdateSharingPermissions,
+  ): Promise<void> {
+    return this.service.updateSelf(auth, id, dto);
   }
 
   @Put(':id/user/:userId')

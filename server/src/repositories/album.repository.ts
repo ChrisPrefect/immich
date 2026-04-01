@@ -14,6 +14,7 @@ import { InjectKysely } from 'nestjs-kysely';
 import { columns } from 'src/database';
 import { Chunked, ChunkedArray, ChunkedSet, DummyValue, GenerateSql } from 'src/decorators';
 import { AlbumUserCreateDto } from 'src/dtos/album.dto';
+import { SharingPermission } from 'src/enum';
 import { DB } from 'src/schema';
 import { AlbumTable } from 'src/schema/tables/album.table';
 import { AssetExifTable } from 'src/schema/tables/asset-exif.table';
@@ -326,7 +327,12 @@ export class AlbumRepository {
         await tx
           .insertInto('album_user')
           .values(
-            albumUsers.map((albumUser) => ({ albumId: newAlbum.id, userId: albumUser.userId, role: albumUser.role })),
+            albumUsers.map((albumUser) => ({
+              albumId: newAlbum.id,
+              userId: albumUser.userId,
+              role: albumUser.role,
+              permissions: [SharingPermission.AssetRead],
+            })),
           )
           .execute();
       }

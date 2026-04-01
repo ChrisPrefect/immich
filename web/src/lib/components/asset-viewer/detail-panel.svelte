@@ -13,7 +13,7 @@
   import { boundingBoxesArray } from '$lib/stores/people.store';
   import { locale } from '$lib/stores/preferences.store';
   import { preferences, user } from '$lib/stores/user.store';
-  import { getAssetMediaUrl, getPeopleThumbnailUrl } from '$lib/utils';
+  import { getAssetMediaUrl, getPeopleThumbnailUrl, hasPermissions } from '$lib/utils';
   import { delay, getDimensions } from '$lib/utils/asset-utils';
   import { getByteUnitString } from '$lib/utils/byte-units';
   import { handleError } from '$lib/utils/handle-error';
@@ -23,6 +23,7 @@
     AssetMediaSize,
     getAllAlbums,
     getAssetInfo,
+    SharingPermission,
     type AlbumResponseDto,
     type AssetResponseDto,
   } from '@immich/sdk';
@@ -58,6 +59,7 @@
   let showAssetPath = $state(false);
   let showEditFaces = $state(false);
   let isOwner = $derived($user?.id === asset.ownerId);
+  const allowExifUpdate = $derived(hasPermissions(asset, SharingPermission.ExifUpdate));
   let people = $derived(asset.people || []);
   let unassignedFaces = $derived(asset.unassignedFaces || []);
   let showingHiddenPeople = $state(false);
@@ -132,10 +134,6 @@
   const toggleAssetPath = () => (showAssetPath = !showAssetPath);
 
   const handleChangeDate = async () => {
-    if (!isOwner) {
-      return;
-    }
-
     await modalManager.show(AssetChangeDateModal, {
       asset: toTimelineAsset(asset),
       initialDate: dateTime,
@@ -181,8 +179,8 @@
     </section>
   {/if}
 
-  <DetailPanelDescription {asset} {isOwner} />
-  <DetailPanelRating {asset} {isOwner} />
+  <DetailPanelDescription {asset} {allowExifUpdate} />
+  <DetailPanelRating {asset} {allowExifUpdate} />
 
   {#if !authManager.isSharedLink && isOwner}
     <section class="px-4 pt-4 text-sm">
@@ -300,8 +298,8 @@
         type="button"
         class="flex w-full text-start justify-between place-items-start gap-4 py-4"
         onclick={handleChangeDate}
-        title={isOwner ? $t('edit_date') : ''}
-        class:hover:text-primary={isOwner}
+        title={allowExifUpdate ? $t('edit_date') : ''}
+        class:hover:text-primary={allowExifUpdate}
       >
         <div class="flex gap-4">
           <div>
@@ -336,13 +334,13 @@
           </div>
         </div>
 
-        {#if isOwner}
+        {#if allowExifUpdate}
           <div class="p-1">
             <Icon icon={mdiPencil} size="20" />
           </div>
         {/if}
       </button>
-    {:else if !dateTime && isOwner}
+    {:else if !dateTime && allowExifUpdate}
       <div class="flex justify-between place-items-start gap-4 py-4">
         <div class="flex gap-4">
           <div>
@@ -361,7 +359,7 @@
       <div>
         <p class="break-all flex place-items-center gap-2 whitespace-pre-wrap">
           {asset.originalFileName}
-          {#if isOwner}
+          {#if allowExifUpdate}
             <IconButton
               icon={mdiInformationOutline}
               aria-label={$t('show_file_location')}
@@ -464,7 +462,7 @@
       </div>
     {/if}
 
-    <DetailPanelLocation {isOwner} {asset} />
+    <DetailPanelLocation allowUpdateExif={allowExifUpdate} {asset} />
   </div>
 </section>
 

@@ -613,6 +613,8 @@ export type AssetResponseDto = {
     /** Owner user ID */
     ownerId: string;
     people?: PersonWithFacesResponseDto[];
+    /** Sharing permissions */
+    permissions: SharingPermission[];
     /** Is resized */
     resized?: boolean;
     stack?: (AssetStackResponseDto) | null;
@@ -731,6 +733,14 @@ export type BulkIdResponseDto = {
     id: string;
     /** Whether operation succeeded */
     success: boolean;
+};
+export type SharingPermissionsResponseDto = {
+    /** Sharing permissions */
+    permissions: SharingPermission[];
+};
+export type UpdateSharingPermissions = {
+    /** Sharing permissions */
+    permissions: SharingPermission[];
 };
 export type UpdateAlbumUserDto = {
     /** Album user role */
@@ -3826,6 +3836,32 @@ export function addAssetsToAlbum({ id, key, slug, bulkIdsDto }: {
     })));
 }
 /**
+ * Get own sharing permissions
+ */
+export function getOwnAlbumUser({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: SharingPermissionsResponseDto;
+    }>(`/albums/${encodeURIComponent(id)}/user/self`, {
+        ...opts
+    }));
+}
+/**
+ * Update own sharing permissions
+ */
+export function updateOwnAlbumUser({ id, updateSharingPermissions }: {
+    id: string;
+    updateSharingPermissions: UpdateSharingPermissions;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/albums/${encodeURIComponent(id)}/user/self`, oazapfts.json({
+        ...opts,
+        method: "PUT",
+        body: updateSharingPermissions
+    })));
+}
+/**
  * Remove user from album
  */
 export function removeUserFromAlbum({ id, userId }: {
@@ -6912,6 +6948,19 @@ export enum SourceType {
     MachineLearning = "machine-learning",
     Exif = "exif",
     Manual = "manual"
+}
+export enum SharingPermission {
+    All = "all",
+    AssetRead = "asset.read",
+    AssetUpdate = "asset.update",
+    AssetEdit = "asset.edit",
+    AssetDelete = "asset.delete",
+    AssetShare = "asset.share",
+    ExifRead = "exif.read",
+    ExifUpdate = "exif.update",
+    PersonRead = "person.read",
+    PersonCreate = "person.create",
+    PersonMerge = "person.merge"
 }
 export enum AssetTypeEnum {
     Image = "IMAGE",

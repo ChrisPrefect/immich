@@ -40,6 +40,7 @@ import {
   withFiles,
   withLibrary,
   withOwner,
+  withPermissions,
   withSmartSearch,
   withTagId,
   withTags,
@@ -531,10 +532,11 @@ export class AssetRepository {
       .executeTakeFirst();
   }
 
-  @GenerateSql({ params: [DummyValue.UUID] })
+  @GenerateSql({ params: [DummyValue.UUID, {}, DummyValue.UUID] })
   getById(
     id: string,
     { exifInfo, faces, files, library, owner, smartSearch, stack, tags, edits }: GetByIdsRelations = {},
+    userId?: string,
   ) {
     return this.db
       .selectFrom('asset')
@@ -577,6 +579,7 @@ export class AssetRepository {
       .$if(!!files, (qb) => qb.select(withFiles))
       .$if(!!tags, (qb) => qb.select(withTags))
       .$if(!!edits, (qb) => qb.select(withEdits))
+      .$if(!!userId, (qb) => qb.select(withPermissions(userId!)))
       .limit(1)
       .executeTakeFirst();
   }

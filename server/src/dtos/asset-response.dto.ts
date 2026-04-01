@@ -13,7 +13,7 @@ import {
 } from 'src/dtos/person.dto';
 import { TagResponseDto, mapTag } from 'src/dtos/tag.dto';
 import { UserResponseDto, mapUser } from 'src/dtos/user.dto';
-import { AssetStatus, AssetType, AssetVisibility, ChecksumAlgorithm } from 'src/enum';
+import { AssetStatus, AssetType, AssetVisibility, ChecksumAlgorithm, SharingPermission } from 'src/enum';
 import { ImageDimensions, MaybeDehydrated } from 'src/types';
 import { getDimensions } from 'src/utils/asset.util';
 import { hexOrBufferToBase64 } from 'src/utils/bytes';
@@ -138,6 +138,9 @@ export class AssetResponseDto extends SanitizedAssetResponseDto {
   resized?: boolean;
   @Property({ description: 'Is edited', history: new HistoryBuilder().added('v2.5.0').beta('v2.5.0') })
   isEdited!: boolean;
+
+  @ValidateEnum({ enum: SharingPermission, name: 'SharingPermission', description: 'Sharing permissions', each: true })
+  permissions!: SharingPermission[];
 }
 
 export type MapAsset = {
@@ -178,6 +181,7 @@ export type MapAsset = {
   width: number | null;
   height: number | null;
   isEdited: boolean;
+  permissions?: { permission: SharingPermission }[];
 };
 
 export class AssetStackResponseDto {
@@ -240,8 +244,16 @@ const mapStack = (entity: { stack?: Stack | null }) => {
 
 export function mapAsset(entity: MaybeDehydrated<MapAsset>, options: AssetMapOptions = {}): AssetResponseDto {
   const { stripMetadata = false, withStack = false } = options;
+  const permissions =
+    options.auth?.user.id === entity.ownerId
+      ? [SharingPermission.All]
+      : (entity.permissions?.map(({ permission }) => permission) ?? []);
 
-  if (stripMetadata) {
+  if (
+    stripMetadata ||
+    (entity.permissions &&
+      !(permissions.includes(SharingPermission.All) || permissions.includes(SharingPermission.ExifRead)))
+  ) {
     const sanitizedAssetResponse: SanitizedAssetResponseDto = {
       id: entity.id,
       type: entity.type,
@@ -297,5 +309,6 @@ export function mapAsset(entity: MaybeDehydrated<MapAsset>, options: AssetMapOpt
     width: entity.width,
     height: entity.height,
     isEdited: entity.isEdited,
+    permissions,
   };
 }

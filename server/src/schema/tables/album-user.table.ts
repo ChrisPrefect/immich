@@ -10,7 +10,8 @@ import {
   UpdateDateColumn,
 } from '@immich/sql-tools';
 import { CreateIdColumn, UpdatedAtTrigger, UpdateIdColumn } from 'src/decorators';
-import { AlbumUserRole } from 'src/enum';
+import { AlbumUserRole, SharingPermission } from 'src/enum';
+import { sharing_permission_enum } from 'src/schema/enums';
 import { album_user_after_insert, album_user_delete_audit } from 'src/schema/functions';
 import { AlbumTable } from 'src/schema/tables/album.table';
 import { UserTable } from 'src/schema/tables/user.table';
@@ -61,4 +62,11 @@ export class AlbumUserTable {
 
   @UpdateDateColumn()
   updatedAt!: Generated<Timestamp>;
+
+  @Column({
+    array: true,
+    enum: sharing_permission_enum,
+    default: [SharingPermission.AssetRead, SharingPermission.ExifRead],
+  })
+  permissions!: Generated<SharingPermission[]>;
 }

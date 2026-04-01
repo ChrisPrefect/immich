@@ -8,7 +8,7 @@ import { BulkIdErrorReason } from 'src/dtos/asset-ids.response.dto';
 import { AssetResponseDto, MapAsset, mapAsset } from 'src/dtos/asset-response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { mapUser, UserResponseDto } from 'src/dtos/user.dto';
-import { AlbumUserRole, AssetOrder } from 'src/enum';
+import { AlbumUserRole, AssetOrder, SharingPermission } from 'src/enum';
 import { MaybeDehydrated } from 'src/types';
 import { asDateString } from 'src/utils/date';
 import { Optional, ValidateBoolean, ValidateEnum, ValidateUUID } from 'src/validation';
@@ -122,6 +122,16 @@ export class AlbumStatisticsResponseDto {
 
   @ApiProperty({ type: 'integer', description: 'Number of non-shared albums' })
   notShared!: number;
+}
+
+export class UpdateSharingPermissions {
+  @ValidateEnum({ enum: SharingPermission, name: 'SharingPermission', description: 'Sharing permissions', each: true })
+  permissions!: SharingPermission[];
+}
+
+export class SharingPermissionsResponseDto {
+  @ValidateEnum({ enum: SharingPermission, name: 'SharingPermission', description: 'Sharing permissions', each: true })
+  permissions!: SharingPermission[];
 }
 
 export class UpdateAlbumUserDto {

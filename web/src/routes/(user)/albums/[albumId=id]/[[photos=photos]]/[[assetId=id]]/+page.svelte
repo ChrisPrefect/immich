@@ -37,6 +37,7 @@
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
   import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
+  import SharingPermissionsModal from '$lib/modals/SharingPermissionsModal.svelte';
   import { Route } from '$lib/route';
   import {
     getAlbumActions,
@@ -73,6 +74,7 @@
     mdiLink,
     mdiPlus,
     mdiPresentationPlay,
+    mdiShareVariant,
   } from '@mdi/js';
   import { onDestroy } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -406,6 +408,15 @@
                       onclick={() => modalManager.show(AlbumOptionsModal, { album })}
                     />
                   {/if}
+
+                  <IconButton
+                    shape="round"
+                    aria-label="Sharing permissions"
+                    color="secondary"
+                    size="medium"
+                    icon={mdiShareVariant}
+                    onclick={() => modalManager.show(SharingPermissionsModal, { albumId: album.id })}
+                  />
 
                   <ActionButton action={Share} />
                 </div>

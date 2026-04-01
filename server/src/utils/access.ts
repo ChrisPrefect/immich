@@ -1,7 +1,7 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { AuthSharedLink } from 'src/database';
 import { AuthDto } from 'src/dtos/auth.dto';
-import { AlbumUserRole, Permission } from 'src/enum';
+import { AlbumUserRole, Permission, SharingPermission } from 'src/enum';
 import { AccessRepository } from 'src/repositories/access.repository';
 import { setDifference, setIsEqual, setIsSuperset, setUnion } from 'src/utils/set';
 
@@ -120,37 +120,41 @@ const checkOtherAccess = async (access: AccessRepository, request: OtherAccessRe
 
     case Permission.AssetRead: {
       const isOwner = await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
-      const isAlbum = await access.asset.checkAlbumAccess(auth.user.id, setDifference(ids, isOwner));
-      const isPartner = await access.asset.checkPartnerAccess(auth.user.id, setDifference(ids, isOwner, isAlbum));
-      return setUnion(isOwner, isAlbum, isPartner);
+      const isShared = await access.asset.checkSharedAccess(auth.user.id, ids, [SharingPermission.AssetRead]);
+      return setUnion(isOwner, isShared);
     }
 
     case Permission.AssetShare: {
       const isOwner = await access.asset.checkOwnerAccess(auth.user.id, ids, false);
-      const isPartner = await access.asset.checkPartnerAccess(auth.user.id, setDifference(ids, isOwner));
-      return setUnion(isOwner, isPartner);
+      const isShared = await access.asset.checkSharedAccess(auth.user.id, ids, [SharingPermission.AssetShare]);
+      return setUnion(isOwner, isShared);
     }
 
     case Permission.AssetView: {
       const isOwner = await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
-      const isAlbum = await access.asset.checkAlbumAccess(auth.user.id, setDifference(ids, isOwner));
-      const isPartner = await access.asset.checkPartnerAccess(auth.user.id, setDifference(ids, isOwner, isAlbum));
-      return setUnion(isOwner, isAlbum, isPartner);
+      const isShared = await access.asset.checkSharedAccess(auth.user.id, ids, [SharingPermission.AssetRead]);
+      return setUnion(isOwner, isShared);
     }
 
     case Permission.AssetDownload: {
       const isOwner = await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
-      const isAlbum = await access.asset.checkAlbumAccess(auth.user.id, setDifference(ids, isOwner));
-      const isPartner = await access.asset.checkPartnerAccess(auth.user.id, setDifference(ids, isOwner, isAlbum));
-      return setUnion(isOwner, isAlbum, isPartner);
+      const isShared = await access.asset.checkSharedAccess(auth.user.id, ids, [
+        SharingPermission.AssetRead,
+        SharingPermission.ExifRead,
+      ]);
+      return setUnion(isOwner, isShared);
     }
 
     case Permission.AssetUpdate: {
-      return await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      const isOwner = await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      const isShared = await access.asset.checkSharedAccess(auth.user.id, ids, [SharingPermission.AssetShare]);
+      return setUnion(isOwner, isShared);
     }
 
     case Permission.AssetDelete: {
-      return await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      const isOwner = await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      const isShared = await access.asset.checkSharedAccess(auth.user.id, ids, [SharingPermission.AssetDelete]);
+      return setUnion(isOwner, isShared);
     }
 
     case Permission.AssetCopy: {
@@ -158,15 +162,21 @@ const checkOtherAccess = async (access: AccessRepository, request: OtherAccessRe
     }
 
     case Permission.AssetEditGet: {
-      return await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      const isOwner = await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      const isShared = await access.asset.checkSharedAccess(auth.user.id, ids, [SharingPermission.AssetEdit]);
+      return setUnion(isOwner, isShared);
     }
 
     case Permission.AssetEditCreate: {
-      return await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      const isOwner = await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      const isShared = await access.asset.checkSharedAccess(auth.user.id, ids, [SharingPermission.AssetEdit]);
+      return setUnion(isOwner, isShared);
     }
 
     case Permission.AssetEditDelete: {
-      return await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      const isOwner = await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      const isShared = await access.asset.checkSharedAccess(auth.user.id, ids, [SharingPermission.AssetEdit]);
+      return setUnion(isOwner, isShared);
     }
 
     case Permission.AlbumRead: {

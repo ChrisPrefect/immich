@@ -344,8 +344,8 @@ importers:
         specifier: 2.0.0-rc13
         version: 2.0.0-rc13
       '@immich/sql-tools':
-        specifier: ^0.3.2
-        version: 0.3.2
+        specifier: ^0.3.4
+        version: 0.3.4
       '@nestjs/bullmq':
         specifier: ^11.0.1
         version: 11.0.4(@nestjs/common@11.1.17(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.17)(bullmq@5.71.0)
@@ -3035,8 +3035,8 @@ packages:
   '@immich/justified-layout-wasm@0.4.3':
     resolution: {integrity: sha512-fpcQ7zPhP3Cp1bEXhONVYSUeIANa2uzaQFGKufUZQo5FO7aFT77szTVChhlCy4XaVy5R4ZvgSkA/1TJmeORz7Q==}
 
-  '@immich/sql-tools@0.3.2':
-    resolution: {integrity: sha512-UWhy/+Lf8C1dJip5wPfFytI3Vq/9UyDKQE1ROjXwVhT6E/CPgBkRLwHPetjYGPJ4o1JVVpRLnEEJCXdvzqVpGw==}
+  '@immich/sql-tools@0.3.4':
+    resolution: {integrity: sha512-lsJaFELmBEEd3VtsPGXGT8HCBLkthra3k4EalH6MQeCZv9+iTpK7WT2vJLA5a/ndo+cCbcgm+jxsceqZKCuyRQ==}
     hasBin: true
 
   '@immich/svelte-markdown-preprocess@0.2.1':
@@ -15216,7 +15216,7 @@ snapshots:
 
   '@immich/justified-layout-wasm@0.4.3': {}
 
-  '@immich/sql-tools@0.3.2':
+  '@immich/sql-tools@0.3.4':
     dependencies:
       commander: 14.0.3
       kysely: 0.28.14

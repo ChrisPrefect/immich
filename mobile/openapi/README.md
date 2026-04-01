@@ -91,10 +91,12 @@ Class | Method | HTTP request | Description
 *AlbumsApi* | [**getAlbumInfo**](doc//AlbumsApi.md#getalbuminfo) | **GET** /albums/{id} | Retrieve an album
 *AlbumsApi* | [**getAlbumStatistics**](doc//AlbumsApi.md#getalbumstatistics) | **GET** /albums/statistics | Retrieve album statistics
 *AlbumsApi* | [**getAllAlbums**](doc//AlbumsApi.md#getallalbums) | **GET** /albums | List all albums
+*AlbumsApi* | [**getOwnAlbumUser**](doc//AlbumsApi.md#getownalbumuser) | **GET** /albums/{id}/user/self | Get own sharing permissions
 *AlbumsApi* | [**removeAssetFromAlbum**](doc//AlbumsApi.md#removeassetfromalbum) | **DELETE** /albums/{id}/assets | Remove assets from an album
 *AlbumsApi* | [**removeUserFromAlbum**](doc//AlbumsApi.md#removeuserfromalbum) | **DELETE** /albums/{id}/user/{userId} | Remove user from album
 *AlbumsApi* | [**updateAlbumInfo**](doc//AlbumsApi.md#updatealbuminfo) | **PATCH** /albums/{id} | Update an album
 *AlbumsApi* | [**updateAlbumUser**](doc//AlbumsApi.md#updatealbumuser) | **PUT** /albums/{id}/user/{userId} | Update user role
+*AlbumsApi* | [**updateOwnAlbumUser**](doc//AlbumsApi.md#updateownalbumuser) | **PUT** /albums/{id}/user/self | Update own sharing permissions
 *AssetsApi* | [**checkBulkUpload**](doc//AssetsApi.md#checkbulkupload) | **POST** /assets/bulk-upload-check | Check bulk upload
 *AssetsApi* | [**checkExistingAssets**](doc//AssetsApi.md#checkexistingassets) | **POST** /assets/exist | Check existing assets
 *AssetsApi* | [**copyAsset**](doc//AssetsApi.md#copyasset) | **PUT** /assets/copy | Copy asset
@@ -561,6 +563,8 @@ Class | Method | HTTP request | Description
  - [SharedLinkType](doc//SharedLinkType.md)
  - [SharedLinksResponse](doc//SharedLinksResponse.md)
  - [SharedLinksUpdate](doc//SharedLinksUpdate.md)
+ - [SharingPermission](doc//SharingPermission.md)
+ - [SharingPermissionsResponseDto](doc//SharingPermissionsResponseDto.md)
  - [SignUpDto](doc//SignUpDto.md)
  - [SmartSearchDto](doc//SmartSearchDto.md)
  - [SourceType](doc//SourceType.md)
@@ -658,6 +662,7 @@ Class | Method | HTTP request | Description
  - [UpdateAlbumUserDto](doc//UpdateAlbumUserDto.md)
  - [UpdateAssetDto](doc//UpdateAssetDto.md)
  - [UpdateLibraryDto](doc//UpdateLibraryDto.md)
+ - [UpdateSharingPermissions](doc//UpdateSharingPermissions.md)
  - [UsageByUserDto](doc//UsageByUserDto.md)
  - [UserAdminCreateDto](doc//UserAdminCreateDto.md)
  - [UserAdminDeleteDto](doc//UserAdminDeleteDto.md)

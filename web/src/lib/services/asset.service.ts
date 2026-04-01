@@ -7,7 +7,7 @@ import AssetAddToAlbumModal from '$lib/modals/AssetAddToAlbumModal.svelte';
 import AssetTagModal from '$lib/modals/AssetTagModal.svelte';
 import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
 import { user as authUser, preferences } from '$lib/stores/user.store';
-import { getAssetMediaUrl, getSharedLink, sleep } from '$lib/utils';
+import { getAssetMediaUrl, getSharedLink, hasPermissions, sleep } from '$lib/utils';
 import { downloadUrl } from '$lib/utils/asset-utils';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
@@ -18,6 +18,7 @@ import {
   AssetVisibility,
   getAssetInfo,
   runAssetJobs,
+  SharingPermission,
   updateAsset,
   type AssetJobsDto,
   type AssetResponseDto,
@@ -103,7 +104,12 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto) =
     title: $t('share'),
     icon: mdiShareVariantOutline,
     type: $t('assets'),
-    $if: () => !!(currentAuthUser && !asset.isTrashed && asset.visibility !== AssetVisibility.Locked),
+    $if: () =>
+      !!(
+        hasPermissions(asset, SharingPermission.AssetShare) &&
+        !asset.isTrashed &&
+        asset.visibility !== AssetVisibility.Locked
+      ),
     onAction: () => modalManager.show(SharedLinkCreateModal, { assetIds: [asset.id] }),
   };
 
@@ -126,7 +132,7 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto) =
 
   const SharedLinkDownload: ActionItem = {
     ...Download,
-    $if: () => isOwner || !!sharedLink?.allowDownload,
+    $if: () => hasPermissions(asset, SharingPermission.AssetShare) || !!sharedLink?.allowDownload,
   };
 
   const PlayMotionPhoto: ActionItem = {
@@ -237,7 +243,7 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto) =
     icon: mdiTune,
     $if: () =>
       !sharedLink &&
-      isOwner &&
+      hasPermissions(asset, SharingPermission.AssetEdit) &&
       asset.type === AssetTypeEnum.Image &&
       !asset.livePhotoVideoId &&
       asset.exifInfo?.projectionType !== ProjectionType.EQUIRECTANGULAR &&

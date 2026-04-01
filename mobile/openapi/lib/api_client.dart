@@ -644,6 +644,10 @@ class ApiClient {
           return SharedLinksResponse.fromJson(value);
         case 'SharedLinksUpdate':
           return SharedLinksUpdate.fromJson(value);
+        case 'SharingPermission':
+          return SharingPermissionTypeTransformer().decode(value);
+        case 'SharingPermissionsResponseDto':
+          return SharingPermissionsResponseDto.fromJson(value);
         case 'SignUpDto':
           return SignUpDto.fromJson(value);
         case 'SmartSearchDto':
@@ -838,6 +842,8 @@ class ApiClient {
           return UpdateAssetDto.fromJson(value);
         case 'UpdateLibraryDto':
           return UpdateLibraryDto.fromJson(value);
+        case 'UpdateSharingPermissions':
+          return UpdateSharingPermissions.fromJson(value);
         case 'UsageByUserDto':
           return UsageByUserDto.fromJson(value);
         case 'UserAdminCreateDto':

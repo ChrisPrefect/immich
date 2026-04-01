@@ -2221,6 +2221,119 @@
         "x-immich-state": "Stable"
       }
     },
+    "/albums/{id}/user/self": {
+      "get": {
+        "description": "Get the own sharing permissions in a specific album.",
+        "operationId": "getOwnAlbumUser",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharingPermissionsResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get own sharing permissions",
+        "tags": [
+          "Albums"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3",
+            "state": "Added"
+          },
+          {
+            "version": "v3",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "albumAsset.create",
+        "x-immich-state": "Stable"
+      },
+      "put": {
+        "description": "Change the own sharing permissions in a specific album.",
+        "operationId": "updateOwnAlbumUser",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSharingPermissions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Update own sharing permissions",
+        "tags": [
+          "Albums"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3",
+            "state": "Added"
+          },
+          {
+            "version": "v3",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "albumAsset.create",
+        "x-immich-state": "Stable"
+      }
+    },
     "/albums/{id}/user/{userId}": {
       "delete": {
         "description": "Remove a user from an album. Use an ID of \"me\" to leave a shared album.",
@@ -17137,6 +17250,13 @@
             },
             "type": "array"
           },
+          "permissions": {
+            "description": "Sharing permissions",
+            "items": {
+              "$ref": "#/components/schemas/SharingPermission"
+            },
+            "type": "array"
+          },
           "resized": {
             "deprecated": true,
             "description": "Is resized",
@@ -17226,6 +17346,7 @@
           "originalFileName",
           "originalPath",
           "ownerId",
+          "permissions",
           "thumbhash",
           "type",
           "updatedAt",
@@ -22154,6 +22275,38 @@
         },
         "type": "object"
       },
+      "SharingPermission": {
+        "description": "Sharing permissions",
+        "enum": [
+          "all",
+          "asset.read",
+          "asset.update",
+          "asset.edit",
+          "asset.delete",
+          "asset.share",
+          "exif.read",
+          "exif.update",
+          "person.read",
+          "person.create",
+          "person.merge"
+        ],
+        "type": "string"
+      },
+      "SharingPermissionsResponseDto": {
+        "properties": {
+          "permissions": {
+            "description": "Sharing permissions",
+            "items": {
+              "$ref": "#/components/schemas/SharingPermission"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "permissions"
+        ],
+        "type": "object"
+      },
       "SignUpDto": {
         "properties": {
           "email": {
@@ -25498,6 +25651,21 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "UpdateSharingPermissions": {
+        "properties": {
+          "permissions": {
+            "description": "Sharing permissions",
+            "items": {
+              "$ref": "#/components/schemas/SharingPermission"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "permissions"
+        ],
         "type": "object"
       },
       "UsageByUserDto": {

@@ -301,13 +301,44 @@ limit
 
 -- AssetRepository.getById
 select
-  "asset".*
+  "asset".*,
+  (
+    select
+      coalesce(json_agg(agg), '[]')
+    from
+      (
+        select distinct
+          unnest("album_user"."permissions") as "permission"
+        from
+          "album_user"
+          inner join "album_asset" on "album_user"."albumId" = "album_asset"."albumId"
+        where
+          "album_asset"."assetId" = "asset"."id"
+          and "album_user"."userId" = "asset"."ownerId"
+          and "album_user"."albumId" in (
+            select
+              "album_user"."albumId"
+            from
+              "album_user"
+            where
+              "album_user"."userId" = $1
+          )
+        union
+        select distinct
+          unnest("partner"."permissions") as "permission"
+        from
+          "partner"
+        where
+          "partner"."sharedById" = "asset"."ownerId"
+          and "partner"."sharedWithId" = $2
+      ) as agg
+  ) as "permissions"
 from
   "asset"
 where
-  "asset"."id" = $1::uuid
+  "asset"."id" = $3::uuid
 limit
-  $2
+  $4
 
 -- AssetRepository.updateAll
 update "asset"

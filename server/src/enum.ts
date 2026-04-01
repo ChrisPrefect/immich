@@ -293,6 +293,23 @@ export enum Permission {
   AdminAuthUnlinkAll = 'adminAuth.unlinkAll',
 }
 
+export enum SharingPermission {
+  All = 'all',
+
+  AssetRead = 'asset.read',
+  AssetUpdate = 'asset.update',
+  AssetEdit = 'asset.edit',
+  AssetDelete = 'asset.delete',
+  AssetShare = 'asset.share',
+
+  ExifRead = 'exif.read',
+  ExifUpdate = 'exif.update',
+
+  PersonRead = 'person.read',
+  PersonCreate = 'person.create',
+  PersonMerge = 'person.merge',
+}
+
 export enum SharedLinkType {
   Album = 'ALBUM',
 

@@ -77,14 +77,18 @@ export class AssetService extends BaseService {
   async get(auth: AuthDto, id: string): Promise<AssetResponseDto | SanitizedAssetResponseDto> {
     await this.requireAccess({ auth, permission: Permission.AssetRead, ids: [id] });
 
-    const asset = await this.assetRepository.getById(id, {
-      exifInfo: true,
-      owner: true,
-      faces: { person: true },
-      stack: { assets: true },
-      edits: true,
-      tags: true,
-    });
+    const asset = await this.assetRepository.getById(
+      id,
+      {
+        exifInfo: true,
+        owner: true,
+        faces: { person: true },
+        stack: { assets: true },
+        edits: true,
+        tags: true,
+      },
+      auth.user.id,
+    );
 
     if (!asset) {
       throw new BadRequestException('Asset not found');

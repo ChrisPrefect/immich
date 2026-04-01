@@ -13,7 +13,7 @@ import {
 } from 'src/dtos/person.dto';
 import { TagResponseDto, mapTag } from 'src/dtos/tag.dto';
 import { UserResponseDto, mapUser } from 'src/dtos/user.dto';
-import { AssetStatus, AssetType, AssetVisibility } from 'src/enum';
+import { AssetStatus, AssetType, AssetVisibility, ChecksumAlgorithm } from 'src/enum';
 import { ImageDimensions, MaybeDehydrated } from 'src/types';
 import { getDimensions } from 'src/utils/asset.util';
 import { hexOrBufferToBase64 } from 'src/utils/bytes';
@@ -148,12 +148,12 @@ export type MapAsset = {
   updateId: string;
   status: AssetStatus;
   checksum: Buffer<ArrayBufferLike>;
+  checksumAlgorithm: ChecksumAlgorithm;
   deviceAssetId: string;
   deviceId: string;
   duplicateId: string | null;
   duration: string | null;
   edits?: ShallowDehydrateObject<AssetEditActionItem>[];
-  encodedVideoPath: string | null;
   exifInfo?: ShallowDehydrateObject<Selectable<Exif>> | null;
   faces?: ShallowDehydrateObject<AssetFace>[];
   fileCreatedAt: Date;

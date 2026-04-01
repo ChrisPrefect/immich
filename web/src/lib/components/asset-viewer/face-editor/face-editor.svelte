@@ -1,7 +1,7 @@
 <script lang="ts">
+  import { shortcut } from '$lib/actions/shortcut';
   import ImageThumbnail from '$lib/components/assets/thumbnail/image-thumbnail.svelte';
-  import { assetViewingStore } from '$lib/stores/asset-viewing.store';
-  import { isFaceEditMode } from '$lib/stores/face-edit.svelte';
+  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { getPeopleThumbnailUrl } from '$lib/utils';
   import { getNaturalSize, scaleToFit } from '$lib/utils/container-utils';
   import { handleError } from '$lib/utils/handle-error';
@@ -9,15 +9,15 @@
   import { Button, Input, modalManager, toastManager } from '@immich/ui';
   import { Canvas, InteractiveFabricObject, Rect } from 'fabric';
   import { clamp } from 'lodash-es';
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { t } from 'svelte-i18n';
 
-  interface Props {
+  type Props = {
     htmlElement: HTMLImageElement | HTMLVideoElement;
     containerWidth: number;
     containerHeight: number;
     assetId: string;
-  }
+  };
 
   let { htmlElement, containerWidth, containerHeight, assetId }: Props = $props();
 
@@ -26,6 +26,7 @@
   let faceRect: Rect | undefined = $state();
   let faceSelectorEl: HTMLDivElement | undefined = $state();
   let scrollableListEl: HTMLDivElement | undefined = $state();
+  let searchInputEl: HTMLInputElement | null = $state(null);
   let page = $state(1);
   let candidates = $state<PersonResponseDto[]>([]);
 
@@ -80,6 +81,8 @@
   onMount(async () => {
     setupCanvas();
     await getPeople();
+    await tick();
+    searchInputEl?.focus();
   });
 
   const imageContentMetrics = $derived.by(() => {
@@ -135,8 +138,8 @@
     );
   };
 
-  const cancel = () => {
-    isFaceEditMode.value = false;
+  const onClose = () => {
+    assetViewerManager.closeFaceEditMode();
   };
 
   const getPeople = async () => {
@@ -220,12 +223,15 @@
 
   $effect(() => {
     const rect = faceRect;
-    if (rect) {
+    const cvs = canvas;
+    if (rect && cvs) {
       rect.on('moving', positionFaceSelector);
       rect.on('scaling', positionFaceSelector);
+      cvs.on('object:modified', () => searchInputEl?.focus());
       return () => {
         rect.off('moving', positionFaceSelector);
         rect.off('scaling', positionFaceSelector);
+        cvs.off('object:modified', () => searchInputEl?.focus());
       };
     }
   });
@@ -280,18 +286,25 @@
         },
       });
 
-      await assetViewingStore.setAssetId(assetId);
+      await assetViewerManager.setAssetId(assetId);
     } catch (error) {
       handleError(error, 'Error tagging face');
     } finally {
-      isFaceEditMode.value = false;
+      onClose();
     }
   };
+
+  onDestroy(() => {
+    onClose();
+  });
 </script>
+
+<svelte:document use:shortcut={{ shortcut: { key: 'Escape' }, onShortcut: onClose, ignoreInputFields: false }} />
 
 <div
   id="face-editor-data"
   class="absolute start-0 top-0 z-5 h-full w-full overflow-hidden"
+  data-overlay-interactive
   data-face-left={faceBoxPosition.left}
   data-face-top={faceBoxPosition.top}
   data-face-width={faceBoxPosition.width}
@@ -307,7 +320,7 @@
     <p class="text-center text-sm">{$t('select_person_to_tag')}</p>
 
     <div class="my-3 relative">
-      <Input placeholder={$t('search_people')} bind:value={searchTerm} size="tiny" />
+      <Input placeholder={$t('search_people')} bind:value={searchTerm} bind:ref={searchInputEl} size="tiny" />
     </div>
 
     <div bind:this={scrollableListEl} class="h-62.5 overflow-y-auto mt-2">
@@ -341,6 +354,6 @@
       {/if}
     </div>
 
-    <Button size="small" fullWidth onclick={cancel} color="danger" class="mt-2">{$t('cancel')}</Button>
+    <Button size="small" fullWidth onclick={onClose} color="danger" class="mt-2">{$t('cancel')}</Button>
   </div>
 </div>

@@ -2,8 +2,8 @@
   import FaceEditor from '$lib/components/asset-viewer/face-editor/face-editor.svelte';
   import VideoRemoteViewer from '$lib/components/asset-viewer/video-remote-viewer.svelte';
   import { assetViewerFadeDuration } from '$lib/constants';
+  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { castManager } from '$lib/managers/cast-manager.svelte';
-  import { isFaceEditMode } from '$lib/stores/face-edit.svelte';
   import { autoPlayVideo, loopVideo as loopVideoPreference } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
   import { timeToSeconds } from '$lib/utils/date-time';
@@ -75,7 +75,8 @@
       ? getAssetMediaUrl({ id: assetId, size: AssetMediaSize.Original, cacheKey })
       : getAssetPlaybackUrl({ id: assetId, cacheKey }),
   );
-  let duration = $derived(timeToSeconds(asset.duration));
+  const duration = $derived(timeToSeconds(asset.duration));
+  const aspectRatio = $derived(asset.width && asset.height ? `${asset.width} / ${asset.height}` : undefined);
   let showVideo = $state(false);
   let hasFocused = $state(false);
 
@@ -141,7 +142,7 @@
   let containerHeight = $state(0);
 
   $effect(() => {
-    if (isFaceEditMode.value) {
+    if (assetViewerManager.isFaceEditMode) {
       videoPlayer?.pause();
     }
   });
@@ -169,7 +170,7 @@
         dir="ltr"
         nohotkeys
         class="h-full max-w-full dark"
-        style={asset.width != null && asset.height != null ? `aspect-ratio: ${asset.width} / ${asset.height};` : undefined}
+        style:aspect-ratio={aspectRatio}
         defaultduration={duration}
       >
         <video
@@ -246,7 +247,7 @@
         </div>
       {/if}
 
-      {#if isFaceEditMode.value}
+      {#if assetViewerManager.isFaceEditMode}
         <FaceEditor htmlElement={videoPlayer} {containerWidth} {containerHeight} {assetId} />
       {/if}
     {/if}

@@ -19,7 +19,6 @@ class SyncAlbumV1 {
     required this.isActivityEnabled,
     required this.name,
     required this.order,
-    required this.ownerId,
     required this.thumbnailAssetId,
     required this.updatedAt,
   });
@@ -41,9 +40,6 @@ class SyncAlbumV1 {
 
   AssetOrder order;
 
-  /// Owner ID
-  String ownerId;
-
   /// Thumbnail asset ID
   String? thumbnailAssetId;
 
@@ -58,7 +54,6 @@ class SyncAlbumV1 {
     other.isActivityEnabled == isActivityEnabled &&
     other.name == name &&
     other.order == order &&
-    other.ownerId == ownerId &&
     other.thumbnailAssetId == thumbnailAssetId &&
     other.updatedAt == updatedAt;
 
@@ -71,12 +66,11 @@ class SyncAlbumV1 {
     (isActivityEnabled.hashCode) +
     (name.hashCode) +
     (order.hashCode) +
-    (ownerId.hashCode) +
     (thumbnailAssetId == null ? 0 : thumbnailAssetId!.hashCode) +
     (updatedAt.hashCode);
 
   @override
-  String toString() => 'SyncAlbumV1[createdAt=$createdAt, description=$description, id=$id, isActivityEnabled=$isActivityEnabled, name=$name, order=$order, ownerId=$ownerId, thumbnailAssetId=$thumbnailAssetId, updatedAt=$updatedAt]';
+  String toString() => 'SyncAlbumV1[createdAt=$createdAt, description=$description, id=$id, isActivityEnabled=$isActivityEnabled, name=$name, order=$order, thumbnailAssetId=$thumbnailAssetId, updatedAt=$updatedAt]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -86,7 +80,6 @@ class SyncAlbumV1 {
       json[r'isActivityEnabled'] = this.isActivityEnabled;
       json[r'name'] = this.name;
       json[r'order'] = this.order;
-      json[r'ownerId'] = this.ownerId;
     if (this.thumbnailAssetId != null) {
       json[r'thumbnailAssetId'] = this.thumbnailAssetId;
     } else {
@@ -111,7 +104,6 @@ class SyncAlbumV1 {
         isActivityEnabled: mapValueOfType<bool>(json, r'isActivityEnabled')!,
         name: mapValueOfType<String>(json, r'name')!,
         order: AssetOrder.fromJson(json[r'order'])!,
-        ownerId: mapValueOfType<String>(json, r'ownerId')!,
         thumbnailAssetId: mapValueOfType<String>(json, r'thumbnailAssetId'),
         updatedAt: mapDateTime(json, r'updatedAt', r'')!,
       );
@@ -167,7 +159,6 @@ class SyncAlbumV1 {
     'isActivityEnabled',
     'name',
     'order',
-    'ownerId',
     'thumbnailAssetId',
     'updatedAt',
   };

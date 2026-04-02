@@ -283,8 +283,6 @@ export class SyncAlbumUserV1 {
 export class SyncAlbumV1 {
   @ApiProperty({ description: 'Album ID' })
   id!: string;
-  @ApiProperty({ description: 'Owner ID' })
-  ownerId!: string;
   @ApiProperty({ description: 'Album name' })
   name!: string;
   @ApiProperty({ description: 'Album description' })

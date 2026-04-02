@@ -105,16 +105,6 @@
           <HeaderActionButton action={AddUsers} />
         </HStack>
         <div class="ps-2">
-          <div class="flex items-center gap-2 mb-2">
-            <div>
-              <UserAvatar user={album.owner} size="md" />
-            </div>
-            <Text class="w-full" size="small">{album.owner.name}</Text>
-            <Field disabled class="w-32 shrink-0">
-              <Select options={[{ label: $t('owner'), value: 'owner' }]} value="owner" />
-            </Field>
-          </div>
-
           {#each album.albumUsers as { user, role } (user.id)}
             <div class="flex items-center justify-between gap-4 py-2">
               <div class="flex flex-row items-center gap-2">
@@ -129,6 +119,7 @@
                   options={[
                     { label: $t('role_editor'), value: AlbumUserRole.Editor },
                     { label: $t('role_viewer'), value: AlbumUserRole.Viewer },
+                    { label: $t('owner'), value: AlbumUserRole.Owner },
                     { label: $t('remove_user'), value: 'none' },
                   ] as SelectOption<AlbumUserRole | 'none'>[]}
                   onChange={(value) => handleRoleSelect(user, value)}

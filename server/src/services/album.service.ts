@@ -17,7 +17,7 @@ import {
 } from 'src/dtos/album.dto';
 import { BulkIdErrorReason, BulkIdResponseDto, BulkIdsDto } from 'src/dtos/asset-ids.response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
-import { Permission } from 'src/enum';
+import { AlbumUserRole, Permission } from 'src/enum';
 import { AlbumAssetCount, AlbumInfoOptions } from 'src/repositories/album.repository';
 import { BaseService } from 'src/services/base.service';
 import { addAssets, removeAssets } from 'src/utils/asset.util';
@@ -107,6 +107,7 @@ export class AlbumService extends BaseService {
         throw new BadRequestException('Cannot share album with owner');
       }
     }
+    albumUsers.unshift({ userId: auth.user.id, role: AlbumUserRole.Owner });
 
     const allowedAssetIdsSet = await this.checkAccess({
       auth,
@@ -119,7 +120,6 @@ export class AlbumService extends BaseService {
 
     const album = await this.albumRepository.create(
       {
-        ownerId: auth.user.id,
         albumName: dto.albumName,
         description: dto.description,
         albumThumbnailAssetId: assetIds[0] || null,
@@ -130,7 +130,7 @@ export class AlbumService extends BaseService {
     );
 
     for (const { userId } of albumUsers) {
-      await this.eventRepository.emit('AlbumInvite', { id: album.id, userId });
+      await this.eventRepository.emit('AlbumInvite', { id: album.id, userId, senderName: auth.user.name });
     }
 
     return mapAlbumWithAssets(album);
@@ -188,9 +188,7 @@ export class AlbumService extends BaseService {
         albumThumbnailAssetId: album.albumThumbnailAssetId ?? firstNewAssetId,
       });
 
-      const allUsersExceptUs = [...album.albumUsers.map(({ user }) => user.id), album.owner.id].filter(
-        (userId) => userId !== auth.user.id,
-      );
+      const allUsersExceptUs = album.albumUsers.map(({ user }) => user.id).filter((userId) => userId !== auth.user.id);
 
       for (const recipientId of allUsersExceptUs) {
         await this.eventRepository.emit('AlbumUpdate', { id, recipientId });
@@ -248,9 +246,7 @@ export class AlbumService extends BaseService {
         updatedAt: new Date(),
         albumThumbnailAssetId: album.albumThumbnailAssetId ?? notPresentAssetIds[0],
       });
-      const allUsersExceptUs = [...album.albumUsers.map(({ user }) => user.id), album.owner.id].filter(
-        (userId) => userId !== auth.user.id,
-      );
+      const allUsersExceptUs = album.albumUsers.map(({ user }) => user.id).filter((userId) => userId !== auth.user.id);
       events.push({ id: albumId, recipients: allUsersExceptUs });
     }
 
@@ -288,8 +284,8 @@ export class AlbumService extends BaseService {
     const album = await this.findOrFail(id, { withAssets: false });
 
     for (const { userId, role } of albumUsers) {
-      if (album.ownerId === userId) {
-        throw new BadRequestException('Cannot be shared with owner');
+      if (role === AlbumUserRole.Owner) {
+        throw new BadRequestException('Cannot add another owner');
       }
 
       const exists = album.albumUsers.find(({ user: { id } }) => id === userId);
@@ -303,7 +299,7 @@ export class AlbumService extends BaseService {
       }
 
       await this.albumUserRepository.create({ userId, albumId: id, role });
-      await this.eventRepository.emit('AlbumInvite', { id, userId });
+      await this.eventRepository.emit('AlbumInvite', { id, userId, senderName: auth.user.name });
     }
 
     return this.findOrFail(id, { withAssets: true }).then(mapAlbumWithoutAssets);
@@ -316,13 +312,16 @@ export class AlbumService extends BaseService {
 
     const album = await this.findOrFail(id, { withAssets: false });
 
-    if (album.ownerId === userId) {
-      throw new BadRequestException('Cannot remove album owner');
-    }
-
     const exists = album.albumUsers.find(({ user: { id } }) => id === userId);
     if (!exists) {
       throw new BadRequestException('Album not shared with user');
+    }
+
+    if (
+      exists.role === AlbumUserRole.Owner &&
+      album.albumUsers.filter(({ role }) => role === AlbumUserRole.Owner).length === 1
+    ) {
+      throw new BadRequestException('Cannot remove the last album owner');
     }
 
     // non-admin can remove themselves

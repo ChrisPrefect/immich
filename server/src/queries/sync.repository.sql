@@ -29,7 +29,6 @@ order by
 -- SyncRepository.album.getUpserts
 select distinct
   on ("album"."id", "album"."updateId") "album"."id",
-  "album"."ownerId",
   "album"."albumName" as "name",
   "album"."description",
   "album"."createdAt",
@@ -37,17 +36,25 @@ select distinct
   "album"."albumThumbnailAssetId" as "thumbnailAssetId",
   "album"."isActivityEnabled",
   "album"."order",
-  "album"."updateId"
+  "album"."updateId",
+  (
+    select
+      "album_user"."userId" as "ownerId"
+    from
+      "album_user"
+    where
+      "album_user"."albumId" = "album"."id"
+      and "album_user"."role" = 'owner'
+    limit
+      $1
+  ) as "ownerId"
 from
   "album" as "album"
   left join "album_user" as "album_users" on "album"."id" = "album_users"."albumId"
 where
-  "album"."updateId" < $1
-  and "album"."updateId" > $2
-  and (
-    "album"."ownerId" = $3
-    or "album_users"."userId" = $4
-  )
+  "album"."updateId" < $2
+  and "album"."updateId" > $3
+  and "album_users"."userId" = $4
 order by
   "album"."updateId" asc
 
@@ -109,16 +116,12 @@ select
 from
   "asset" as "asset"
   inner join "album_asset" on "album_asset"."assetId" = "asset"."id"
-  inner join "album" on "album"."id" = "album_asset"."albumId"
-  left join "album_user" on "album_user"."albumId" = "album_asset"."albumId"
+  inner join "album_user" on "album_user"."albumId" = "album_asset"."albumId"
 where
   "asset"."updateId" < $1
   and "asset"."updateId" > $2
   and "album_asset"."updateId" <= $3
-  and (
-    "album"."ownerId" = $4
-    or "album_user"."userId" = $5
-  )
+  and "album_user"."userId" = $4
 order by
   "asset"."updateId" asc
 
@@ -147,15 +150,11 @@ select
 from
   "album_asset" as "album_asset"
   inner join "asset" on "asset"."id" = "album_asset"."assetId"
-  inner join "album" on "album"."id" = "album_asset"."albumId"
-  left join "album_user" on "album_user"."albumId" = "album_asset"."albumId"
+  inner join "album_user" on "album_user"."albumId" = "album_asset"."albumId"
 where
   "album_asset"."updateId" < $1
   and "album_asset"."updateId" > $2
-  and (
-    "album"."ownerId" = $3
-    or "album_user"."userId" = $4
-  )
+  and "album_user"."userId" = $3
 order by
   "album_asset"."updateId" asc
 
@@ -229,16 +228,12 @@ select
 from
   "asset_exif" as "asset_exif"
   inner join "album_asset" on "album_asset"."assetId" = "asset_exif"."assetId"
-  inner join "album" on "album"."id" = "album_asset"."albumId"
-  left join "album_user" on "album_user"."albumId" = "album_asset"."albumId"
+  inner join "album_user" on "album_user"."albumId" = "album_asset"."albumId"
 where
   "asset_exif"."updateId" < $1
   and "asset_exif"."updateId" > $2
   and "album_asset"."updateId" <= $3
-  and (
-    "album"."ownerId" = $4
-    or "album_user"."userId" = $5
-  )
+  and "album_user"."userId" = $4
 order by
   "asset_exif"."updateId" asc
 
@@ -278,10 +273,7 @@ from
 where
   "album_asset"."updateId" < $1
   and "album_asset"."updateId" > $2
-  and (
-    "album"."ownerId" = $3
-    or "album_user"."userId" = $4
-  )
+  and "album_user"."userId" = $3
 order by
   "album_asset"."updateId" asc
 
@@ -312,20 +304,11 @@ where
   and "album_asset_audit"."id" > $2
   and "albumId" in (
     select
-      "id"
+      "album_user"."albumId" as "id"
     from
-      "album"
+      "album_user"
     where
-      "ownerId" = $3
-    union
-    (
-      select
-        "album_user"."albumId" as "id"
-      from
-        "album_user"
-      where
-        "album_user"."userId" = $4
-    )
+      "album_user"."userId" = $3
   )
 order by
   "album_asset_audit"."id" asc
@@ -337,15 +320,11 @@ select
   "album_asset"."updateId"
 from
   "album_asset" as "album_asset"
-  inner join "album" on "album"."id" = "album_asset"."albumId"
-  left join "album_user" on "album_user"."albumId" = "album_asset"."albumId"
+  inner join "album_user" on "album_user"."albumId" = "album_asset"."albumId"
 where
   "album_asset"."updateId" < $1
   and "album_asset"."updateId" > $2
-  and (
-    "album"."ownerId" = $3
-    or "album_user"."userId" = $4
-  )
+  and "album_user"."userId" = $3
 order by
   "album_asset"."updateId" asc
 
@@ -377,20 +356,11 @@ where
   and "album_user_audit"."id" > $2
   and "albumId" in (
     select
-      "id"
+      "album_user"."albumId" as "id"
     from
-      "album"
+      "album_user"
     where
-      "ownerId" = $3
-    union
-    (
-      select
-        "album_user"."albumId" as "id"
-      from
-        "album_user"
-      where
-        "album_user"."userId" = $4
-    )
+      "album_user"."userId" = $3
   )
 order by
   "album_user_audit"."id" asc
@@ -408,20 +378,11 @@ where
   and "album_user"."updateId" > $2
   and "album_user"."albumId" in (
     select
-      "id"
+      "albumUsers"."albumId" as "id"
     from
-      "album"
+      "album_user" as "albumUsers"
     where
-      "ownerId" = $3
-    union
-    (
-      select
-        "albumUsers"."albumId" as "id"
-      from
-        "album_user" as "albumUsers"
-      where
-        "albumUsers"."userId" = $4
-    )
+      "albumUsers"."userId" = $3
   )
 order by
   "album_user"."updateId" asc

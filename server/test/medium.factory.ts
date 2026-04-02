@@ -222,9 +222,11 @@ export class MediumTestContext<S extends BaseService = BaseService> {
     return { result };
   }
 
-  async newAlbum(dto: Insertable<AlbumTable>, assetIds?: string[]) {
+  async newAlbum({ ownerId, ...dto }: Insertable<AlbumTable> & { ownerId: string }, assetIds?: string[]) {
     const album = mediumFactory.albumInsert(dto);
-    const result = await this.get(AlbumRepository).create(album, assetIds ?? [], []);
+    const result = await this.get(AlbumRepository).create(album, assetIds ?? [], [
+      { userId: ownerId, role: AlbumUserRole.Owner },
+    ]);
     return { album, result };
   }
 
@@ -572,9 +574,9 @@ const assetInsert = (asset: Partial<Insertable<AssetTable>> = {}) => {
   };
 };
 
-const albumInsert = (album: Partial<Insertable<AlbumTable>> & { ownerId: string }) => {
+const albumInsert = (album: Partial<Insertable<AlbumTable>>) => {
   const id = album.id || newUuid();
-  const defaults: Omit<Insertable<AlbumTable>, 'ownerId'> = {
+  const defaults: Insertable<AlbumTable> = {
     albumName: 'Album',
   };
 

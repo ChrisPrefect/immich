@@ -15683,13 +15683,6 @@
             ],
             "description": "Asset sort order"
           },
-          "owner": {
-            "$ref": "#/components/schemas/UserResponseDto"
-          },
-          "ownerId": {
-            "description": "Owner user ID",
-            "type": "string"
-          },
           "shared": {
             "description": "Is shared album",
             "type": "boolean"
@@ -15716,8 +15709,6 @@
           "hasSharedLink",
           "id",
           "isActivityEnabled",
-          "owner",
-          "ownerId",
           "shared",
           "updatedAt"
         ],
@@ -15813,6 +15804,7 @@
         "description": "Album user role",
         "enum": [
           "editor",
+          "owner",
           "viewer"
         ],
         "type": "string"
@@ -22805,10 +22797,6 @@
               }
             ]
           },
-          "ownerId": {
-            "description": "Owner ID",
-            "type": "string"
-          },
           "thumbnailAssetId": {
             "description": "Thumbnail asset ID",
             "nullable": true,
@@ -22827,7 +22815,6 @@
           "isActivityEnabled",
           "name",
           "order",
-          "ownerId",
           "thumbnailAssetId",
           "updatedAt"
         ],

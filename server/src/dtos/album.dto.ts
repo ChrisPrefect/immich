@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 import { ArrayNotEmpty, IsArray, IsString, ValidateNested } from 'class-validator';
 import { ShallowDehydrateObject } from 'kysely';
 import _ from 'lodash';
-import { AlbumUser, AuthSharedLink, User } from 'src/database';
+import { AlbumUser, AuthSharedLink } from 'src/database';
 import { BulkIdErrorReason } from 'src/dtos/asset-ids.response.dto';
 import { AssetResponseDto, MapAsset, mapAsset } from 'src/dtos/asset-response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
@@ -148,8 +148,6 @@ export class ContributorCountResponseDto {
 export class AlbumResponseDto {
   @ApiProperty({ description: 'Album ID' })
   id!: string;
-  @ApiProperty({ description: 'Owner user ID' })
-  ownerId!: string;
   @ApiProperty({ description: 'Album name' })
   albumName!: string;
   @ApiProperty({ description: 'Album description' })
@@ -170,9 +168,6 @@ export class AlbumResponseDto {
   // Description lives on schema to avoid duplication
   @ApiProperty({ description: undefined })
   assets!: AssetResponseDto[];
-  // Description lives on schema to avoid duplication
-  @ApiProperty({ description: undefined })
-  owner!: UserResponseDto;
   @ApiProperty({ type: 'integer', description: 'Number of assets' })
   assetCount!: number;
   @ApiPropertyOptional({ description: 'Last modified asset timestamp', format: 'date-time' })
@@ -202,8 +197,6 @@ export type MapAlbumDto = {
   createdAt: Date;
   updatedAt: Date;
   id: string;
-  ownerId: string;
-  owner: ShallowDehydrateObject<User>;
   isActivityEnabled: boolean;
   order: AssetOrder;
 };
@@ -230,7 +223,7 @@ export const mapAlbum = (
   const assets = entity.assets || [];
 
   const hasSharedLink = !!entity.sharedLinks && entity.sharedLinks.length > 0;
-  const hasSharedUser = albumUsers.length > 0;
+  const hasSharedUser = albumUsers.length > 1;
 
   let startDate = assets.at(0)?.localDateTime;
   let endDate = assets.at(-1)?.localDateTime;
@@ -246,8 +239,6 @@ export const mapAlbum = (
     createdAt: asDateString(entity.createdAt),
     updatedAt: asDateString(entity.updatedAt),
     id: entity.id,
-    ownerId: entity.ownerId,
-    owner: mapUser(entity.owner),
     albumUsers: albumUsersSorted,
     shared: hasSharedUser || hasSharedLink,
     hasSharedLink,

@@ -661,9 +661,6 @@ export type AlbumResponseDto = {
     lastModifiedAssetTimestamp?: string;
     /** Asset sort order */
     order?: AssetOrder;
-    owner: UserResponseDto;
-    /** Owner user ID */
-    ownerId: string;
     /** Is shared album */
     shared: boolean;
     /** Start date (earliest asset) */
@@ -2971,8 +2968,6 @@ export type SyncAlbumV1 = {
     /** Album name */
     name: string;
     order: AssetOrder;
-    /** Owner ID */
-    ownerId: string;
     /** Thumbnail asset ID */
     thumbnailAssetId: string | null;
     /** Updated at */
@@ -6906,6 +6901,7 @@ export enum AssetVisibility {
 }
 export enum AlbumUserRole {
     Editor = "editor",
+    Owner = "owner",
     Viewer = "viewer"
 }
 export enum SourceType {

@@ -424,7 +424,7 @@ describe('/albums', () => {
         description: '',
         albumThumbnailAssetId: null,
         shared: false,
-        albumUsers: [],
+        albumUsers: [expect.objectContaining({ role: AlbumUserRole.Owner })],
         hasSharedLink: false,
         assets: [],
         assetCount: 0,
@@ -644,11 +644,11 @@ describe('/albums', () => {
       expect(status).toBe(200);
       expect(body).toEqual(
         expect.objectContaining({
-          albumUsers: [
+          albumUsers: expect.arrayContaining([
             expect.objectContaining({
               user: expect.objectContaining({ id: user2.userId }),
             }),
-          ],
+          ]),
         }),
       );
     });
@@ -686,7 +686,7 @@ describe('/albums', () => {
         albumUsers: [{ userId: user2.userId, role: AlbumUserRole.Viewer }],
       });
 
-      expect(album.albumUsers[0].role).toEqual(AlbumUserRole.Viewer);
+      expect(album.albumUsers[1].role).toEqual(AlbumUserRole.Viewer);
 
       const { status } = await request(app)
         .put(`/albums/${album.id}/user/${user2.userId}`)
@@ -701,7 +701,10 @@ describe('/albums', () => {
         .set('Authorization', `Bearer ${user1.accessToken}`);
       expect(body).toEqual(
         expect.objectContaining({
-          albumUsers: [expect.objectContaining({ role: AlbumUserRole.Editor })],
+          albumUsers: [
+            expect.objectContaining({ role: AlbumUserRole.Editor }),
+            expect.objectContaining({ role: AlbumUserRole.Owner }),
+          ],
         }),
       );
     });
@@ -712,7 +715,7 @@ describe('/albums', () => {
         albumUsers: [{ userId: user2.userId, role: AlbumUserRole.Viewer }],
       });
 
-      expect(album.albumUsers[0].role).toEqual(AlbumUserRole.Viewer);
+      expect(album.albumUsers[1].role).toEqual(AlbumUserRole.Viewer);
 
       const { status, body } = await request(app)
         .put(`/albums/${album.id}/user/${user2.userId}`)

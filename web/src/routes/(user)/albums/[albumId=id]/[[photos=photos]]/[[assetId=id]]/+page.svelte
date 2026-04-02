@@ -210,9 +210,7 @@
   let albumId = $derived(album.id);
 
   const containsEditors = $derived(album?.shared && album.albumUsers.some(({ role }) => role === AlbumUserRole.Editor));
-  const albumUsers = $derived(
-    showAlbumUsers && containsEditors ? [album.owner, ...album.albumUsers.map(({ user }) => user)] : [],
-  );
+  const albumUsers = $derived(showAlbumUsers && containsEditors ? album.albumUsers.map(({ user }) => user) : []);
 
   $effect(() => {
     if (!album.isActivityEnabled && activityManager.commentCount === 0) {
@@ -231,7 +229,7 @@
     return { albumId, order: album.order };
   });
 
-  const isShared = $derived(viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : album.albumUsers.length > 0);
+  const isShared = $derived(viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : album.albumUsers.length > 1);
 
   $effect(() => {
     if (assetViewerManager.isViewing || !isShared) {
@@ -246,7 +244,7 @@
   let isOwned = $derived($user.id == album.ownerId);
 
   let showActivityStatus = $derived(
-    album.albumUsers.length > 0 &&
+    album.albumUsers.length > 1 &&
       !assetViewerManager.isViewing &&
       (album.isActivityEnabled || activityManager.commentCount > 0),
   );
@@ -369,7 +367,7 @@
               {/if}
 
               <!-- ALBUM SHARING -->
-              {#if album.albumUsers.length > 0 || (album.hasSharedLink && isOwned)}
+              {#if album.albumUsers.length > 1 || (album.hasSharedLink && isOwned)}
                 <div class="my-3 flex gap-x-1">
                   <!-- link -->
                   {#if album.hasSharedLink && isOwned}
@@ -615,7 +613,7 @@
       {/if}
     {/if}
   </div>
-  {#if album.albumUsers.length > 0 && album && assetViewerManager.isShowActivityPanel && $user && !assetViewerManager.isViewing}
+  {#if album.albumUsers.length > 1 && album && assetViewerManager.isShowActivityPanel && $user && !assetViewerManager.isViewing}
     <div class="flex">
       <div
         transition:fly={{ duration: 150 }}

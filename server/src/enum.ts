@@ -55,6 +55,7 @@ export enum AssetFileType {
 
 export enum AlbumUserRole {
   Editor = 'editor',
+  Owner = 'owner',
   Viewer = 'viewer',
 }
 

@@ -2140,6 +2140,8 @@
   "show_in_timeline": "Show in timeline",
   "show_in_timeline_setting_description": "Show photos and videos from this user in your timeline",
   "show_keyboard_shortcuts": "Show keyboard shortcuts",
+  "show_keys_description": "Show/hide key presses",
+  "show_keys_title": "Toggle show keys",
   "show_metadata": "Show metadata",
   "show_or_hide_info": "Show or hide info",
   "show_password": "Show password",

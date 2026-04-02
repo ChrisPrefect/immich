@@ -3,12 +3,14 @@
   import { page } from '$app/state';
   import { shortcut } from '$lib/actions/shortcut';
   import DownloadPanel from '$lib/components/asset-viewer/download-panel.svelte';
+  import KeyboardPanel from '$lib/components/KeyboardPanel.svelte';
   import ErrorLayout from '$lib/components/layouts/ErrorLayout.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import NavigationLoadingBar from '$lib/components/shared-components/navigation-loading-bar.svelte';
   import UploadPanel from '$lib/components/shared-components/upload-panel.svelte';
   import VersionAnnouncement from '$lib/components/VersionAnnouncement.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
+  import { keyboardManager } from '$lib/managers/keyboard.manager.svelte';
   import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
   import { themeManager } from '$lib/managers/theme-manager.svelte';
   import ServerRestartingModal from '$lib/modals/ServerRestartingModal.svelte';
@@ -189,6 +191,8 @@
 
 <OnEvents {onWebsocketConnect} />
 
+<svelte:window onkeydown={(event) => keyboardManager.onKeyDown(event)} />
+
 <CommandPaletteDefaultProvider name="Global" actions={commands} />
 <VersionAnnouncement />
 
@@ -251,4 +255,5 @@
 
   <DownloadPanel />
   <UploadPanel />
+  <KeyboardPanel />
 </TooltipProvider>

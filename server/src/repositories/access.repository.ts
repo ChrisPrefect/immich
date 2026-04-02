@@ -91,7 +91,9 @@ class AlbumAccess {
     }
 
     const accessRole =
-      access === AlbumUserRole.Editor ? [AlbumUserRole.Editor] : [AlbumUserRole.Editor, AlbumUserRole.Viewer];
+      access === AlbumUserRole.Editor
+        ? [AlbumUserRole.Editor, AlbumUserRole.Owner]
+        : [AlbumUserRole.Editor, AlbumUserRole.Viewer, AlbumUserRole.Owner];
 
     return this.db
       .selectFrom('album')

@@ -1,5 +1,5 @@
 import { Selectable } from 'kysely';
-import { AssetOrder } from 'src/enum';
+import { AlbumUserRole, AssetOrder } from 'src/enum';
 import { AlbumTable } from 'src/schema/tables/album.table';
 import { SharedLinkTable } from 'src/schema/tables/shared-link.table';
 import { AlbumUserFactory } from 'test/factories/album-user.factory';
@@ -76,11 +76,20 @@ export class AlbumFactory {
   }
 
   build() {
+    const owner = this.#owner.build();
+    const ownerAlbumUser = AlbumUserFactory.from({
+      albumId: this.value.id,
+      userId: owner.id,
+      role: AlbumUserRole.Owner,
+    })
+      .user(owner)
+      .build();
+
     return {
       ...this.value,
-      owner: this.#owner.build(),
+      owner,
       assets: this.#assets.map((asset) => asset.build()),
-      albumUsers: this.#albumUsers.map((albumUser) => albumUser.build()),
+      albumUsers: [ownerAlbumUser, ...this.#albumUsers.map((albumUser) => albumUser.build())],
       sharedLinks: this.#sharedLinks,
     };
   }

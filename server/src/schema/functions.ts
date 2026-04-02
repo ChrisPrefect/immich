@@ -125,9 +125,6 @@ export const album_delete_audit = registerFunction({
   language: 'PLPGSQL',
   body: `
     BEGIN
-      INSERT INTO album_audit ("albumId", "userId")
-      SELECT "id", "ownerId"
-      FROM OLD;
       RETURN NULL;
     END`,
 });

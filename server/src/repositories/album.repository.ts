@@ -14,6 +14,7 @@ import { InjectKysely } from 'nestjs-kysely';
 import { columns } from 'src/database';
 import { Chunked, ChunkedArray, ChunkedSet, DummyValue, GenerateSql } from 'src/decorators';
 import { AlbumUserCreateDto } from 'src/dtos/album.dto';
+import { AlbumUserRole } from 'src/enum';
 import { DB } from 'src/schema';
 import { AlbumTable } from 'src/schema/tables/album.table';
 import { AssetExifTable } from 'src/schema/tables/asset-exif.table';
@@ -213,12 +214,25 @@ export class AlbumRepository {
       .selectAll('album')
       .where((eb) =>
         eb.or([
+          // Albums I own that have non-owner shared users
+          eb.and([
+            eb('album.ownerId', '=', ownerId),
+            eb.exists(
+              eb
+                .selectFrom('album_user')
+                .whereRef('album_user.albumId', '=', 'album.id')
+                .where('album_user.role', '!=', AlbumUserRole.Owner),
+            ),
+          ]),
+          // Albums shared with me (I'm in album_user but not the owner)
           eb.exists(
             eb
               .selectFrom('album_user')
               .whereRef('album_user.albumId', '=', 'album.id')
-              .where((eb) => eb.or([eb('album.ownerId', '=', ownerId), eb('album_user.userId', '=', ownerId)])),
+              .where('album_user.userId', '=', ownerId)
+              .where('album_user.role', '!=', AlbumUserRole.Owner),
           ),
+          // Albums with shared links
           eb.exists(
             eb
               .selectFrom('shared_link')
@@ -245,7 +259,16 @@ export class AlbumRepository {
       .selectAll('album')
       .where('album.ownerId', '=', ownerId)
       .where('album.deletedAt', 'is', null)
-      .where((eb) => eb.not(eb.exists(eb.selectFrom('album_user').whereRef('album_user.albumId', '=', 'album.id'))))
+      .where((eb) =>
+        eb.not(
+          eb.exists(
+            eb
+              .selectFrom('album_user')
+              .whereRef('album_user.albumId', '=', 'album.id')
+              .where('album_user.role', '!=', AlbumUserRole.Owner),
+          ),
+        ),
+      )
       .where((eb) => eb.not(eb.exists(eb.selectFrom('shared_link').whereRef('shared_link.albumId', '=', 'album.id'))))
       .select(withOwner)
       .orderBy('album.createdAt', 'desc')
@@ -322,14 +345,13 @@ export class AlbumRepository {
         await this.addAssets(tx, newAlbum.id, assetIds);
       }
 
-      if (albumUsers.length > 0) {
-        await tx
-          .insertInto('album_user')
-          .values(
-            albumUsers.map((albumUser) => ({ albumId: newAlbum.id, userId: albumUser.userId, role: albumUser.role })),
-          )
-          .execute();
-      }
+      // Always insert the owner with Owner role in album_user
+      const allAlbumUsers = [
+        { albumId: newAlbum.id, userId: album.ownerId, role: AlbumUserRole.Owner },
+        ...albumUsers.map((albumUser) => ({ albumId: newAlbum.id, userId: albumUser.userId, role: albumUser.role })),
+      ];
+
+      await tx.insertInto('album_user').values(allAlbumUsers).execute();
 
       return tx
         .selectFrom('album')

@@ -283,16 +283,19 @@ describe(AlbumService.name, () => {
       );
     });
 
-    it('should throw an error if the userId is the ownerId', async () => {
+    it('should silently filter the owner from albumUsers', async () => {
       const album = AlbumFactory.create();
-      mocks.user.get.mockResolvedValue(album.owner);
-      await expect(
-        sut.create(AuthFactory.create(album.owner), {
-          albumName: 'Empty album',
-          albumUsers: [{ userId: album.owner.id, role: AlbumUserRole.Editor }],
-        }),
-      ).rejects.toBeInstanceOf(BadRequestException);
-      expect(mocks.album.create).not.toHaveBeenCalled();
+      mocks.album.create.mockResolvedValue(getForAlbum(album));
+      mocks.user.getMetadata.mockResolvedValue([]);
+      await sut.create(AuthFactory.create(album.owner), {
+        albumName: 'Empty album',
+        albumUsers: [{ userId: album.owner.id, role: AlbumUserRole.Editor }],
+      });
+      expect(mocks.album.create).toHaveBeenCalledWith(
+        expect.objectContaining({ ownerId: album.owner.id }),
+        [],
+        [],
+      );
     });
   });
 
@@ -420,7 +423,7 @@ describe(AlbumService.name, () => {
         sut.addUsers(AuthFactory.create(album.owner), album.id, {
           albumUsers: [{ userId: album.owner.id }],
         }),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      ).rejects.toThrow('User already added');
       expect(mocks.album.update).not.toHaveBeenCalled();
       expect(mocks.user.get).not.toHaveBeenCalled();
     });
@@ -537,6 +540,7 @@ describe(AlbumService.name, () => {
       const user = UserFactory.create();
       const album = AlbumFactory.from().albumUser({ userId: user.id }).build();
       mocks.access.album.checkOwnerAccess.mockResolvedValue(new Set([album.id]));
+      mocks.album.getById.mockResolvedValue(getForAlbum(album));
       mocks.albumUser.update.mockResolvedValue();
 
       await sut.updateUser(AuthFactory.create(album.owner), album.id, user.id, { role: AlbumUserRole.Viewer });
@@ -545,6 +549,16 @@ describe(AlbumService.name, () => {
         { albumId: album.id, userId: user.id },
         { role: AlbumUserRole.Viewer },
       );
+    });
+
+    it('should not allow changing the album owner role', async () => {
+      const album = AlbumFactory.create();
+      mocks.access.album.checkOwnerAccess.mockResolvedValue(new Set([album.id]));
+      mocks.album.getById.mockResolvedValue(getForAlbum(album));
+
+      await expect(
+        sut.updateUser(AuthFactory.create(album.owner), album.id, album.owner.id, { role: AlbumUserRole.Viewer }),
+      ).rejects.toThrow('Cannot change album owner role');
     });
   });
 

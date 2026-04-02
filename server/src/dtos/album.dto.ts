@@ -230,7 +230,7 @@ export const mapAlbum = (
   const assets = entity.assets || [];
 
   const hasSharedLink = !!entity.sharedLinks && entity.sharedLinks.length > 0;
-  const hasSharedUser = albumUsers.length > 0;
+  const hasSharedUser = albumUsers.some(({ role }) => role !== AlbumUserRole.Owner);
 
   let startDate = assets.at(0)?.localDateTime;
   let endDate = assets.at(-1)?.localDateTime;

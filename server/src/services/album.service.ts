@@ -17,7 +17,7 @@ import {
 } from 'src/dtos/album.dto';
 import { BulkIdErrorReason, BulkIdResponseDto, BulkIdsDto } from 'src/dtos/asset-ids.response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
-import { Permission } from 'src/enum';
+import { AlbumUserRole, Permission } from 'src/enum';
 import { AlbumAssetCount, AlbumInfoOptions } from 'src/repositories/album.repository';
 import { BaseService } from 'src/services/base.service';
 import { addAssets, removeAssets } from 'src/utils/asset.util';
@@ -80,7 +80,8 @@ export class AlbumService extends BaseService {
     const album = await this.findOrFail(id, { withAssets });
     const [albumMetadataForIds] = await this.albumRepository.getMetadataForIds([album.id]);
 
-    const hasSharedUsers = album.albumUsers && album.albumUsers.length > 0;
+    const hasSharedUsers =
+      album.albumUsers && album.albumUsers.some(({ role }) => role !== AlbumUserRole.Owner);
     const hasSharedLink = album.sharedLinks && album.sharedLinks.length > 0;
     const isShared = hasSharedUsers || hasSharedLink;
 
@@ -98,15 +99,18 @@ export class AlbumService extends BaseService {
     const albumUsers = dto.albumUsers || [];
 
     for (const { userId } of albumUsers) {
+      if (userId == auth.user.id) {
+        continue;
+      }
+
       const exists = await this.userRepository.get(userId, {});
       if (!exists) {
         throw new BadRequestException('User not found');
       }
-
-      if (userId == auth.user.id) {
-        throw new BadRequestException('Cannot share album with owner');
-      }
     }
+
+    // Filter out the owner from albumUsers since they are always added by the repository
+    const filteredAlbumUsers = albumUsers.filter(({ userId }) => userId !== auth.user.id);
 
     const allowedAssetIdsSet = await this.checkAccess({
       auth,
@@ -126,10 +130,10 @@ export class AlbumService extends BaseService {
         order: getPreferences(userMetadata).albums.defaultAssetOrder,
       },
       assetIds,
-      albumUsers,
+      filteredAlbumUsers,
     );
 
-    for (const { userId } of albumUsers) {
+    for (const { userId } of filteredAlbumUsers) {
       await this.eventRepository.emit('AlbumInvite', { id: album.id, userId });
     }
 
@@ -188,9 +192,9 @@ export class AlbumService extends BaseService {
         albumThumbnailAssetId: album.albumThumbnailAssetId ?? firstNewAssetId,
       });
 
-      const allUsersExceptUs = [...album.albumUsers.map(({ user }) => user.id), album.owner.id].filter(
-        (userId) => userId !== auth.user.id,
-      );
+      const allUsersExceptUs = album.albumUsers
+        .map(({ user }) => user.id)
+        .filter((userId) => userId !== auth.user.id);
 
       for (const recipientId of allUsersExceptUs) {
         await this.eventRepository.emit('AlbumUpdate', { id, recipientId });
@@ -248,9 +252,9 @@ export class AlbumService extends BaseService {
         updatedAt: new Date(),
         albumThumbnailAssetId: album.albumThumbnailAssetId ?? notPresentAssetIds[0],
       });
-      const allUsersExceptUs = [...album.albumUsers.map(({ user }) => user.id), album.owner.id].filter(
-        (userId) => userId !== auth.user.id,
-      );
+      const allUsersExceptUs = album.albumUsers
+        .map(({ user }) => user.id)
+        .filter((userId) => userId !== auth.user.id);
       events.push({ id: albumId, recipients: allUsersExceptUs });
     }
 
@@ -288,10 +292,6 @@ export class AlbumService extends BaseService {
     const album = await this.findOrFail(id, { withAssets: false });
 
     for (const { userId, role } of albumUsers) {
-      if (album.ownerId === userId) {
-        throw new BadRequestException('Cannot be shared with owner');
-      }
-
       const exists = album.albumUsers.find(({ user: { id } }) => id === userId);
       if (exists) {
         throw new BadRequestException('User already added');
@@ -316,13 +316,13 @@ export class AlbumService extends BaseService {
 
     const album = await this.findOrFail(id, { withAssets: false });
 
-    if (album.ownerId === userId) {
-      throw new BadRequestException('Cannot remove album owner');
+    const albumUser = album.albumUsers.find(({ user: { id } }) => id === userId);
+    if (!albumUser) {
+      throw new BadRequestException('Album not shared with user');
     }
 
-    const exists = album.albumUsers.find(({ user: { id } }) => id === userId);
-    if (!exists) {
-      throw new BadRequestException('Album not shared with user');
+    if (albumUser.role === AlbumUserRole.Owner) {
+      throw new BadRequestException('Cannot remove album owner');
     }
 
     // non-admin can remove themselves
@@ -335,6 +335,13 @@ export class AlbumService extends BaseService {
 
   async updateUser(auth: AuthDto, id: string, userId: string, dto: UpdateAlbumUserDto): Promise<void> {
     await this.requireAccess({ auth, permission: Permission.AlbumShare, ids: [id] });
+
+    const album = await this.findOrFail(id, { withAssets: false });
+    const albumUser = album.albumUsers.find(({ user: { id } }) => id === userId);
+    if (albumUser?.role === AlbumUserRole.Owner) {
+      throw new BadRequestException('Cannot change album owner role');
+    }
+
     await this.albumUserRepository.update({ albumId: id, userId }, { role: dto.role });
   }
 

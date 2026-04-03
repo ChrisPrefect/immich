@@ -7,6 +7,7 @@ import { Readable, Writable } from 'node:stream';
 import { SystemConfig } from 'src/config';
 import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants';
 import { StorageCore } from 'src/cores/storage.core';
+import { AuthSharedLink } from 'src/database';
 import { OnEvent, OnJob } from 'src/decorators';
 import { GetUploadStatusDto, ResumeUploadDto, StartUploadDto } from 'src/dtos/asset-upload.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
@@ -30,6 +31,7 @@ import { mimeTypes } from 'src/utils/mime-types';
 import { withRetry } from 'src/utils/misc';
 
 export const MAX_RUFH_INTEROP_VERSION = 8;
+type CompletionData = { id: string; path: string; fileModifiedAt: Date; sharedLink?: AuthSharedLink };
 
 @Injectable()
 export class AssetUploadService extends BaseService {
@@ -60,13 +62,13 @@ export class AssetUploadService extends BaseService {
     const isResumable = version && uploadComplete !== undefined;
     const { backup } = await this.getConfig({ withCache: true });
 
-    const asset = await this.onStart(auth, dto);
-    if (asset.isDuplicate) {
-      if (asset.status !== AssetStatus.Partial) {
+    const { id, path, status, isDuplicate } = await this.onStart(auth, dto);
+    const location = `/api/upload/${id}`;
+    if (isDuplicate) {
+      if (status !== AssetStatus.Partial) {
         return this.sendAlreadyCompleted(res);
       }
 
-      const location = `/api/upload/${asset.id}`;
       if (isResumable) {
         this.sendInterimResponse(res, location, version, this.getUploadLimits(backup));
         // this is a 5xx to indicate the client should do offset retrieval and resume
@@ -79,26 +81,25 @@ export class AssetUploadService extends BaseService {
       return this.sendInconsistentLength(res);
     }
 
-    const location = `/api/upload/${asset.id}`;
     if (isResumable) {
       this.sendInterimResponse(res, location, version, this.getUploadLimits(backup));
     }
 
-    this.addRequest(asset.id, req);
-    await this.databaseRepository.withUuidLock(asset.id, async () => {
+    this.addRequest(id, req);
+    await this.databaseRepository.withUuidLock(id, async () => {
       // conventional upload, check status again with lock acquired before overwriting
-      if (asset.isDuplicate) {
-        const existingAsset = await this.assetRepository.getCompletionMetadata(asset.id, auth.user.id);
+      if (isDuplicate) {
+        const existingAsset = await this.assetRepository.getCompletionMetadata(id, auth.user.id);
         if (existingAsset?.status !== AssetStatus.Partial) {
           return this.sendAlreadyCompleted(res);
         }
       }
-      await this.storageRepository.mkdir(dirname(asset.path));
+      await this.storageRepository.mkdir(dirname(path));
 
       let checksumBuffer: Buffer | undefined;
-      const writeStream = asset.isDuplicate
-        ? this.storageRepository.createWriteStream(asset.path, { flush: isComplete })
-        : this.storageRepository.createOrAppendWriteStream(asset.path, { flush: isComplete });
+      const writeStream = isDuplicate
+        ? this.storageRepository.createWriteStream(path, { flush: isComplete })
+        : this.storageRepository.createOrAppendWriteStream(path, { flush: isComplete });
       this.pipe(req, writeStream, contentLength);
       if (isComplete) {
         const hash = createHash('sha1');
@@ -114,11 +115,11 @@ export class AssetUploadService extends BaseService {
         return;
       }
       if (dto.checksum.compare(checksumBuffer!) !== 0) {
-        return await this.sendChecksumMismatch(res, asset.id, asset.path);
+        return await this.sendChecksumMismatch(res, id, path);
       }
 
-      await this.onComplete({ id: asset.id, path: asset.path, fileModifiedAt: assetData.fileModifiedAt });
-      res.status(200).send({ id: asset.id });
+      await this.onComplete({ id, path, fileModifiedAt: assetData.fileModifiedAt, sharedLink: auth.sharedLink });
+      res.status(200).send({ id });
     });
   }
 
@@ -179,7 +180,7 @@ export class AssetUploadService extends BaseService {
         return await this.sendChecksumMismatch(res, id, path);
       }
 
-      await this.onComplete({ id, path, fileModifiedAt });
+      await this.onComplete({ id, path, fileModifiedAt, sharedLink: auth.sharedLink });
       res.status(200).send({ id });
     });
   }
@@ -325,9 +326,9 @@ export class AssetUploadService extends BaseService {
     return { id: assetId, path, status: AssetStatus.Partial, isDuplicate: false };
   }
 
-  async onComplete({ id, path, fileModifiedAt }: { id: string; path: string; fileModifiedAt: Date }) {
+  async onComplete({ id, path, fileModifiedAt, sharedLink }: CompletionData) {
     this.logger.log('Completing upload for asset', id);
-    const asset = await withRetry(() => this.assetRepository.setComplete(id));
+    const asset = await withRetry(() => this.assetRepository.setComplete(id, sharedLink));
     if (!asset) {
       this.logger.error(`Failed to mark asset ${id} as complete: not found or already completed`);
       return;

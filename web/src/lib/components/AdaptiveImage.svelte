@@ -18,6 +18,7 @@
     sharedLink?: SharedLinkResponseDto;
     objectFit?: 'contain' | 'cover';
     container: Size;
+    imageClass?: string;
     onUrlChange?: (url: string) => void;
     onImageReady?: () => void;
     onError?: () => void;
@@ -35,6 +36,7 @@
     sharedLink,
     objectFit = 'contain',
     container,
+    imageClass,
     onUrlChange,
     onImageReady,
     onError,
@@ -151,7 +153,14 @@
 <div class="relative h-full w-full overflow-hidden will-change-transform" bind:this={ref}>
   {@render backdrop?.()}
 
-  <div class="absolute inset-0 pointer-events-none" style:left style:top style:width style:height>
+  <div
+    class={['absolute inset-0 pointer-events-none', imageClass]}
+    style:left
+    style:top
+    style:width
+    style:height
+    style:view-transition-name={assetViewerManager.transitionName}
+  >
     {#if show.alphaBackground}
       <AlphaBackground />
     {/if}

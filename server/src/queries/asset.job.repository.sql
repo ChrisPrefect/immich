@@ -315,8 +315,10 @@ select
   "asset_exif"."lockedProperties"
 from
   "asset_exif"
+  inner join "asset" on "asset"."id" = "asset_exif"."assetId"
 where
   "asset_exif"."assetId" = $1
+  and "asset"."status" != 'partial'
 
 -- AssetJobRepository.getAlbumThumbnailFiles
 select
@@ -326,8 +328,10 @@ select
   "asset_file"."isEdited"
 from
   "asset_file"
+  inner join "asset" on "asset"."id" = "asset_file"."assetId"
 where
   "asset_file"."assetId" = $1
+  and "asset"."status" != 'partial'
   and "asset_file"."type" = $2
 
 -- AssetJobRepository.streamForSearchDuplicates
@@ -454,6 +458,7 @@ from
   "asset"
 where
   "asset"."id" = $2
+  and "asset"."status" != 'partial'
 
 -- AssetJobRepository.getForSyncAssets
 select
@@ -467,6 +472,7 @@ from
   "asset"
 where
   "asset"."id" = any ($1::uuid[])
+  and "asset"."status" != 'partial'
 
 -- AssetJobRepository.getForAssetDeletion
 select
@@ -733,6 +739,7 @@ where
   "asset_job_status"."ocrAt" is null
   and "asset"."deletedAt" is null
   and "asset"."visibility" != $1
+  and "asset"."status" != 'partial'
 
 -- AssetJobRepository.streamForMigrationJob
 select

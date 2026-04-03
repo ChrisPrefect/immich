@@ -439,53 +439,57 @@ export class AssetRepository {
       .executeTakeFirst();
   }
 
-  @GenerateSql({ params: [DummyValue.UUID] })
+  @GenerateSql({ params: [DummyValue.UUID, { albumId: DummyValue.UUID, id: DummyValue.UUID }] })
   setComplete(assetId: string, sharedLink?: { albumId?: string | null; id: string }) {
-    let query = this.db.with('completed_asset', (qb) =>
-      qb
-        .updateTable('asset as complete_asset')
-        .set((eb) => ({
-          status: sql.lit(AssetStatus.Active),
-          visibility: eb
-            .case()
-            .when(
-              eb.and([
-                eb('complete_asset.type', '=', sql.lit(AssetType.Video)),
-                eb.exists(eb.selectFrom('asset').whereRef('complete_asset.id', '=', 'asset.livePhotoVideoId')),
-              ]),
-            )
-            .then(sql<AssetVisibility>`'hidden'::asset_visibility_enum`)
-            .else(sql<AssetVisibility>`'timeline'::asset_visibility_enum`)
-            .end(),
-        }))
-        .where('id', '=', assetId)
-        .where('status', '=', sql.lit(AssetStatus.Partial))
-        .returningAll(),
-    );
-
-    if (sharedLink?.albumId) {
-      (query as any) = query.with('shared_link', (qb) =>
-        qb
-          .insertInto('album_asset')
-          .columns(['albumId', 'assetId'])
-          .expression((eb) =>
-            eb.selectFrom('completed_asset').select([eb.val(sharedLink.albumId).as('albumId'), 'completed_asset.id']),
+    const completedAsset = this.db
+      .updateTable('asset as complete_asset')
+      .set((eb) => ({
+        status: sql.lit(AssetStatus.Active),
+        visibility: eb
+          .case()
+          .when(
+            eb.and([
+              eb('complete_asset.type', '=', sql.lit(AssetType.Video)),
+              eb.exists(eb.selectFrom('asset').whereRef('complete_asset.id', '=', 'asset.livePhotoVideoId')),
+            ]),
           )
-          .onConflict((oc) => oc.doNothing()),
-      );
-    } else if (sharedLink) {
-      (query as any) = query.with('shared_link', (qb) =>
-        qb
-          .insertInto('shared_link_asset')
-          .columns(['sharedLinkId', 'assetId'])
-          .expression((eb) =>
-            eb.selectFrom('completed_asset').select([eb.val(sharedLink.id).as('sharedLinkId'), 'completed_asset.id']),
-          )
-          .onConflict((oc) => oc.doNothing()),
-      );
+          .then(sql<AssetVisibility>`'hidden'::asset_visibility_enum`)
+          .else(sql<AssetVisibility>`'timeline'::asset_visibility_enum`)
+          .end(),
+      }))
+      .where('id', '=', assetId)
+      .where('status', '=', sql.lit(AssetStatus.Partial))
+      .returningAll();
+    if (!sharedLink) {
+      return completedAsset.executeTakeFirst();
     }
 
-    return query.selectFrom('completed_asset').selectAll().executeTakeFirst();
+    return this.db
+      .with('completed_asset', () => completedAsset)
+      .with('shared_link', (qb) =>
+        sharedLink?.albumId
+          ? qb
+              .insertInto('album_asset')
+              .columns(['albumId', 'assetId'])
+              .expression((eb) =>
+                eb
+                  .selectFrom('completed_asset')
+                  .select([eb.val(sharedLink.albumId).as('albumId'), 'completed_asset.id']),
+              )
+              .onConflict((oc) => oc.doNothing())
+          : qb
+              .insertInto('shared_link_asset')
+              .columns(['sharedLinkId', 'assetId'])
+              .expression((eb) =>
+                eb
+                  .selectFrom('completed_asset')
+                  .select([eb.val(sharedLink.id).as('sharedLinkId'), 'completed_asset.id']),
+              )
+              .onConflict((oc) => oc.doNothing()),
+      )
+      .selectFrom('completed_asset')
+      .selectAll()
+      .executeTakeFirst();
   }
 
   @GenerateSql({ params: [DummyValue.UUID] })

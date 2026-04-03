@@ -160,8 +160,10 @@ export class AssetJobRepository {
   async getLockedPropertiesForMetadataExtraction(assetId: string) {
     return this.db
       .selectFrom('asset_exif')
+      .innerJoin('asset', 'asset.id', 'asset_exif.assetId')
       .select('asset_exif.lockedProperties')
       .where('asset_exif.assetId', '=', assetId)
+      .where('asset.status', '!=', sql.lit(AssetStatus.Partial))
       .executeTakeFirst()
       .then((row) => row?.lockedProperties ?? []);
   }
@@ -170,8 +172,10 @@ export class AssetJobRepository {
   getAlbumThumbnailFiles(id: string, fileType?: AssetFileType) {
     return this.db
       .selectFrom('asset_file')
+      .innerJoin('asset', 'asset.id', 'asset_file.assetId')
       .select(columns.assetFiles)
       .where('asset_file.assetId', '=', id)
+      .where('asset.status', '!=', sql.lit(AssetStatus.Partial))
       .$if(!!fileType, (qb) => qb.where('asset_file.type', '=', fileType!))
       .execute();
   }
@@ -250,6 +254,7 @@ export class AssetJobRepository {
       .selectFrom('asset')
       .select((eb) => ['asset.visibility', withFilePath(eb, AssetFileType.Preview).as('previewFile')])
       .where('asset.id', '=', id)
+      .where('asset.status', '!=', sql.lit(AssetStatus.Partial))
       .executeTakeFirst();
   }
 
@@ -266,6 +271,7 @@ export class AssetJobRepository {
         'asset.fileModifiedAt',
       ])
       .where('asset.id', '=', anyUuid(ids))
+      .where('asset.status', '!=', sql.lit(AssetStatus.Partial))
       .execute();
   }
 
@@ -464,6 +470,7 @@ export class AssetJobRepository {
       )
       .where('asset.deletedAt', 'is', null)
       .where('asset.visibility', '!=', AssetVisibility.Hidden)
+      .where('asset.status', '!=', sql.lit(AssetStatus.Partial))
       .stream();
   }
 

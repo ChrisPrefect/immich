@@ -117,25 +117,44 @@ where
   and "ownerId" = $2
 
 -- AssetRepository.setComplete
-update "asset" as "complete_asset"
-set
-  "status" = 'active',
-  "visibility" = case
-    when (
-      "complete_asset"."type" = 'VIDEO'
-      and exists (
-        select
-        from
-          "asset"
-        where
-          "complete_asset"."id" = "asset"."livePhotoVideoId"
-      )
-    ) then 'hidden'::asset_visibility_enum
-    else 'timeline'::asset_visibility_enum
-  end
-where
-  "id" = $1
-  and "status" = 'partial'
+with
+  "completed_asset" as (
+    update "asset" as "complete_asset"
+    set
+      "status" = 'active',
+      "visibility" = case
+        when (
+          "complete_asset"."type" = 'VIDEO'
+          and exists (
+            select
+            from
+              "asset"
+            where
+              "complete_asset"."id" = "asset"."livePhotoVideoId"
+          )
+        ) then 'hidden'::asset_visibility_enum
+        else 'timeline'::asset_visibility_enum
+      end
+    where
+      "id" = $1
+      and "status" = 'partial'
+    returning
+      *
+  ),
+  "shared_link" as (
+    insert into
+      "album_asset" ("albumId", "assetId")
+    select
+      $2 as "albumId",
+      "completed_asset"."id"
+    from
+      "completed_asset"
+    on conflict do nothing
+  )
+select
+  *
+from
+  "completed_asset"
 
 -- AssetRepository.removeAndDecrementQuota
 with

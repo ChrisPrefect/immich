@@ -440,8 +440,8 @@ export class AssetRepository {
   }
 
   @GenerateSql({ params: [DummyValue.UUID] })
-  async setComplete(assetId: string) {
-    await this.db
+  setComplete(assetId: string) {
+    return this.db
       .updateTable('asset as complete_asset')
       .set((eb) => ({
         status: sql.lit(AssetStatus.Active),
@@ -459,7 +459,8 @@ export class AssetRepository {
       }))
       .where('id', '=', assetId)
       .where('status', '=', sql.lit(AssetStatus.Partial))
-      .execute();
+      .returningAll()
+      .executeTakeFirst();
   }
 
   @GenerateSql({ params: [DummyValue.UUID] })

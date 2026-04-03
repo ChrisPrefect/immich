@@ -62,12 +62,12 @@ export class StorageRepository {
     return fs.writeFile(filepath, buffer, { flag: 'wx' });
   }
 
-  createWriteStream(filepath: string): Writable {
-    return createWriteStream(filepath, { flags: 'w', flush: true, highWaterMark: 1024 * 1024 });
+  createWriteStream(filepath: string, { flush }: { flush: boolean } = { flush: true }): Writable {
+    return createWriteStream(filepath, { flags: 'w', flush, highWaterMark: 1024 * 1024 });
   }
 
-  createOrAppendWriteStream(filepath: string): Writable {
-    return createWriteStream(filepath, { flags: 'a', flush: true, highWaterMark: 1024 * 1024 });
+  createOrAppendWriteStream(filepath: string, { flush }: { flush: boolean } = { flush: true }): Writable {
+    return createWriteStream(filepath, { flags: 'a', flush, highWaterMark: 1024 * 1024 });
   }
 
   createOrOverwriteFile(filepath: string, buffer: Buffer) {

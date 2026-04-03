@@ -97,8 +97,8 @@ export class AssetUploadService extends BaseService {
 
       let checksumBuffer: Buffer | undefined;
       const writeStream = asset.isDuplicate
-        ? this.storageRepository.createWriteStream(asset.path)
-        : this.storageRepository.createOrAppendWriteStream(asset.path);
+        ? this.storageRepository.createWriteStream(asset.path, { flush: isComplete })
+        : this.storageRepository.createOrAppendWriteStream(asset.path, { flush: isComplete });
       this.pipe(req, writeStream, contentLength);
       if (isComplete) {
         const hash = createHash('sha1');
@@ -159,7 +159,7 @@ export class AssetUploadService extends BaseService {
         return;
       }
 
-      const writeStream = this.storageRepository.createOrAppendWriteStream(path);
+      const writeStream = this.storageRepository.createOrAppendWriteStream(path, { flush: uploadComplete });
       this.pipe(req, writeStream, contentLength);
       await new Promise((resolve, reject) => writeStream.on('close', resolve).on('error', reject));
       this.setCompleteHeader(res, version, uploadComplete);
@@ -213,18 +213,21 @@ export class AssetUploadService extends BaseService {
 
       const offset = await this.getCurrentOffset(asset.path);
       this.setCompleteHeader(res, version, asset.status !== AssetStatus.Partial);
-      res
-        .status(204)
-        .setHeader('Upload-Offset', offset.toString())
-        .setHeader('Cache-Control', 'no-store')
-        .setHeader('Upload-Limit', this.getUploadLimits(backup))
-        .send();
+      res.status(204).setHeader('Upload-Offset', offset.toString()).setHeader('Cache-Control', 'no-store');
+      if (asset.size) {
+        res.setHeader('Upload-Length', asset.size.toString());
+      }
+      res.setHeader('Upload-Limit', this.getUploadLimits(backup)).send();
     });
   }
 
   async getUploadOptions(res: Response): Promise<void> {
     const { backup } = await this.getConfig({ withCache: true });
-    res.status(204).setHeader('Upload-Limit', this.getUploadLimits(backup)).send();
+    res
+      .status(204)
+      .setHeader('Accept-Patch', 'application/partial-upload')
+      .setHeader('Upload-Limit', this.getUploadLimits(backup))
+      .send();
   }
 
   @OnJob({ name: JobName.PartialAssetCleanupQueueAll, queue: QueueName.BackgroundTask })
@@ -324,13 +327,19 @@ export class AssetUploadService extends BaseService {
 
   async onComplete({ id, path, fileModifiedAt }: { id: string; path: string; fileModifiedAt: Date }) {
     this.logger.log('Completing upload for asset', id);
-    const jobData = { name: JobName.AssetExtractMetadata, data: { id, source: 'upload' } } as const;
-    await withRetry(() => this.assetRepository.setComplete(id));
+    const asset = await withRetry(() => this.assetRepository.setComplete(id));
+    if (!asset) {
+      this.logger.error(`Failed to mark asset ${id} as complete: not found or already completed`);
+      return;
+    }
+
     try {
       await withRetry(() => this.storageRepository.utimes(path, new Date(), fileModifiedAt));
+      await this.eventRepository.emit('AssetCreate', { asset });
     } catch (error: any) {
-      this.logger.error(`Failed to update times for ${path}: ${error.message}`);
+      this.logger.error(`onComplete error for ${path}: ${error.message}`);
     }
+    const jobData = { name: JobName.AssetExtractMetadata, data: { id, source: 'upload' } } as const;
     await withRetry(() => this.jobRepository.queue(jobData));
   }
 

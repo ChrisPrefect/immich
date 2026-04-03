@@ -190,7 +190,7 @@ function isUploadComplete(obj: any) {
     return false;
   } else if (uploadIncomplete === STRUCTURED_FALSE) {
     return true;
-  } else if (uploadComplete !== undefined) {
+  } else if (uploadIncomplete !== undefined) {
     throw new BadRequestException('upload-incomplete must be a structured boolean value');
   }
 }

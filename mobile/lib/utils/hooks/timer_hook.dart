@@ -1,36 +1,17 @@
 import 'package:async/async.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
-RestartableTimer useTimer(Duration duration, void Function() callback) {
-  return use(_TimerHook(duration: duration, callback: callback));
-}
+RestartableTimer useTimer(Duration duration, VoidCallback callback) {
+  final latest = useRef(callback);
+  latest.value = callback;
 
-class _TimerHook extends Hook<RestartableTimer> {
-  final Duration duration;
-  final void Function() callback;
+  final timer = useMemoized(
+    () => RestartableTimer(duration, () => latest.value()),
+    [duration],
+  );
 
-  const _TimerHook({required this.duration, required this.callback});
-  @override
-  HookState<RestartableTimer, Hook<RestartableTimer>> createState() => _TimerHookState();
-}
+  useEffect(() => timer.cancel, [timer]);
 
-class _TimerHookState extends HookState<RestartableTimer, _TimerHook> {
-  late RestartableTimer timer;
-  @override
-  void initHook() {
-    super.initHook();
-    timer = RestartableTimer(hook.duration, hook.callback);
-  }
-
-  @override
-  RestartableTimer build(BuildContext context) {
-    return timer;
-  }
-
-  @override
-  void dispose() {
-    timer.cancel();
-    super.dispose();
-  }
+  return timer;
 }

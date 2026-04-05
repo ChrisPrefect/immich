@@ -92,7 +92,7 @@
     title: $t('go_back'),
     type: $t('assets'),
     icon: languageManager.rtl ? mdiArrowRight : mdiArrowLeft,
-    $if: () => !!onClose && !assetViewerManager.isFaceEditMode,
+    $if: () => !!onClose && !assetViewerManager.isFaceEditMode && !assetViewerManager.isEditFacesPanelOpen,
     onAction: () => onClose?.(),
     shortcuts: [{ key: 'Escape' }],
   });

@@ -49,7 +49,6 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
 
   const Share: ActionItem = {
     title: $t('share'),
-    type: $t('command'),
     icon: mdiShareVariantOutline,
     $if: () => isOwned,
     onAction: () => modalManager.show(AlbumOptionsModal, { album }),
@@ -57,7 +56,6 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
 
   const AddUsers: ActionItem = {
     title: $t('invite_people'),
-    type: $t('command'),
     icon: mdiPlus,
     color: 'primary',
     onAction: () => modalManager.show(AlbumAddUsersModal, { album }),
@@ -65,7 +63,6 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
 
   const CreateSharedLink: ActionItem = {
     title: $t('create_link'),
-    type: $t('command'),
     icon: mdiLink,
     color: 'primary',
     onAction: () => modalManager.show(SharedLinkCreateModal, { albumId: album.id }),
@@ -77,7 +74,6 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
 export const getAlbumAssetsActions = ($t: MessageFormatter, album: AlbumResponseDto, assets: TimelineAsset[]) => {
   const AddAssets: ActionItem = {
     title: $t('add_assets'),
-    type: $t('command'),
     color: 'primary',
     icon: mdiPlusBoxOutline,
     $if: () => assets.length > 0,
@@ -92,7 +88,6 @@ export const getAlbumAssetsActions = ($t: MessageFormatter, album: AlbumResponse
   const Upload: ActionItem = {
     title: $t('select_from_computer'),
     description: $t('album_upload_assets'),
-    type: $t('command'),
     icon: mdiUpload,
     onAction: () => void openFileUploadDialog({ albumId: album.id }),
   };

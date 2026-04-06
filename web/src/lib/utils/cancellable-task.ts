@@ -64,8 +64,12 @@ export class CancellableTask {
       if (this.cancellable && !cancellable) {
         this.cancellable = cancellable;
       }
-      await this.complete;
-      return 'WAITED';
+      try {
+        await this.complete;
+        return 'WAITED';
+      } catch {
+        return 'CANCELED';
+      }
     }
     this.cancellable = cancellable;
     const cancelToken = (this.cancelToken = new AbortController());

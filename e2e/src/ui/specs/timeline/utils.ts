@@ -145,6 +145,7 @@ export const timelineUtils = {
   async waitForTimelineLoad(page: Page) {
     await page.locator('#asset-grid[data-initialized]').waitFor();
     await expect.poll(() => thumbnailUtils.locator(page).count()).toBeGreaterThan(0);
+    await page.locator('#virtual-timeline:not(.invisible)').waitFor();
   },
   async getScrollTop(page: Page) {
     const queryTop = () =>

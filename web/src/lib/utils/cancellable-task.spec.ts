@@ -2,39 +2,39 @@ import { CancellableTask } from '$lib/utils/cancellable-task';
 
 describe('CancellableTask', () => {
   describe('execute', () => {
-    it('should execute task successfully and return LOADED', async () => {
+    it('should execute task successfully and return SUCCESS', async () => {
       const task = new CancellableTask();
-      const taskFn = vi.fn(async (_: AbortSignal) => {
+      const taskFunction = vi.fn(async (_: AbortSignal) => {
         await new Promise((resolve) => setTimeout(resolve, 10));
       });
 
-      const result = await task.execute(taskFn, true);
+      const result = await task.execute(taskFunction, true);
 
-      expect(result).toBe('LOADED');
-      expect(task.executed).toBe(true);
-      expect(task.loading).toBe(false);
-      expect(taskFn).toHaveBeenCalledTimes(1);
+      expect(result).toBe('SUCCESS');
+      expect(task.succeeded).toBe(true);
+      expect(task.running).toBe(false);
+      expect(taskFunction).toHaveBeenCalledTimes(1);
     });
 
-    it('should call loadedCallback when task completes successfully', async () => {
-      const loadedCallback = vi.fn();
-      const task = new CancellableTask(loadedCallback);
-      const taskFn = vi.fn(async () => {});
+    it('should call succeededCallback when task completes successfully', async () => {
+      const succeededCallback = vi.fn();
+      const task = new CancellableTask(succeededCallback);
+      const taskFunction = vi.fn(async () => {});
 
-      await task.execute(taskFn, true);
+      await task.execute(taskFunction, true);
 
-      expect(loadedCallback).toHaveBeenCalledTimes(1);
+      expect(succeededCallback).toHaveBeenCalledTimes(1);
     });
 
     it('should return DONE if task is already executed', async () => {
       const task = new CancellableTask();
-      const taskFn = vi.fn(async () => {});
+      const taskFunction = vi.fn(async () => {});
 
-      await task.execute(taskFn, true);
-      const result = await task.execute(taskFn, true);
+      await task.execute(taskFunction, true);
+      const result = await task.execute(taskFunction, true);
 
       expect(result).toBe('DONE');
-      expect(taskFn).toHaveBeenCalledTimes(1);
+      expect(taskFunction).toHaveBeenCalledTimes(1);
     });
 
     it('should wait if task is already running', async () => {
@@ -43,42 +43,42 @@ describe('CancellableTask', () => {
       const taskPromise = new Promise<void>((resolve) => {
         resolveTask = resolve;
       });
-      const taskFn = vi.fn(async () => {
+      const taskFunction = vi.fn(async () => {
         await taskPromise;
       });
 
-      const promise1 = task.execute(taskFn, true);
-      const promise2 = task.execute(taskFn, true);
+      const promise1 = task.execute(taskFunction, true);
+      const promise2 = task.execute(taskFunction, true);
 
-      expect(task.loading).toBe(true);
+      expect(task.running).toBe(true);
       resolveTask!();
 
       const [result1, result2] = await Promise.all([promise1, promise2]);
 
-      expect(result1).toBe('LOADED');
+      expect(result1).toBe('SUCCESS');
       expect(result2).toBe('WAITED');
-      expect(taskFn).toHaveBeenCalledTimes(1);
+      expect(taskFunction).toHaveBeenCalledTimes(1);
     });
 
     it('should pass AbortSignal to task function', async () => {
       const task = new CancellableTask();
       let capturedSignal: AbortSignal | null = null;
-      const taskFn = async (signal: AbortSignal) => {
+      const taskFunction = async (signal: AbortSignal) => {
         await Promise.resolve();
         capturedSignal = signal;
       };
 
-      await task.execute(taskFn, true);
+      await task.execute(taskFunction, true);
 
       expect(capturedSignal).toBeInstanceOf(AbortSignal);
     });
 
     it('should set cancellable flag correctly', async () => {
       const task = new CancellableTask();
-      const taskFn = vi.fn(async () => {});
+      const taskFunction = vi.fn(async () => {});
 
       expect(task.cancellable).toBe(true);
-      const promise = task.execute(taskFn, false);
+      const promise = task.execute(taskFunction, false);
       expect(task.cancellable).toBe(false);
       await promise;
     });
@@ -89,14 +89,14 @@ describe('CancellableTask', () => {
       const taskPromise = new Promise<void>((resolve) => {
         resolveTask = resolve;
       });
-      const taskFn = vi.fn(async () => {
+      const taskFunction = vi.fn(async () => {
         await taskPromise;
       });
 
-      const promise1 = task.execute(taskFn, false);
+      const promise1 = task.execute(taskFunction, false);
       expect(task.cancellable).toBe(false);
 
-      const promise2 = task.execute(taskFn, true);
+      const promise2 = task.execute(taskFunction, true);
       expect(task.cancellable).toBe(false);
 
       resolveTask!();
@@ -108,7 +108,7 @@ describe('CancellableTask', () => {
     it('should cancel a running task', async () => {
       const task = new CancellableTask();
       let taskStarted = false;
-      const taskFn = async (signal: AbortSignal) => {
+      const taskFunction = async (signal: AbortSignal) => {
         taskStarted = true;
         await new Promise((resolve) => setTimeout(resolve, 100));
         if (signal.aborted) {
@@ -116,9 +116,7 @@ describe('CancellableTask', () => {
         }
       };
 
-      const promise = task.execute(taskFn, true);
-
-      // Wait a bit to ensure task has started
+      const promise = task.execute(taskFunction, true);
       await new Promise((resolve) => setTimeout(resolve, 10));
       expect(taskStarted).toBe(true);
 
@@ -126,20 +124,20 @@ describe('CancellableTask', () => {
 
       const result = await promise;
       expect(result).toBe('CANCELED');
-      expect(task.executed).toBe(false);
+      expect(task.succeeded).toBe(false);
     });
 
     it('should call canceledCallback when task is canceled', async () => {
       const canceledCallback = vi.fn();
       const task = new CancellableTask(undefined, canceledCallback);
-      const taskFn = async (signal: AbortSignal) => {
+      const taskFunction = async (signal: AbortSignal) => {
         await new Promise((resolve) => setTimeout(resolve, 100));
         if (signal.aborted) {
           throw new DOMException('Aborted', 'AbortError');
         }
       };
 
-      const promise = task.execute(taskFn, true);
+      const promise = task.execute(taskFunction, true);
       await new Promise((resolve) => setTimeout(resolve, 10));
       task.cancel();
       await promise;
@@ -149,16 +147,16 @@ describe('CancellableTask', () => {
 
     it('should not cancel if task is not cancellable', async () => {
       const task = new CancellableTask();
-      const taskFn = vi.fn(async () => {
+      const taskFunction = vi.fn(async () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
       });
 
-      const promise = task.execute(taskFn, false);
+      const promise = task.execute(taskFunction, false);
       task.cancel();
       const result = await promise;
 
-      expect(result).toBe('LOADED');
-      expect(task.executed).toBe(true);
+      expect(result).toBe('SUCCESS');
+      expect(task.succeeded).toBe(true);
     });
 
     it('should return CANCELED when concurrent caller is waiting and task is canceled', async () => {
@@ -167,15 +165,15 @@ describe('CancellableTask', () => {
       const taskPromise = new Promise<void>((resolve) => {
         resolveTask = resolve;
       });
-      const taskFn = async (signal: AbortSignal) => {
+      const taskFunction = async (signal: AbortSignal) => {
         await taskPromise;
         if (signal.aborted) {
           throw new DOMException('Aborted', 'AbortError');
         }
       };
 
-      const promise1 = task.execute(taskFn, true);
-      const promise2 = task.execute(taskFn, true);
+      const promise1 = task.execute(taskFunction, true);
+      const promise2 = task.execute(taskFunction, true);
 
       task.cancel();
       resolveTask!();
@@ -187,41 +185,41 @@ describe('CancellableTask', () => {
 
     it('should not cancel if task is already executed', async () => {
       const task = new CancellableTask();
-      const taskFn = vi.fn(async () => {});
+      const taskFunction = vi.fn(async () => {});
 
-      await task.execute(taskFn, true);
-      expect(task.executed).toBe(true);
+      await task.execute(taskFunction, true);
+      expect(task.succeeded).toBe(true);
 
       task.cancel();
-      expect(task.executed).toBe(true);
+      expect(task.succeeded).toBe(true);
     });
   });
 
   describe('reset', () => {
     it('should reset task to initial state', async () => {
       const task = new CancellableTask();
-      const taskFn = vi.fn(async () => {});
+      const taskFunction = vi.fn(async () => {});
 
-      await task.execute(taskFn, true);
-      expect(task.executed).toBe(true);
+      await task.execute(taskFunction, true);
+      expect(task.succeeded).toBe(true);
 
       await task.reset();
 
-      expect(task.executed).toBe(false);
-      expect(task.cancelToken).toBe(null);
-      expect(task.loading).toBe(false);
+      expect(task.succeeded).toBe(false);
+      expect(task.abortController).toBe(null);
+      expect(task.running).toBe(false);
     });
 
     it('should cancel running task before resetting', async () => {
       const task = new CancellableTask();
-      const taskFn = async (signal: AbortSignal) => {
+      const taskFunction = async (signal: AbortSignal) => {
         await new Promise((resolve) => setTimeout(resolve, 100));
         if (signal.aborted) {
           throw new DOMException('Aborted', 'AbortError');
         }
       };
 
-      const promise = task.execute(taskFn, true);
+      const promise = task.execute(taskFunction, true);
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       const resetPromise = task.reset();
@@ -229,30 +227,30 @@ describe('CancellableTask', () => {
       await promise;
       await resetPromise;
 
-      expect(task.executed).toBe(false);
-      expect(task.loading).toBe(false);
+      expect(task.succeeded).toBe(false);
+      expect(task.running).toBe(false);
     });
 
     it('should allow re-execution after reset', async () => {
       const task = new CancellableTask();
-      const taskFn = vi.fn(async () => {});
+      const taskFunction = vi.fn(async () => {});
 
-      await task.execute(taskFn, true);
+      await task.execute(taskFunction, true);
       await task.reset();
-      const result = await task.execute(taskFn, true);
+      const result = await task.execute(taskFunction, true);
 
-      expect(result).toBe('LOADED');
-      expect(task.executed).toBe(true);
-      expect(taskFn).toHaveBeenCalledTimes(2);
+      expect(result).toBe('SUCCESS');
+      expect(task.succeeded).toBe(true);
+      expect(taskFunction).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('waitUntilCompletion', () => {
     it('should return DONE if task is already executed', async () => {
       const task = new CancellableTask();
-      const taskFn = vi.fn(async () => {});
+      const taskFunction = vi.fn(async () => {});
 
-      await task.execute(taskFn, true);
+      await task.execute(taskFunction, true);
       const result = await task.waitUntilCompletion();
 
       expect(result).toBe('DONE');
@@ -264,11 +262,11 @@ describe('CancellableTask', () => {
       const taskPromise = new Promise<void>((resolve) => {
         resolveTask = resolve;
       });
-      const taskFn = async () => {
+      const taskFunction = async () => {
         await taskPromise;
       };
 
-      const executePromise = task.execute(taskFn, true);
+      const executePromise = task.execute(taskFunction, true);
       const waitPromise = task.waitUntilCompletion();
 
       resolveTask!();
@@ -280,14 +278,14 @@ describe('CancellableTask', () => {
 
     it('should return CANCELED if task is canceled', async () => {
       const task = new CancellableTask();
-      const taskFn = async (signal: AbortSignal) => {
+      const taskFunction = async (signal: AbortSignal) => {
         await new Promise((resolve) => setTimeout(resolve, 100));
         if (signal.aborted) {
           throw new DOMException('Aborted', 'AbortError');
         }
       };
 
-      const executePromise = task.execute(taskFn, true);
+      const executePromise = task.execute(taskFunction, true);
       const waitPromise = task.waitUntilCompletion();
 
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -299,13 +297,13 @@ describe('CancellableTask', () => {
     });
   });
 
-  describe('waitUntilExecution', () => {
+  describe('waitUntilSucceeded', () => {
     it('should return DONE if task is already executed', async () => {
       const task = new CancellableTask();
-      const taskFn = vi.fn(async () => {});
+      const taskFunction = vi.fn(async () => {});
 
-      await task.execute(taskFn, true);
-      const result = await task.waitUntilExecution();
+      await task.execute(taskFunction, true);
+      const result = await task.waitUntilSucceeded();
 
       expect(result).toBe('DONE');
     });
@@ -316,12 +314,12 @@ describe('CancellableTask', () => {
       const taskPromise = new Promise<void>((resolve) => {
         resolveTask = resolve;
       });
-      const taskFn = async () => {
+      const taskFunction = async () => {
         await taskPromise;
       };
 
-      const executePromise = task.execute(taskFn, true);
-      const waitPromise = task.waitUntilExecution();
+      const executePromise = task.execute(taskFunction, true);
+      const waitPromise = task.waitUntilSucceeded();
 
       resolveTask!();
 
@@ -335,7 +333,7 @@ describe('CancellableTask', () => {
 
       const task = new CancellableTask();
       let attempt = 0;
-      const taskFn = async (signal: AbortSignal) => {
+      const taskFunction = async (signal: AbortSignal) => {
         attempt++;
         await new Promise((resolve) => setTimeout(resolve, 100));
         if (signal.aborted && attempt === 1) {
@@ -344,8 +342,8 @@ describe('CancellableTask', () => {
       };
 
       // Start first execution
-      const executePromise1 = task.execute(taskFn, true);
-      const waitPromise = task.waitUntilExecution();
+      const executePromise1 = task.execute(taskFunction, true);
+      const waitPromise = task.waitUntilSucceeded();
 
       // Cancel the first execution
       vi.advanceTimersByTime(10);
@@ -354,12 +352,12 @@ describe('CancellableTask', () => {
       await executePromise1;
 
       // Start second execution
-      const executePromise2 = task.execute(taskFn, true);
+      const executePromise2 = task.execute(taskFunction, true);
       vi.advanceTimersByTime(100);
 
       const [executeResult, waitResult] = await Promise.all([executePromise2, waitPromise]);
 
-      expect(executeResult).toBe('LOADED');
+      expect(executeResult).toBe('SUCCESS');
       expect(waitResult).toBe('WAITED');
       expect(attempt).toBe(2);
 
@@ -371,98 +369,98 @@ describe('CancellableTask', () => {
     it('should return ERRORED when task throws non-abort error', async () => {
       const task = new CancellableTask();
       const error = new Error('Task failed');
-      const taskFn = async () => {
+      const taskFunction = async () => {
         await Promise.resolve();
         throw error;
       };
 
-      const result = await task.execute(taskFn, true);
+      const result = await task.execute(taskFunction, true);
 
       expect(result).toBe('ERRORED');
-      expect(task.executed).toBe(false);
+      expect(task.succeeded).toBe(false);
     });
 
     it('should call errorCallback when task throws non-abort error', async () => {
       const errorCallback = vi.fn();
       const task = new CancellableTask(undefined, undefined, errorCallback);
       const error = new Error('Task failed');
-      const taskFn = async () => {
+      const taskFunction = async () => {
         await Promise.resolve();
         throw error;
       };
 
-      await task.execute(taskFn, true);
+      await task.execute(taskFunction, true);
 
       expect(errorCallback).toHaveBeenCalledTimes(1);
       expect(errorCallback).toHaveBeenCalledWith(error);
     });
 
-    it('should return CANCELED when task throws AbortError', async () => {
+    it('should return ERRORED when task throws AbortError without signal being aborted', async () => {
       const task = new CancellableTask();
-      const taskFn = async () => {
+      const taskFunction = async () => {
         await Promise.resolve();
         throw new DOMException('Aborted', 'AbortError');
       };
 
-      const result = await task.execute(taskFn, true);
+      const result = await task.execute(taskFunction, true);
 
-      expect(result).toBe('CANCELED');
-      expect(task.executed).toBe(false);
+      expect(result).toBe('ERRORED');
+      expect(task.succeeded).toBe(false);
     });
 
     it('should allow re-execution after error', async () => {
       const task = new CancellableTask();
-      const taskFn1 = async () => {
+      const taskFunction1 = async () => {
         await Promise.resolve();
         throw new Error('Failed');
       };
-      const taskFn2 = vi.fn(async () => {});
+      const taskFunction2 = vi.fn(async () => {});
 
-      const result1 = await task.execute(taskFn1, true);
+      const result1 = await task.execute(taskFunction1, true);
       expect(result1).toBe('ERRORED');
 
-      const result2 = await task.execute(taskFn2, true);
-      expect(result2).toBe('LOADED');
-      expect(task.executed).toBe(true);
+      const result2 = await task.execute(taskFunction2, true);
+      expect(result2).toBe('SUCCESS');
+      expect(task.succeeded).toBe(true);
     });
   });
 
-  describe('loading property', () => {
+  describe('running property', () => {
     it('should return true when task is running', async () => {
       const task = new CancellableTask();
       let resolveTask: () => void;
       const taskPromise = new Promise<void>((resolve) => {
         resolveTask = resolve;
       });
-      const taskFn = async () => {
+      const taskFunction = async () => {
         await taskPromise;
       };
 
-      expect(task.loading).toBe(false);
+      expect(task.running).toBe(false);
 
-      const promise = task.execute(taskFn, true);
-      expect(task.loading).toBe(true);
+      const promise = task.execute(taskFunction, true);
+      expect(task.running).toBe(true);
 
       resolveTask!();
       await promise;
 
-      expect(task.loading).toBe(false);
+      expect(task.running).toBe(false);
     });
   });
 
   describe('complete promise', () => {
     it('should resolve when task completes successfully', async () => {
       const task = new CancellableTask();
-      const taskFn = vi.fn(async () => {});
+      const taskFunction = vi.fn(async () => {});
 
       const completePromise = task.complete;
-      await task.execute(taskFn, true);
+      await task.execute(taskFunction, true);
       await expect(completePromise).resolves.toBeUndefined();
     });
 
     it('should reject when task is canceled', async () => {
       const task = new CancellableTask();
-      const taskFn = async (signal: AbortSignal) => {
+      const taskFunction = async (signal: AbortSignal) => {
         await new Promise((resolve) => setTimeout(resolve, 100));
         if (signal.aborted) {
           throw new DOMException('Aborted', 'AbortError');
@@ -470,7 +468,7 @@ describe('CancellableTask', () => {
       };
 
       const completePromise = task.complete;
-      const promise = task.execute(taskFn, true);
+      const promise = task.execute(taskFunction, true);
       await new Promise((resolve) => setTimeout(resolve, 10));
       task.cancel();
       await promise;
@@ -480,13 +478,13 @@ describe('CancellableTask', () => {
 
     it('should reject when task errors', async () => {
       const task = new CancellableTask();
-      const taskFn = async () => {
+      const taskFunction = async () => {
         await Promise.resolve();
         throw new Error('Failed');
       };
 
       const completePromise = task.complete;
-      await task.execute(taskFn, true);
+      await task.execute(taskFunction, true);
 
       await expect(completePromise).rejects.toBeUndefined();
     });
@@ -496,27 +494,22 @@ describe('CancellableTask', () => {
     it('should automatically call abort() on signal when task is canceled', async () => {
       const task = new CancellableTask();
       let capturedSignal: AbortSignal | null = null;
-      const taskFn = async (signal: AbortSignal) => {
+      const taskFunction = async (signal: AbortSignal) => {
         capturedSignal = signal;
-        // Simulate a long-running task
         await new Promise((resolve) => setTimeout(resolve, 100));
         if (signal.aborted) {
           throw new DOMException('Aborted', 'AbortError');
         }
       };
 
-      const promise = task.execute(taskFn, true);
-
-      // Wait a bit to ensure task has started
+      const promise = task.execute(taskFunction, true);
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(capturedSignal).not.toBeNull();
       expect(capturedSignal!.aborted).toBe(false);
 
-      // Cancel the task
       task.cancel();
 
-      // Verify the signal was aborted
       expect(capturedSignal!.aborted).toBe(true);
 
       const result = await promise;
@@ -526,25 +519,22 @@ describe('CancellableTask', () => {
     it('should detect if signal was aborted after task completes', async () => {
       const task = new CancellableTask();
       let controller: AbortController | null = null;
-      const taskFn = async (_: AbortSignal) => {
-        // Capture the controller to abort it externally
-        controller = task.cancelToken;
-        // Simulate some work
+      const taskFunction = async (_: AbortSignal) => {
+        // Capture the controller to abort it externally before the function returns
+        controller = task.abortController;
         await new Promise((resolve) => setTimeout(resolve, 10));
-        // Now abort before the function returns
         controller?.abort();
       };
 
-      const result = await task.execute(taskFn, true);
+      const result = await task.execute(taskFunction, true);
 
       expect(result).toBe('CANCELED');
-      expect(task.executed).toBe(false);
+      expect(task.succeeded).toBe(false);
     });
 
     it('should handle abort signal in async operations', async () => {
       const task = new CancellableTask();
-      const taskFn = async (signal: AbortSignal) => {
-        // Simulate listening to abort signal during async operation
+      const taskFunction = async (signal: AbortSignal) => {
         return new Promise<void>((resolve, reject) => {
           signal.addEventListener('abort', () => {
             reject(new DOMException('Aborted', 'AbortError'));
@@ -553,7 +543,7 @@ describe('CancellableTask', () => {
         });
       };
 
-      const promise = task.execute(taskFn, true);
+      const promise = task.execute(taskFunction, true);
       await new Promise((resolve) => setTimeout(resolve, 10));
       task.cancel();
 

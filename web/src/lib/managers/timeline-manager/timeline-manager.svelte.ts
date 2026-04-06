@@ -307,8 +307,8 @@ export class TimelineManager extends VirtualScrollManager {
       return;
     }
 
-    if (!this.initTask.executed) {
-      await (this.initTask.loading ? this.initTask.waitUntilCompletion() : this.#init(this.#options));
+    if (!this.initTask.succeeded) {
+      await (this.initTask.running ? this.initTask.waitUntilCompletion() : this.#init(this.#options));
     }
 
     const changedWidth = viewport.width !== this.viewportWidth;
@@ -351,14 +351,10 @@ export class TimelineManager extends VirtualScrollManager {
       return;
     }
 
-    if (timelineMonth.loader?.executed) {
-      return;
-    }
-
     const executionStatus = await timelineMonth.loader?.execute(async (signal: AbortSignal) => {
       await loadFromTimeBuckets(this, timelineMonth, this.#options, signal);
     }, cancelable);
-    if (executionStatus === 'LOADED') {
+    if (executionStatus === 'SUCCESS') {
       updateGeometry(this, timelineMonth, { invalidateHeight: false });
       this.updateViewportProximities();
     }
@@ -372,7 +368,7 @@ export class TimelineManager extends VirtualScrollManager {
 
   async findTimelineMonthForAsset(asset: AssetDescriptor | AssetResponseDto) {
     if (!this.isInitialized) {
-      await this.initTask.waitUntilExecution();
+      await this.initTask.waitUntilSucceeded();
     }
 
     const { id } = asset;

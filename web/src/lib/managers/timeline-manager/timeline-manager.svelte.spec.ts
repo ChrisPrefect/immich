@@ -145,7 +145,7 @@ describe('TimelineManager', () => {
     it('cancels month loading', async () => {
       const month = getTimelineMonthByDate(timelineManager, { year: 2024, month: 1 })!;
       void timelineManager.loadTimelineMonth({ year: 2024, month: 1 });
-      const abortSpy = vi.spyOn(month!.loader!.cancelToken!, 'abort');
+      const abortSpy = vi.spyOn(month!.loader!.abortController!, 'abort');
       month?.cancel();
       expect(abortSpy).toBeCalledTimes(1);
       await timelineManager.loadTimelineMonth({ year: 2024, month: 1 });
@@ -638,12 +638,8 @@ describe('TimelineManager', () => {
       const previousMonth = getTimelineMonthByDate(timelineManager, { year: 2024, month: 3 });
       const a = month!.getFirstAsset();
       const b = previousMonth!.getFirstAsset();
-      const loadTimelineMonthSpy = vi.spyOn(month!.loader!, 'execute');
-      const previousMonthSpy = vi.spyOn(previousMonth!.loader!, 'execute');
       const previous = await timelineManager.getLaterAsset(a);
       expect(previous).toEqual(b);
-      expect(loadTimelineMonthSpy).toBeCalledTimes(0);
-      expect(previousMonthSpy).toBeCalledTimes(0);
     });
 
     it('skips removed assets', async () => {

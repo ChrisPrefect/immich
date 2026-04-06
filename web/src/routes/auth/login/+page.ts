@@ -1,5 +1,6 @@
 import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
 import { Route } from '$lib/route';
+import { loadUser } from '$lib/utils/auth';
 import { getFormatter } from '$lib/utils/i18n';
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
@@ -10,6 +11,11 @@ export const load = (async ({ parent, url }) => {
   if (!serverConfigManager.value.isInitialized) {
     // Admin not registered
     redirect(307, Route.register());
+  }
+
+  const user = await loadUser();
+  if (user && !serverConfigManager.value.maintenanceMode) {
+    redirect(307, url.searchParams.get('continue') || Route.photos());
   }
 
   const $t = await getFormatter();

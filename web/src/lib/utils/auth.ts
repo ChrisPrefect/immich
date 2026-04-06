@@ -15,10 +15,14 @@ export interface AuthOptions {
 
 export const loadUser = async () => {
   try {
+    if (!hasAuthCookie()) {
+      return null;
+    }
+
     let user = get(user$);
     let preferences = get(preferences$);
 
-    if ((!user || !preferences) && hasAuthCookie()) {
+    if (!user || !preferences) {
       [user, preferences] = await Promise.all([getMyUser(), getMyPreferences()]);
       user$.set(user);
       preferences$.set(preferences);

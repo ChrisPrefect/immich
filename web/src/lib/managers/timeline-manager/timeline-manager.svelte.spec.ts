@@ -1,5 +1,6 @@
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import { eventManager } from '$lib/managers/event-manager.svelte';
+import { layoutTimelineMonth } from '$lib/managers/timeline-manager/internal/layout-support.svelte';
 import { getTimelineMonthByDate } from '$lib/managers/timeline-manager/internal/search-support.svelte';
 import { AbortError } from '$lib/utils';
 import { fromISODateTimeUTCToObject } from '$lib/utils/timeline-util';
@@ -768,6 +769,100 @@ describe('TimelineManager', () => {
       }
 
       expect(discoveredAssets.size).toBe(assetCount);
+    });
+  });
+
+  describe('layoutTimelineMonth', () => {
+    let timelineManager: TimelineManager;
+
+    beforeEach(async () => {
+      timelineManager = new TimelineManager();
+      sdkMock.getTimeBuckets.mockResolvedValue([]);
+      await timelineManager.updateViewport({ width: 1588, height: 1000 });
+    });
+
+    it('uses tallest day height when multiple days share a row', () => {
+      const day20Asset = deriveLocalDateTimeFromFileCreatedAt(
+        timelineAssetFactory.build({
+          fileCreatedAt: fromISODateTimeUTCToObject('2024-01-20T12:00:00.000Z'),
+        }),
+      );
+      const day10Asset = deriveLocalDateTimeFromFileCreatedAt(
+        timelineAssetFactory.build({
+          fileCreatedAt: fromISODateTimeUTCToObject('2024-01-10T12:00:00.000Z'),
+        }),
+      );
+      timelineManager.upsertAssets([day20Asset, day10Asset]);
+
+      const month = timelineManager.months[0];
+      expect(month.timelineDays).toHaveLength(2);
+
+      const [tallDay, shortDay] = month.timelineDays;
+      vi.spyOn(tallDay, 'layout').mockImplementation(() => {
+        tallDay.width = 400;
+        tallDay.height = 300;
+      });
+      vi.spyOn(shortDay, 'layout').mockImplementation(() => {
+        shortDay.width = 200;
+        shortDay.height = 150;
+      });
+
+      layoutTimelineMonth(timelineManager, month);
+
+      // Both days fit in one row: 400 + 12 (gap) + 200 = 612 < 1588
+      expect(tallDay.row).toBe(0);
+      expect(shortDay.row).toBe(0);
+
+      // Month height should use the tallest day: 300 + 48 (headerHeight) = 348
+      expect(month.height).toBe(300 + timelineManager.headerHeight);
+    });
+
+    it('resets row height tracking when starting a new row', () => {
+      const day30Asset = deriveLocalDateTimeFromFileCreatedAt(
+        timelineAssetFactory.build({
+          fileCreatedAt: fromISODateTimeUTCToObject('2024-01-30T12:00:00.000Z'),
+        }),
+      );
+      const day20Asset = deriveLocalDateTimeFromFileCreatedAt(
+        timelineAssetFactory.build({
+          fileCreatedAt: fromISODateTimeUTCToObject('2024-01-20T12:00:00.000Z'),
+        }),
+      );
+      const day10Asset = deriveLocalDateTimeFromFileCreatedAt(
+        timelineAssetFactory.build({
+          fileCreatedAt: fromISODateTimeUTCToObject('2024-01-10T12:00:00.000Z'),
+        }),
+      );
+      timelineManager.upsertAssets([day30Asset, day20Asset, day10Asset]);
+
+      const month = timelineManager.months[0];
+      expect(month.timelineDays).toHaveLength(3);
+
+      const [day1, day2, day3] = month.timelineDays;
+      // Row 0: day1 (wide, tall) fills the row
+      vi.spyOn(day1, 'layout').mockImplementation(() => {
+        day1.width = 1500;
+        day1.height = 400;
+      });
+      // Row 1: day2 and day3 share a row
+      vi.spyOn(day2, 'layout').mockImplementation(() => {
+        day2.width = 300;
+        day2.height = 200;
+      });
+      vi.spyOn(day3, 'layout').mockImplementation(() => {
+        day3.width = 300;
+        day3.height = 100;
+      });
+
+      layoutTimelineMonth(timelineManager, month);
+
+      expect(day1.row).toBe(0);
+      expect(day2.row).toBe(1);
+      expect(day3.row).toBe(1);
+
+      const headerHeight = timelineManager.headerHeight;
+      // Row 0: 400 + 48 = 448. Row 1: max(200, 100) + 48 = 248. Total = 696
+      expect(month.height).toBe(400 + headerHeight + (200 + headerHeight));
     });
   });
 

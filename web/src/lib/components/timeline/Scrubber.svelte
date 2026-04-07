@@ -493,7 +493,13 @@
 
 <svelte:window
   bind:innerHeight={windowHeight}
-  onmousemove={({ clientY }) => (isDragging || isHover) && handleMouseEvent({ clientY })}
+  onmousemove={(e) => {
+    if (isDragging && (e.buttons & 1) === 0) {
+      handleMouseEvent({ clientY: e.clientY, isDragging: false });
+    } else if (isDragging || isHover) {
+      handleMouseEvent({ clientY: e.clientY });
+    }
+  }}
   onmousedown={({ clientY }) => isHover && handleMouseEvent({ clientY, isDragging: true })}
   onmouseup={({ clientY }) => handleMouseEvent({ clientY, isDragging: false })}
 />

@@ -146,7 +146,7 @@ class URLSessionManager: NSObject {
 
   private static func buildSession(delegate: URLSessionManagerDelegate) -> URLSession {
     let config = URLSessionConfiguration.default
-    config.urlCache = urlCache
+    // config.urlCache = urlCache
     config.httpCookieStorage = cookieStorage
     config.httpMaximumConnectionsPerHost = 64
     config.timeoutIntervalForRequest = 60

@@ -147,7 +147,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
   }
 
   void _onAssetInit(Duration timeStamp) {
-    _preloader.preload(widget.initialIndex, context.sizeData);
+    // _preloader.preload(widget.initialIndex, context.sizeData);
     _handleCasting();
   }
 
@@ -158,7 +158,7 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
     if (asset == null) return;
 
     AssetViewer._setAsset(ref, asset);
-    _preloader.preload(index, context.sizeData);
+    // _preloader.preload(index, context.sizeData);
     _handleCasting();
     _stackChildrenKeepAlive?.close();
     _stackChildrenKeepAlive = ref.read(stackChildrenNotifier(asset).notifier).ref.keepAlive();

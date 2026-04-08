@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
@@ -17,6 +18,7 @@ import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/download_status_floating_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/general_bottom_sheet.widget.dart';
+import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/scrubber.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/segment.model.dart';
@@ -140,9 +142,13 @@ class _SliverTimeline extends ConsumerStatefulWidget {
   ConsumerState createState() => _SliverTimelineState();
 }
 
-class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
+class _SliverTimelineState extends ConsumerState<_SliverTimeline> with SingleTickerProviderStateMixin {
   late final ScrollController _scrollController;
   StreamSubscription? _eventSubscription;
+
+  Ticker? _autoScrollTicker;
+  Duration _lastTickTime = Duration.zero;
+  static const _autoScrollVelocity = 4800.0; // pixels per second
 
   // Drag selection state
   bool _dragging = false;
@@ -246,9 +252,50 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
 
   @override
   void dispose() {
+    _stopAutoScroll();
     _scrollController.dispose();
     _eventSubscription?.cancel();
     super.dispose();
+  }
+
+  void _toggleAutoScroll() {
+    if (_autoScrollTicker?.isActive ?? false) {
+      _stopAutoScroll();
+    } else {
+      _startAutoScroll();
+    }
+  }
+
+  void _startAutoScroll() {
+    _lastTickTime = Duration.zero;
+    _autoScrollTicker = createTicker(_onAutoScrollTick)..start();
+  }
+
+  void _stopAutoScroll() {
+    _autoScrollTicker?.stop();
+    _autoScrollTicker?.dispose();
+    _autoScrollTicker = null;
+  }
+
+  void _onAutoScrollTick(Duration elapsed) {
+    if (_lastTickTime == Duration.zero) {
+      _lastTickTime = elapsed;
+      return;
+    }
+
+    final deltaSeconds = (elapsed - _lastTickTime).inMicroseconds / 1000000.0;
+    _lastTickTime = elapsed;
+
+    final newOffset = _scrollController.offset + (_autoScrollVelocity * deltaSeconds);
+    final maxOffset = _scrollController.position.maxScrollExtent;
+    if (newOffset >= maxOffset || remoteImageHistogram.count(ImageType.thumbnail) >= remoteImageHistogram.maxSamples) {
+      _scrollController.jumpTo(newOffset.clamp(0, maxOffset));
+      _stopAutoScroll();
+      remoteImageHistogram.logAll();
+      remoteImageHistogram.save();
+    } else {
+      _scrollController.jumpTo(newOffset);
+    }
   }
 
   void _scrollToDate(DateTime date) {
@@ -434,6 +481,16 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
             controller: _scrollController,
             child: RawGestureDetector(
               gestures: {
+                SerialTapGestureRecognizer: GestureRecognizerFactoryWithHandlers<SerialTapGestureRecognizer>(
+                  () => SerialTapGestureRecognizer(),
+                  (SerialTapGestureRecognizer tap) {
+                    tap.onSerialTapDown = (details) {
+                      if (details.count == 3) {
+                        _toggleAutoScroll();
+                      }
+                    };
+                  },
+                ),
                 CustomScaleGestureRecognizer: GestureRecognizerFactoryWithHandlers<CustomScaleGestureRecognizer>(
                   () => CustomScaleGestureRecognizer(),
                   (CustomScaleGestureRecognizer scale) {

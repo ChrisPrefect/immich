@@ -8,11 +8,16 @@ import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumb_hash_provider.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
+import 'package:immich_mobile/utils/image_load_histogram.dart';
 import 'package:logging/logging.dart';
 
 final log = Logger('ThumbnailWidget');
 
-enum ThumbhashMode { enabled, disabled, only }
+enum ImageType { thumbnail }
+
+final remoteImageHistogram = Histogram<ImageType>(maxSamples: 8192, values: ImageType.values);
+
+int thumbnailId = 0;
 
 class Thumbnail extends StatefulWidget {
   final ImageProvider? imageProvider;
@@ -111,8 +116,11 @@ class _ThumbnailState extends State<Thumbnail> with SingleTickerProviderStateMix
     if (imageProvider == null) return;
 
     final imageStream = _imageStream = imageProvider.resolve(ImageConfiguration.empty);
+    final stopwatch = Stopwatch();
+    final curThumbnailId = thumbnailId++;
     final imageStreamListener = _imageStreamListener = ImageStreamListener(
       (ImageInfo imageInfo, bool synchronousCall) {
+        stopwatch.stop();
         _stopListeningToThumbhashStream();
         if (!mounted) {
           imageInfo.dispose();
@@ -123,7 +131,27 @@ class _ThumbnailState extends State<Thumbnail> with SingleTickerProviderStateMix
           return;
         }
 
-        if ((synchronousCall && _providerImage == null) || !_isVisible()) {
+        final renderObject = context.findRenderObject() as RenderBox?;
+        final double topLeft;
+        final double bottomRight;
+        final double contextHeight = context.height;
+        if (renderObject == null || !renderObject.attached) {
+          topLeft = double.maxFinite;
+          bottomRight = double.maxFinite;
+        } else {
+          topLeft = renderObject.localToGlobal(Offset.zero).dy;
+          bottomRight = renderObject.localToGlobal(Offset(renderObject.size.width, renderObject.size.height)).dy;
+        }
+        remoteImageHistogram.record(
+          ImageType.thumbnail,
+          stopwatch.elapsedMicroseconds,
+          topLeft.toInt(),
+          bottomRight.toInt(),
+          contextHeight.toInt(),
+          curThumbnailId,
+        );
+
+        if ((synchronousCall && _providerImage == null) || !(topLeft < contextHeight && bottomRight > 0)) {
           _fadeController.value = 1.0;
         } else if (_fadeController.isAnimating) {
           _fadeController.forward();
@@ -146,6 +174,7 @@ class _ThumbnailState extends State<Thumbnail> with SingleTickerProviderStateMix
         _stopListeningToImageStream();
       },
     );
+    stopwatch.start();
     imageStream.addListener(imageStreamListener);
   }
 

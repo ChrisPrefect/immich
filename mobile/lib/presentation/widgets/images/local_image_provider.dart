@@ -124,7 +124,6 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
     }
 
     final originalRequest = request = LocalImageRequest(localId: key.id, assetType: key.assetType, size: Size.zero);
-
     yield* loadRequest(originalRequest, decode, isFinal: true);
   }
 

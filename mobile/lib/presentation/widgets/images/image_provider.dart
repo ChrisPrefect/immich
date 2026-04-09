@@ -106,18 +106,33 @@ mixin CancellableImageProviderMixin<T extends Object> on CancellableImageProvide
     }
   }
 
-  Stream<ImageInfo> initialImageStream() async* {
+  Stream<ImageInfo> initialImageStream({required bool isFinal}) async* {
     final cachedOperation = this.cachedOperation;
+    if (isCancelled) {
+      return;
+    }
     if (cachedOperation == null) {
+      // image resolved synchronously
+      isFinished = isFinal;
       return;
     }
 
     try {
       final cachedImage = await cachedOperation.valueOrCancellation();
-      if (cachedImage != null && !isCancelled) {
-        yield cachedImage;
+      if (isCancelled || cachedImage == null) {
+        return;
       }
+      isFinished = isFinal;
+      yield cachedImage;
     } catch (e, stack) {
+      if (isCancelled) {
+        return;
+      }
+      if (isFinal) {
+        isFinished = true;
+        PaintingBinding.instance.imageCache.evict(this);
+        rethrow;
+      }
       _log.severe('Error loading initial image', e, stack);
     } finally {
       this.cachedOperation = null;

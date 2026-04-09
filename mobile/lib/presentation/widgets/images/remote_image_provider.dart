@@ -102,23 +102,27 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   }
 
   Stream<ImageInfo> _codec(RemoteFullImageProvider key, ImageDecoderCallback decode) async* {
-    yield* initialImageStream();
+    final isImage = assetType == AssetType.image;
+    final loadOriginal = isImage && AppSetting.get(Setting.loadOriginal);
+    final loadPreview = isImage && AppSetting.get(Setting.loadPreview);
+    yield* initialImageStream(isFinal: !loadOriginal && !loadPreview);
 
     if (isCancelled) {
       return;
     }
 
-    final previewRequest = request = RemoteImageRequest(
-      uri: getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
-    );
-    final loadOriginal = assetType == AssetType.image && AppSetting.get(Setting.loadOriginal);
-    yield* loadRequest(previewRequest, decode, isFinal: !loadOriginal);
+    if (loadPreview) {
+      final previewRequest = request = RemoteImageRequest(
+        uri: getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
+      );
+      yield* loadRequest(previewRequest, decode, isFinal: !loadOriginal);
+
+      if (isCancelled) {
+        return;
+      }
+    }
 
     if (!loadOriginal) {
-      return;
-    }
-
-    if (isCancelled) {
       return;
     }
 
@@ -127,19 +131,21 @@ class RemoteFullImageProvider extends CancellableImageProvider<RemoteFullImagePr
   }
 
   Stream<Object> _animatedCodec(RemoteFullImageProvider key, ImageDecoderCallback decode) async* {
-    yield* initialImageStream();
+    yield* initialImageStream(isFinal: false);
 
     if (isCancelled) {
       return;
     }
 
-    final previewRequest = request = RemoteImageRequest(
-      uri: getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
-    );
-    yield* loadRequest(previewRequest, decode, isFinal: false);
+    if (AppSetting.get(Setting.loadPreview)) {
+      final previewRequest = request = RemoteImageRequest(
+        uri: getThumbnailUrlForRemoteId(key.assetId, type: AssetMediaSize.preview, thumbhash: key.thumbhash),
+      );
+      yield* loadRequest(previewRequest, decode, isFinal: false);
 
-    if (isCancelled) {
-      return;
+      if (isCancelled) {
+        return;
+      }
     }
 
     // always try original for animated, since previews don't support animation

@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
-import 'package:immich_mobile/domain/models/store.model.dart';
-import 'package:immich_mobile/entities/store.entity.dart';
+import 'package:immich_mobile/domain/models/setting.model.dart';
+import 'package:immich_mobile/domain/services/setting.service.dart';
 import 'package:immich_mobile/infrastructure/loaders/image_request.dart';
 import 'package:immich_mobile/presentation/widgets/images/animated_image_stream_completer.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
@@ -97,51 +97,56 @@ class LocalFullImageProvider extends CancellableImageProvider<LocalFullImageProv
   }
 
   Stream<ImageInfo> _codec(LocalFullImageProvider key, ImageDecoderCallback decode) async* {
-    yield* initialImageStream();
+    final loadOriginal = AppSetting.get(Setting.loadOriginal);
+    final loadPreview = AppSetting.get(Setting.loadPreview);
+    yield* initialImageStream(isFinal: !loadOriginal && !loadPreview);
 
     if (isCancelled) {
       return;
     }
 
-    final loadOriginal = Store.get(StoreKey.loadOriginal, false);
-    final devicePixelRatio = PlatformDispatcher.instance.views.first.devicePixelRatio;
-    var request = this.request = LocalImageRequest(
-      localId: key.id,
-      size: Size(size.width * devicePixelRatio, size.height * devicePixelRatio),
-      assetType: key.assetType,
-    );
-    yield* loadRequest(request, decode, isFinal: !loadOriginal);
+    if (loadPreview) {
+      final devicePixelRatio = PlatformDispatcher.instance.views.first.devicePixelRatio;
+      final previewRequest = request = LocalImageRequest(
+        localId: key.id,
+        size: Size(size.width * devicePixelRatio, size.height * devicePixelRatio),
+        assetType: key.assetType,
+      );
+      yield* loadRequest(previewRequest, decode, isFinal: !loadOriginal);
+
+      if (isCancelled) {
+        return;
+      }
+    }
 
     if (!loadOriginal) {
       return;
     }
 
-    if (isCancelled) {
-      return;
-    }
+    final originalRequest = request = LocalImageRequest(localId: key.id, assetType: key.assetType, size: Size.zero);
 
-    request = this.request = LocalImageRequest(localId: key.id, assetType: key.assetType, size: Size.zero);
-
-    yield* loadRequest(request, decode, isFinal: true);
+    yield* loadRequest(originalRequest, decode, isFinal: true);
   }
 
   Stream<Object> _animatedCodec(LocalFullImageProvider key, ImageDecoderCallback decode) async* {
-    yield* initialImageStream();
+    yield* initialImageStream(isFinal: false);
 
     if (isCancelled) {
       return;
     }
 
-    final devicePixelRatio = PlatformDispatcher.instance.views.first.devicePixelRatio;
-    final previewRequest = request = LocalImageRequest(
-      localId: key.id,
-      size: Size(size.width * devicePixelRatio, size.height * devicePixelRatio),
-      assetType: key.assetType,
-    );
-    yield* loadRequest(previewRequest, decode, isFinal: false);
+    if (AppSetting.get(Setting.loadPreview)) {
+      final devicePixelRatio = PlatformDispatcher.instance.views.first.devicePixelRatio;
+      final previewRequest = request = LocalImageRequest(
+        localId: key.id,
+        size: Size(size.width * devicePixelRatio, size.height * devicePixelRatio),
+        assetType: key.assetType,
+      );
+      yield* loadRequest(previewRequest, decode, isFinal: false);
 
-    if (isCancelled) {
-      return;
+      if (isCancelled) {
+        return;
+      }
     }
 
     // always try original for animated, since previews don't support animation

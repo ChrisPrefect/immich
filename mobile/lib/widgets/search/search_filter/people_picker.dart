@@ -74,7 +74,7 @@ class PeoplePicker extends HookConsumerWidget {
                           shape: const CircleBorder(side: BorderSide.none),
                           elevation: 3,
                           child: CircleAvatar(
-                            key: ValueKey('avatar-${person.id}'),
+                            key: ValueKey(person.id),
                             maxRadius: imageSize / 2,
                             backgroundImage: RemoteImageProvider(url: getFaceThumbnailUrl(person.id)),
                           ),

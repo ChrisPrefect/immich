@@ -57,6 +57,7 @@ class PeoplePicker extends HookConsumerWidget {
                   final isSelected = selectedPeople.value.contains(person);
 
                   return Padding(
+                    key: ValueKey(person.id),
                     padding: const EdgeInsets.only(bottom: 2.0),
                     child: LargeLeadingTile(
                       title: Text(

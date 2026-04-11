@@ -96,7 +96,11 @@
       sidebarStore.reset();
     }
 
-    if (isAssetViewerRoute(from) && isAssetViewerRoute(to)) {
+    const fromRouteId = from?.route?.id;
+    const toRouteId = to?.route?.id;
+    const sameRouteTransition = fromRouteId && toRouteId && fromRouteId === toRouteId;
+
+    if (sameRouteTransition && (isAssetViewerRoute(from) || isAssetViewerRoute(to))) {
       return;
     }
 

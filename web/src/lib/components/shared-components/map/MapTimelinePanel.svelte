@@ -85,6 +85,7 @@
     visibility: $mapSettings.includeArchived ? undefined : AssetVisibility.Timeline,
     isFavorite: $mapSettings.onlyFavorites || undefined,
     withPartners: $mapSettings.withPartners || undefined,
+    withSharedAlbums: $mapSettings.withSharedAlbums || undefined,
     assetFilter: selectedClusterIds,
   });
 

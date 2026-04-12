@@ -83,6 +83,7 @@ interface AssetBuilderOptions {
   assetType?: AssetType;
   visibility?: AssetVisibility;
   withCoordinates?: boolean;
+  withSharedAlbums?: boolean;
   bbox?: BoundingBox;
 }
 
@@ -732,7 +733,40 @@ export class AssetRepository {
               )
               .where((eb) => eb.or([eb('asset.stackId', 'is', null), eb(eb.table('stack'), 'is not', null)])),
           )
-          .$if(!!options.userIds, (qb) => qb.where('asset.ownerId', '=', anyUuid(options.userIds!)))
+          .$if(!!options.userIds, (qb) =>
+            qb.where((eb) =>
+              eb.or([
+                eb('asset.ownerId', '=', anyUuid(options.userIds!)),
+                ...(options.withSharedAlbums
+                  ? [
+                      eb.exists(
+                        eb
+                          .selectFrom('album_asset')
+                          .innerJoin('album', 'album.id', 'album_asset.albumId')
+                          .whereRef('album_asset.assetId', '=', 'asset.id')
+                          .where((eb) =>
+                            eb.or([
+                              eb('album.ownerId', '=', anyUuid(options.userIds!)),
+                              eb.exists(
+                                eb
+                                  .selectFrom('album_user')
+                                  .whereRef('album_user.albumId', '=', 'album.id')
+                                  .where('album_user.userId', '=', anyUuid(options.userIds!)),
+                              ),
+                              eb.exists(
+                                eb
+                                  .selectFrom('shared_link')
+                                  .whereRef('shared_link.albumId', '=', 'album.id')
+                                  .where('shared_link.userId', '=', anyUuid(options.userIds!)),
+                              ),
+                            ]),
+                          ),
+                      ),
+                    ]
+                  : []),
+              ]),
+            ),
+          )
           .$if(options.isFavorite !== undefined, (qb) => qb.where('asset.isFavorite', '=', options.isFavorite!))
           .$if(!!options.assetType, (qb) => qb.where('asset.type', '=', options.assetType!))
           .$if(options.isDuplicate !== undefined, (qb) =>
@@ -816,7 +850,40 @@ export class AssetRepository {
             ),
           )
           .$if(!!options.personId, (qb) => hasPeople(qb, [options.personId!]))
-          .$if(!!options.userIds, (qb) => qb.where('asset.ownerId', '=', anyUuid(options.userIds!)))
+          .$if(!!options.userIds, (qb) =>
+            qb.where((eb) =>
+              eb.or([
+                eb('asset.ownerId', '=', anyUuid(options.userIds!)),
+                ...(options.withSharedAlbums
+                  ? [
+                      eb.exists(
+                        eb
+                          .selectFrom('album_asset')
+                          .innerJoin('album', 'album.id', 'album_asset.albumId')
+                          .whereRef('album_asset.assetId', '=', 'asset.id')
+                          .where((eb) =>
+                            eb.or([
+                              eb('album.ownerId', '=', anyUuid(options.userIds!)),
+                              eb.exists(
+                                eb
+                                  .selectFrom('album_user')
+                                  .whereRef('album_user.albumId', '=', 'album.id')
+                                  .where('album_user.userId', '=', anyUuid(options.userIds!)),
+                              ),
+                              eb.exists(
+                                eb
+                                  .selectFrom('shared_link')
+                                  .whereRef('shared_link.albumId', '=', 'album.id')
+                                  .where('shared_link.userId', '=', anyUuid(options.userIds!)),
+                              ),
+                            ]),
+                          ),
+                      ),
+                    ]
+                  : []),
+              ]),
+            ),
+          )
           .$if(options.isFavorite !== undefined, (qb) => qb.where('asset.isFavorite', '=', options.isFavorite!))
           .$if(!!options.withStacked, (qb) =>
             qb

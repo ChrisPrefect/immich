@@ -63,6 +63,12 @@ export class TimeBucketDto {
 
   @ValidateBBox({ optional: true })
   bbox?: BBoxDto;
+
+  @ValidateBoolean({
+    optional: true,
+    description: 'Include assets from shared albums',
+  })
+  withSharedAlbums?: boolean;
 }
 
 export class TimeBucketAssetDto extends TimeBucketDto {

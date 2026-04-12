@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { thumbhash } from '$lib/actions/thumbhash';
   import AlphaBackground from '$lib/components/AlphaBackground.svelte';
   import BrokenAsset from '$lib/components/assets/broken-asset.svelte';
   import DelayedLoadingSpinner from '$lib/components/DelayedLoadingSpinner.svelte';
   import ImageLayer from '$lib/components/ImageLayer.svelte';
+  import Thumbhash from '$lib/components/Thumbhash.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { getAssetUrls } from '$lib/utils';
   import { AdaptiveImageLoader, type QualityList } from '$lib/utils/adaptive-image-loader.svelte';
@@ -159,7 +159,7 @@
     {#if show.thumbhash}
       {#if asset.thumbhash}
         <!-- Thumbhash / spinner layer  -->
-        <canvas use:thumbhash={{ base64ThumbHash: asset.thumbhash }} class="h-full w-full absolute"></canvas>
+        <Thumbhash base64ThumbHash={asset.thumbhash} class="h-full w-full absolute" />
       {:else if show.spinner}
         <DelayedLoadingSpinner />
       {/if}

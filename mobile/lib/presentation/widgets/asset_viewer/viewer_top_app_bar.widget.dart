@@ -51,7 +51,7 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
       if (hasOcr)
         IconButton(
           icon: Icon(showingOcr ? Icons.text_fields : Icons.text_fields_outlined),
-          onPressed: () => ref.read(assetViewerProvider.notifier).toggleOcr(),
+          onPressed: ref.read(assetViewerProvider.notifier).toggleOcr,
           color: showingOcr ? context.primaryColor : null,
         ),
       if (asset.isMotionPhoto) const MotionPhotoActionButton(iconOnly: true),

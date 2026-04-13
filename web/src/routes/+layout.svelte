@@ -19,7 +19,6 @@
   import { closeWebsocketConnection, openWebsocketConnection, websocketStore } from '$lib/stores/websocket';
   import { copyToClipboard } from '$lib/utils';
   import { maintenanceShouldRedirect } from '$lib/utils/maintenance';
-  import { isAssetViewerRoute } from '$lib/utils/navigation';
   import { getServerConfig } from '@immich/sdk';
   import {
     CommandPaletteDefaultProvider,
@@ -100,7 +99,7 @@
     const toRouteId = to?.route?.id;
     const sameRouteTransition = fromRouteId && toRouteId && fromRouteId === toRouteId;
 
-    if (sameRouteTransition && (isAssetViewerRoute(from) || isAssetViewerRoute(to))) {
+    if (sameRouteTransition) {
       return;
     }
 

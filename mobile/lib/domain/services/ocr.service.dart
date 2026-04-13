@@ -1,12 +1,12 @@
 import 'package:immich_mobile/domain/models/ocr.model.dart';
 import 'package:immich_mobile/infrastructure/repositories/ocr.repository.dart';
 
-class DriftOcrService {
-  final DriftOcrRepository _repository;
+class OcrService {
+  final OcrRepository _repository;
 
-  const DriftOcrService(this._repository);
+  const OcrService(this._repository);
 
-  Future<List<DriftOcr>?> get(String assetId) {
+  Future<List<Ocr>?> get(String assetId) {
     return _repository.get(assetId);
   }
 }

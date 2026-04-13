@@ -33,7 +33,7 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final isOwner = asset is RemoteAsset && asset.ownerId == user?.id;
     final isInLockedView = ref.watch(inLockedViewProvider);
     final isReadonlyModeEnabled = ref.watch(readonlyModeProvider);
-    final hasOcr = asset is RemoteAsset && ref.watch(driftOcrAssetProvider(asset.id)).valueOrNull?.isNotEmpty == true;
+    final hasOcr = asset is RemoteAsset && ref.watch(ocrAssetProvider(asset.id)).valueOrNull?.isNotEmpty == true;
 
     final showingDetails = ref.watch(assetViewerProvider.select((state) => state.showingDetails));
 

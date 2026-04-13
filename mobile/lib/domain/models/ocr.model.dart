@@ -1,4 +1,4 @@
-class DriftOcr {
+class Ocr {
   final String id;
   final String assetId;
   final double x1;
@@ -14,7 +14,7 @@ class DriftOcr {
   final String text;
   final bool isVisible;
 
-  const DriftOcr({
+  const Ocr({
     required this.id,
     required this.assetId,
     required this.x1,
@@ -31,7 +31,7 @@ class DriftOcr {
     required this.isVisible,
   });
 
-  DriftOcr copyWith({
+  Ocr copyWith({
     String? id,
     String? assetId,
     double? x1,
@@ -47,7 +47,7 @@ class DriftOcr {
     String? text,
     bool? isVisible,
   }) {
-    return DriftOcr(
+    return Ocr(
       id: id ?? this.id,
       assetId: assetId ?? this.assetId,
       x1: x1 ?? this.x1,
@@ -89,7 +89,7 @@ class DriftOcr {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
-    return other is DriftOcr &&
+    return other is Ocr &&
         other.id == id &&
         other.assetId == assetId &&
         other.x1 == x1 &&

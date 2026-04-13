@@ -4,13 +4,11 @@ import 'package:immich_mobile/infrastructure/repositories/ocr.repository.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-final driftOcrRepositoryProvider = Provider<DriftOcrRepository>((ref) => DriftOcrRepository(ref.watch(driftProvider)));
+final ocrRepositoryProvider = Provider<OcrRepository>((ref) => OcrRepository(ref.watch(driftProvider)));
 
-final driftOcrServiceProvider = Provider<DriftOcrService>(
-  (ref) => DriftOcrService(ref.watch(driftOcrRepositoryProvider)),
-);
+final ocrServiceProvider = Provider<OcrService>((ref) => OcrService(ref.watch(ocrRepositoryProvider)));
 
-final driftOcrAssetProvider = FutureProvider.family<List<DriftOcr>?, String>((ref, assetId) async {
-  final service = ref.watch(driftOcrServiceProvider);
+final ocrAssetProvider = FutureProvider.family<List<Ocr>?, String>((ref, assetId) async {
+  final service = ref.watch(ocrServiceProvider);
   return service.get(assetId);
 });

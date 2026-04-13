@@ -85,7 +85,7 @@ class _OcrOverlayState extends ConsumerState<OcrOverlay> {
       return const SizedBox.shrink();
     }
 
-    final ocrData = ref.watch(driftOcrAssetProvider((widget.asset as RemoteAsset).id));
+    final ocrData = ref.watch(ocrAssetProvider((widget.asset as RemoteAsset).id));
 
     return ocrData.when(
       data: (data) {
@@ -99,7 +99,7 @@ class _OcrOverlayState extends ConsumerState<OcrOverlay> {
     );
   }
 
-  Widget _buildOcrBoxes(List<DriftOcr> ocrData) {
+  Widget _buildOcrBoxes(List<Ocr> ocrData) {
     // Use the actual decoded image size from PhotoView's scaleBoundaries when
     // available. The image provider may serve a downscaled preview (e.g. Immich
     // serves a ~1440px preview for large originals), so the decoded dimensions
@@ -114,7 +114,7 @@ class _OcrOverlayState extends ConsumerState<OcrOverlay> {
     return _buildBoxStack(ocrData, imageSize, scale, position);
   }
 
-  Widget _buildBoxStack(List<DriftOcr> ocrData, Size imageSize, double scale, Offset position) {
+  Widget _buildBoxStack(List<Ocr> ocrData, Size imageSize, double scale, Offset position) {
     final imageWidth = imageSize.width;
     final imageHeight = imageSize.height;
     final viewportWidth = widget.viewportSize.width;

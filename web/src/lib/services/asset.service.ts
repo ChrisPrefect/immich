@@ -62,9 +62,7 @@ export const getAssetBulkActions = ($t: MessageFormatter) => {
     title: $t('add_to_album'),
     icon: mdiPlus,
     shortcuts: [{ key: 'l' }],
-    onAction: () => {
-      modalManager.show(AssetAddToAlbumModal, { assetIds });
-    },
+    onAction: () => modalManager.show(AssetAddToAlbumModal, { assetIds }),
   };
 
   const RefreshFacesJob: ActionItem = {

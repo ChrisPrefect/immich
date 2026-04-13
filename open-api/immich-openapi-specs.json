@@ -4391,6 +4391,11 @@
           {
             "version": "v2",
             "state": "Stable"
+          },
+          {
+            "version": "v3",
+            "state": "Updated",
+            "description": "?size=original is deprecated. Consumers should directly call the original endpoint instead"
           }
         ],
         "x-immich-permission": "asset.view",

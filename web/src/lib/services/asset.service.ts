@@ -49,9 +49,9 @@ import type { MessageFormatter } from 'svelte-i18n';
 import { get } from 'svelte/store';
 
 export const getAssetBulkActions = ($t: MessageFormatter) => {
-  const ownedAssets = assetMultiSelectManager.ownedAssets;
-  const assetIds = ownedAssets.map((asset) => asset.id);
-  const isAllVideos = ownedAssets.every((asset) => asset.isVideo);
+  const assets = assetMultiSelectManager.assets;
+  const assetIds = assets.map((asset) => asset.id);
+  const isAllVideos = assets.every((asset) => asset.isVideo);
 
   const onAction = async (name: AssetJobName) => {
     await handleRunAssetJob({ name, assetIds });
@@ -62,7 +62,9 @@ export const getAssetBulkActions = ($t: MessageFormatter) => {
     title: $t('add_to_album'),
     icon: mdiPlus,
     shortcuts: [{ key: 'l' }],
-    onAction: () => modalManager.show(AssetAddToAlbumModal, { assetIds }),
+    onAction: () => {
+      modalManager.show(AssetAddToAlbumModal, { assetIds });
+    },
   };
 
   const RefreshFacesJob: ActionItem = {

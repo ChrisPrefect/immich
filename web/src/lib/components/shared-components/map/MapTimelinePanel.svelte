@@ -30,8 +30,8 @@
     type OnUnlink,
   } from '$lib/utils/actions';
   import { AssetVisibility } from '@immich/sdk';
-  import { ActionButton, CloseButton, CommandPaletteDefaultProvider, Icon } from '@immich/ui';
-  import { mdiDotsVertical, mdiImageMultiple } from '@mdi/js';
+  import { ActionButton, CloseButton, CommandPaletteDefaultProvider, IconButton, Icon } from '@immich/ui';
+  import { mdiArrowCollapse, mdiArrowExpand, mdiDotsVertical, mdiImageMultiple } from '@mdi/js';
   import { ceil, floor } from 'lodash-es';
   import { t } from 'svelte-i18n';
 
@@ -40,9 +40,19 @@
     selectedClusterIds: Set<string>;
     assetCount: number;
     onClose: () => void;
+    // Custom fork: expand panel to full width (hide map)
+    isExpanded?: boolean;
+    onToggleExpand?: () => void;
   }
 
-  let { bbox, selectedClusterIds, assetCount, onClose }: Props = $props();
+  let {
+    bbox,
+    selectedClusterIds,
+    assetCount,
+    onClose,
+    isExpanded = false,
+    onToggleExpand,
+  }: Props = $props();
 
   let timelineManager = $state<TimelineManager>() as TimelineManager;
   let selectedAssets = $derived(assetMultiSelectManager.assets);
@@ -80,11 +90,15 @@
     `${floor(bbox.west, 6)},${floor(bbox.south, 6)},${ceil(bbox.east, 6)},${ceil(bbox.north, 6)}`,
   );
 
+  // Custom fork: visibility must always be set (backend requires it).
+  // If includeArchived is true, fall back to Timeline (showing archived assets on the
+  // map would need a different API flow — not supported here).
   const timelineOptions = $derived({
     bbox: timelineBoundingBox,
-    visibility: $mapSettings.includeArchived ? undefined : AssetVisibility.Timeline,
+    visibility: AssetVisibility.Timeline,
     isFavorite: $mapSettings.onlyFavorites || undefined,
     withPartners: $mapSettings.withPartners || undefined,
+    withStacked: true,
     assetFilter: selectedClusterIds,
   });
 
@@ -97,6 +111,16 @@
 <aside class="h-full w-full overflow-hidden bg-immich-bg dark:bg-immich-dark-bg flex flex-col contain-content">
   <div class="flex items-center justify-between border-b border-gray-200 dark:border-immich-dark-gray pb-1 pe-1">
     <div class="flex items-center gap-2">
+      {#if onToggleExpand}
+        <IconButton
+          shape="round"
+          color="secondary"
+          variant="ghost"
+          aria-label={isExpanded ? $t('collapse') : $t('expand')}
+          icon={isExpanded ? mdiArrowCollapse : mdiArrowExpand}
+          onclick={onToggleExpand}
+        />
+      {/if}
       <Icon icon={mdiImageMultiple} size="20" />
       <p class="text-sm font-medium text-immich-fg dark:text-immich-dark-fg">
         {$t('assets_count', { values: { count: assetCount } })}

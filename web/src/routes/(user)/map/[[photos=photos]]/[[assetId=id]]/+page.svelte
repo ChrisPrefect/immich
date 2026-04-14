@@ -23,11 +23,18 @@
   let selectedClusterIds = $state.raw(new Set<string>());
   let selectedClusterBBox = $state.raw<SelectionBBox>();
   let isTimelinePanelVisible = $state(false);
+  // Custom fork: toggle to expand the asset list to full width (hide the map)
+  let isPanelExpanded = $state(false);
 
   function closeTimelinePanel() {
     isTimelinePanelVisible = false;
+    isPanelExpanded = false;
     selectedClusterBBox = undefined;
     selectedClusterIds = new Set();
+  }
+
+  function togglePanelExpanded() {
+    isPanelExpanded = !isPanelExpanded;
   }
 
   onDestroy(() => {
@@ -58,7 +65,11 @@
       <div
         class={[
           'min-h-0',
-          isTimelinePanelVisible ? 'h-1/2 w-full pb-2 sm:h-full sm:w-2/3 sm:pe-2 sm:pb-0' : 'h-full w-full',
+          isPanelExpanded
+            ? 'hidden'
+            : isTimelinePanelVisible
+              ? 'h-1/2 w-full pb-2 sm:h-full sm:w-2/3 sm:pe-2 sm:pb-0'
+              : 'h-full w-full',
         ]}
       >
         {#await import('$lib/components/shared-components/map/map.svelte')}
@@ -74,12 +85,19 @@
       </div>
 
       {#if isTimelinePanelVisible && selectedClusterBBox}
-        <div class="h-1/2 min-h-0 w-full pt-2 sm:h-full sm:w-1/3 sm:ps-2 sm:pt-0">
+        <div
+          class={[
+            'min-h-0',
+            isPanelExpanded ? 'h-full w-full' : 'h-1/2 w-full pt-2 sm:h-full sm:w-1/3 sm:ps-2 sm:pt-0',
+          ]}
+        >
           <MapTimelinePanel
             bbox={selectedClusterBBox}
             {selectedClusterIds}
             assetCount={selectedClusterIds.size}
             onClose={closeTimelinePanel}
+            isExpanded={isPanelExpanded}
+            onToggleExpand={togglePanelExpanded}
           />
         </div>
       {/if}

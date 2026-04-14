@@ -72,31 +72,7 @@
     onmouseenter={() => (hoveredTimelineDay = timelineDay.groupTitle)}
     onmouseleave={() => (hoveredTimelineDay = null)}
   >
-    <!-- Day title -->
-    <div
-      class="flex pt-7 pb-5 max-md:pt-5 max-md:pb-3 h-6 place-items-center text-xs font-medium text-immich-fg dark:text-immich-dark-fg md:text-sm"
-      style:width={timelineDay.width + 'px'}
-    >
-      {#if !singleSelect}
-        <div
-          class="hover:cursor-pointer transition-all duration-200 ease-out overflow-hidden w-0"
-          class:w-8={hoveredTimelineDay === timelineDay.groupTitle ||
-            assetInteraction.selectedGroup.has(timelineDay.groupTitle)}
-          onclick={() => onTimelineDaySelect(timelineDay, assetsSnapshot(timelineDay.getAssets()))}
-          onkeydown={() => onTimelineDaySelect(timelineDay, assetsSnapshot(timelineDay.getAssets()))}
-        >
-          {#if isTimelineDaySelected}
-            <Icon icon={mdiCheckCircle} size="24" class="text-primary" />
-          {:else}
-            <Icon icon={mdiCircleOutline} size="24" class="text-light-500" />
-          {/if}
-        </div>
-      {/if}
-
-      <span class="w-full truncate first-letter:capitalize" title={getTimelineDayFullDate(timelineDay)}>
-        {timelineDay.groupTitle}
-      </span>
-    </div>
+    <!-- Day title hidden (custom fork: no date grouping) -->
 
     <AssetLayout
       {manager}

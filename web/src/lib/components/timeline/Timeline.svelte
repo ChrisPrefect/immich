@@ -105,14 +105,15 @@
   const usingMobileDevice = $derived(mediaQueryManager.pointerCoarse);
 
   $effect(() => {
+    // Custom fork: headerHeight 0 (no date group headers)
     const layoutOptions = maxMd
       ? {
           rowHeight: 100,
-          headerHeight: 32,
+          headerHeight: 0,
         }
       : {
           rowHeight: 235,
-          headerHeight: 48,
+          headerHeight: 0,
         };
     timelineManager.setLayoutOptions(layoutOptions);
   });

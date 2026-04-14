@@ -240,12 +240,13 @@ export class TimelineMonth {
       return;
     }
 
-    let timelineDay = addContext.getTimelineDay(localDateTime) || this.findTimelineDayByDay(localDateTime.day);
+    // Custom fork: merge all assets into a single group per month (no date grouping)
+    let timelineDay = this.timelineDays[0];
     if (timelineDay) {
       addContext.setTimelineDay(timelineDay, localDateTime);
     } else {
-      const groupTitle = formatGroupTitle(fromTimelinePlainDate(localDateTime));
-      timelineDay = new TimelineDay(this, this.timelineDays.length, localDateTime.day, groupTitle);
+      const groupTitle = '';
+      timelineDay = new TimelineDay(this, 0, 1, groupTitle);
       this.timelineDays.push(timelineDay);
       addContext.setTimelineDay(timelineDay, localDateTime);
       addContext.newTimelineDays.add(timelineDay);

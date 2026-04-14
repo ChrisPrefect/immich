@@ -21,12 +21,11 @@
   import { AssetAction } from '$lib/constants';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { memoryManager } from '$lib/managers/memory-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
   import { preferences } from '$lib/stores/user.store';
-  import { getAssetMediaUrl, memoryLaneTitle } from '$lib/utils';
+  import { getAssetMediaUrl } from '$lib/utils';
   import {
     updateStackedAssetInTimeline,
     updateUnstackedAssetInTimeline,
@@ -34,10 +33,8 @@
     type OnUnlink,
   } from '$lib/utils/actions';
   import { openFileUploadDialog } from '$lib/utils/file-uploader';
-  import { getAltText } from '$lib/utils/thumbnail-util';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
   import { AssetVisibility } from '@immich/sdk';
-  import { ActionButton, CommandPaletteDefaultProvider, ImageCarousel } from '@immich/ui';
+  import { ActionButton, CommandPaletteDefaultProvider } from '@immich/ui';
   import { mdiDotsVertical } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
@@ -81,15 +78,6 @@
     assetMultiSelectManager.clear();
   };
 
-  const items = $derived(
-    memoryManager.memories.map((memory) => ({
-      id: memory.id,
-      title: $memoryLaneTitle(memory),
-      href: Route.memories({ id: memory.assets[0].id }),
-      alt: $t('memory_lane_title', { values: { title: $getAltText(toTimelineAsset(memory.assets[0])) } }),
-      src: getAssetMediaUrl({ id: memory.assets[0].id }),
-    })),
-  );
 </script>
 
 <UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} scrollbar={false}>
@@ -102,9 +90,7 @@
     onEscape={handleEscape}
     withStacked
   >
-    {#if $preferences.memories.enabled}
-      <ImageCarousel {items} />
-    {/if}
+    <!-- memories/rückblicke deaktiviert (custom fork) -->
     {#snippet empty()}
       <EmptyPlaceholder text={$t('no_assets_message')} onClick={() => openFileUploadDialog()} class="mt-10 mx-auto" />
     {/snippet}

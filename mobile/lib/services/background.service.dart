@@ -397,8 +397,11 @@ class BackgroundService {
     List<BackupAlbum> excludedAlbums,
   ) async {
     _errorGracePeriodExceeded = _isErrorGracePeriodExceeded(settingsService);
-    final bool notifyTotalProgress = settingsService.getSetting<bool>(AppSettingsEnum.backgroundBackupTotalProgress);
-    final bool notifySingleProgress = settingsService.getSetting<bool>(AppSettingsEnum.backgroundBackupSingleProgress);
+    final bool showSyncNotifications = settingsService.getSetting<bool>(AppSettingsEnum.showSyncNotifications);
+    final bool notifyTotalProgress =
+        showSyncNotifications && settingsService.getSetting<bool>(AppSettingsEnum.backgroundBackupTotalProgress);
+    final bool notifySingleProgress =
+        showSyncNotifications && settingsService.getSetting<bool>(AppSettingsEnum.backgroundBackupSingleProgress);
 
     if (_canceledBySystem) {
       return false;
@@ -409,12 +412,14 @@ class BackgroundService {
     try {
       toUpload = await backupService.removeAlreadyUploadedAssets(toUpload);
     } catch (e) {
-      unawaited(
-        _showErrorNotification(
-          title: "backup_background_service_error_title".tr(),
-          content: "backup_background_service_connection_failed_message".tr(),
-        ),
-      );
+      if (showSyncNotifications) {
+        unawaited(
+          _showErrorNotification(
+            title: "backup_background_service_error_title".tr(),
+            content: "backup_background_service_connection_failed_message".tr(),
+          ),
+        );
+      }
       return false;
     }
 
@@ -427,16 +432,18 @@ class BackgroundService {
     }
     _assetsToUploadCount = toUpload.length;
     _uploadedAssetsCount = 0;
-    unawaited(
-      _updateNotification(
-        title: "backup_background_service_in_progress_notification".tr(),
-        content: notifyTotalProgress ? formatAssetBackupProgress(_uploadedAssetsCount, _assetsToUploadCount) : null,
-        progress: 0,
-        max: notifyTotalProgress ? _assetsToUploadCount : 0,
-        indeterminate: !notifyTotalProgress,
-        onlyIfFG: !notifyTotalProgress,
-      ),
-    );
+    if (showSyncNotifications) {
+      unawaited(
+        _updateNotification(
+          title: "backup_background_service_in_progress_notification".tr(),
+          content: notifyTotalProgress ? formatAssetBackupProgress(_uploadedAssetsCount, _assetsToUploadCount) : null,
+          progress: 0,
+          max: notifyTotalProgress ? _assetsToUploadCount : 0,
+          indeterminate: !notifyTotalProgress,
+          onlyIfFG: !notifyTotalProgress,
+        ),
+      );
+    }
 
     _cancellationToken?.complete();
     _cancellationToken = Completer<void>();
@@ -453,7 +460,7 @@ class BackgroundService {
       isBackground: true,
     );
 
-    if (!ok && !_cancellationToken!.isCompleted) {
+    if (!ok && !_cancellationToken!.isCompleted && showSyncNotifications) {
       unawaited(
         _showErrorNotification(
           title: "backup_background_service_error_title".tr(),

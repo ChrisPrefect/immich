@@ -94,7 +94,26 @@ enum StoreKey<T> {
   cleanupCutoffDaysAgo<int>._(1011),
   cleanupDefaultsInitialized<bool>._(1012),
 
-  syncMigrationStatus<String>._(1013);
+  syncMigrationStatus<String>._(1013),
+
+  showHeaderImage<bool>._(1014),
+
+  showSyncNotifications<bool>._(1015),
+
+  // ImmichPlus customizations
+  reverseTimeline<bool>._(1016),
+  hideAssetBadges<bool>._(1017),
+  hideMemoriesLane<bool>._(1018),
+  showMemoriesFolder<bool>._(1019),
+  scrollRestoreOnViewerClose<bool>._(1020),
+  placesDirectToMap<bool>._(1021),
+  // Stored as "lat,lng,zoom" string (Store only supports int/String/bool/DateTime)
+  lastMapCamera<String>._(1022),
+  syncIosFavorites<bool>._(1025),
+  syncIosHiddenToLockedFolder<bool>._(1026),
+  logsShowAssetDetail<bool>._(1027),
+  photosFilterAlbumIds<String>._(1028),
+  photosFilterMode<int>._(1029);
 
   const StoreKey._(this.id);
   final int id;

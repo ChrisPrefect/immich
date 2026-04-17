@@ -8,8 +8,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/album/album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/extensions/scroll_extensions.dart';
@@ -117,6 +119,12 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
 
   @override
   void dispose() {
+    // ImmichPlus: ask the timeline behind to scroll so the last-viewed asset is
+    // roughly centered when we return to it.
+    if (Store.get(StoreKey.scrollRestoreOnViewerClose, true)) {
+      EventStream.shared.emit(RestoreAssetIndexEvent(_currentPage));
+    }
+
     _pageController.dispose();
     _preloader.dispose();
     _reloadSubscription?.cancel();

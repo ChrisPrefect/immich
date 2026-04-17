@@ -1,5 +1,6 @@
 [tools]
 flutter = "3.35.7"
+ruby = "3.3.10"
 
 [tools."github:CQLabs/homebrew-dcm"]
 version = "1.30.0"

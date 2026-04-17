@@ -58,8 +58,11 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
       multiSelectProvider.select((multiselect) => multiselect.selectedAssets.contains(asset)),
     );
 
+    final bool hideAssetBadges = ref.watch(settingsProvider.select((s) => s.get(Setting.hideAssetBadges)));
     final bool storageIndicator =
-        ref.watch(settingsProvider.select((s) => s.get(Setting.showStorageIndicator))) && widget.showStorageIndicator;
+        ref.watch(settingsProvider.select((s) => s.get(Setting.showStorageIndicator))) &&
+        widget.showStorageIndicator &&
+        !hideAssetBadges;
 
     if (!isCurrentAsset) {
       _hideIndicators = false;
@@ -139,7 +142,7 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
                     duration: Durations.short4,
                     child: Align(
                       alignment: Alignment.topRight,
-                      child: _AssetTypeIcons(asset: asset),
+                      child: _AssetTypeIcons(asset: asset, hideBadges: hideAssetBadges),
                     ),
                   ),
                 if (storageIndicator && asset != null)
@@ -281,8 +284,9 @@ class _TileOverlayIcon extends StatelessWidget {
 
 class _AssetTypeIcons extends StatelessWidget {
   final BaseAsset asset;
+  final bool hideBadges;
 
-  const _AssetTypeIcons({required this.asset});
+  const _AssetTypeIcons({required this.asset, this.hideBadges = false});
 
   @override
   Widget build(BuildContext context) {
@@ -300,7 +304,7 @@ class _AssetTypeIcons extends StatelessWidget {
             padding: EdgeInsets.only(right: 10.0, top: 6.0),
             child: _TileOverlayIcon(Icons.burst_mode_rounded),
           ),
-        if (isLivePhoto)
+        if (isLivePhoto && !hideBadges)
           const Padding(
             padding: EdgeInsets.only(right: 10.0, top: 6.0),
             child: _TileOverlayIcon(Icons.motion_photos_on_rounded),

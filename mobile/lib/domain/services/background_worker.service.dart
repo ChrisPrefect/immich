@@ -106,7 +106,9 @@ class BackgroundWorkerBgService extends BackgroundWorkerFlutterApi {
         ].nonNulls,
       );
 
-      configureFileDownloaderNotifications();
+      final showSyncNotifications =
+          _ref?.read(appSettingsServiceProvider).getSetting(AppSettingsEnum.showSyncNotifications) ?? true;
+      configureFileDownloaderNotifications(showSyncNotifications: showSyncNotifications);
 
       // Notify the host that the background worker service has been initialized and is ready to use
       unawaited(_backgroundHostApi.onInitialized());

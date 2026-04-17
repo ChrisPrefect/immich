@@ -193,6 +193,9 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
 
       case ScrollToDateEvent scrollToDateEvent:
         _scrollToDate(scrollToDateEvent.date);
+      case RestoreAssetIndexEvent restore:
+        _restoreAssetIndex = restore.index;
+        _restoreAssetPosition(_scrollController);
       case TimelineReloadEvent():
         setState(() {});
       default:
@@ -211,11 +214,15 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
         final newColumnCount = ref.read(timelineArgsProvider).columnCount;
         final rowIndexInSegment = (assetIndexInSegment / newColumnCount).floor();
         final targetRowIndex = targetSegment.firstIndex + 1 + rowIndexInSegment;
-        final targetOffset = targetSegment.indexToLayoutOffset(targetRowIndex);
+        final rowTopOffset = targetSegment.indexToLayoutOffset(targetRowIndex);
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _scrollController.jumpTo(targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent));
-          }
+          if (!mounted) return;
+          // Center the target asset in the viewport (ImmichPlus scroll-restore)
+          final args = ref.read(timelineArgsProvider);
+          final viewport = _scrollController.position.viewportDimension;
+          final tileHeight = (args.maxWidth - (args.spacing * (args.columnCount - 1))) / args.columnCount;
+          final centered = rowTopOffset - (viewport / 2) + (tileHeight / 2);
+          _scrollController.jumpTo(centered.clamp(0.0, _scrollController.position.maxScrollExtent));
         });
       }
     });

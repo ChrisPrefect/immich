@@ -13,9 +13,11 @@ import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
+import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
+import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/utils/people.utils.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
 
@@ -56,6 +58,7 @@ class _MesmerizingSliverAppBarState extends ConsumerState<PersonSliverAppBar> {
   @override
   Widget build(BuildContext context) {
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
+    final showHeaderImage = ref.watch(appSettingsServiceProvider).getSetting(AppSettingsEnum.showHeaderImage);
     Color? actionIconColor = Color.lerp(Colors.white, context.primaryColor, _scrollProgress);
     List<Shadow> actionIconShadows = [
       if (_scrollProgress < 0.95)
@@ -63,6 +66,26 @@ class _MesmerizingSliverAppBarState extends ConsumerState<PersonSliverAppBar> {
       else
         const Shadow(offset: Offset(0, 2), blurRadius: 0, color: Colors.transparent),
     ];
+
+    if (!showHeaderImage) {
+      return isMultiSelectEnabled
+          ? const SliverToBoxAdapter(child: SizedBox(height: 120))
+          : SliverAppBar(
+              pinned: true,
+              centerTitle: true,
+              title: Text(
+                widget.person.name.isNotEmpty ? widget.person.name : 'add_a_name'.tr(),
+                style: context.textTheme.titleMedium,
+              ),
+              leading: IconButton(
+                icon: Icon(Platform.isIOS ? Icons.arrow_back_ios_new_rounded : Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
+              actions: [
+                IconButton(icon: const Icon(Icons.more_vert), onPressed: widget.onShowOptions),
+              ],
+            );
+    }
 
     return isMultiSelectEnabled
         ? SliverToBoxAdapter(

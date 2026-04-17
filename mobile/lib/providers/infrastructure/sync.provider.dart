@@ -1,7 +1,10 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/services/hash.service.dart';
+import 'package:immich_mobile/domain/services/ios_favorite_sync.service.dart';
+import 'package:immich_mobile/domain/services/ios_hidden_sync.service.dart';
 import 'package:immich_mobile/domain/services/local_sync.service.dart';
 import 'package:immich_mobile/domain/services/sync_stream.service.dart';
+import 'package:immich_mobile/repositories/asset_api.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/sync_api.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/sync_migration.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/sync_stream.repository.dart';
@@ -42,6 +45,20 @@ final localSyncServiceProvider = Provider(
     localFilesManager: ref.watch(localFilesManagerRepositoryProvider),
     storageRepository: ref.watch(storageRepositoryProvider),
     nativeSyncApi: ref.watch(nativeSyncApiProvider),
+  ),
+);
+
+final iosFavoriteSyncServiceProvider = Provider(
+  (ref) => IosFavoriteSyncService(
+    db: ref.watch(driftProvider),
+    assetApi: ref.watch(assetApiRepositoryProvider),
+  ),
+);
+
+final iosHiddenSyncServiceProvider = Provider(
+  (ref) => IosHiddenSyncService(
+    db: ref.watch(driftProvider),
+    assetApi: ref.watch(assetApiRepositoryProvider),
   ),
 );
 

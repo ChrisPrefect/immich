@@ -136,6 +136,33 @@ class BackgroundSyncManager {
         });
   }
 
+  /// Pushes iOS "favorite" flags from the local Photos library to the server
+  /// (ImmichPlus feature). Fires and forgets; errors are swallowed to avoid
+  /// disrupting the rest of the sync pipeline.
+  Future<void> syncIosFavorites() async {
+    try {
+      await runInIsolateGentle(
+        computation: (ref) => ref.read(iosFavoriteSyncServiceProvider).syncFavoritesToServer(),
+        debugLabel: 'ios-favorite-sync',
+      );
+    } catch (_) {
+      // Intentional: ImmichPlus best-effort sync, never block real sync.
+    }
+  }
+
+  /// Moves matching server assets into the locked folder for every iOS Photos
+  /// asset that sits in iOS' Hidden smart album (ImmichPlus feature).
+  Future<void> syncIosHiddenToLockedFolder() async {
+    try {
+      await runInIsolateGentle(
+        computation: (ref) => ref.read(iosHiddenSyncServiceProvider).syncHiddenToLockedFolder(),
+        debugLabel: 'ios-hidden-sync',
+      );
+    } catch (_) {
+      // Intentional: best-effort.
+    }
+  }
+
   Future<void> hashAssets() {
     if (_hashTask != null) {
       return _hashTask!.future;

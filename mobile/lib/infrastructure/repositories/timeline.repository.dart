@@ -56,7 +56,11 @@ class DriftTimelineRepository extends DriftDatabaseRepository {
 
   Stream<List<Bucket>> _watchMainBucket(List<String> userIds, {GroupAssetsBy groupBy = GroupAssetsBy.day}) {
     if (groupBy == GroupAssetsBy.none) {
-      throw UnsupportedError("GroupAssetsBy.none is not supported for watchMainBucket");
+      // Flat list: total asset count across all days, no date grouping.
+      return _db.mergedAssetDrift
+          .mergedBucket(userIds: userIds, groupBy: GroupAssetsBy.day.index)
+          .watch()
+          .map((rows) => _generateBuckets(rows.fold<int>(0, (sum, row) => sum + row.assetCount)));
     }
 
     return _db.mergedAssetDrift.mergedBucket(userIds: userIds, groupBy: groupBy.index).map((row) {
@@ -357,6 +361,17 @@ class DriftTimelineRepository extends DriftDatabaseRepository {
     groupBy: groupBy,
   );
 
+  /// Timeline filtered to still-image assets (excludes videos).
+  TimelineQuery image(String userId, GroupAssetsBy groupBy) => _remoteQueryBuilder(
+    filter: (row) =>
+        row.deletedAt.isNull() &
+        row.type.equalsValue(AssetType.image) &
+        row.visibility.equalsValue(AssetVisibility.timeline) &
+        row.ownerId.equals(userId),
+    origin: TimelineOrigin.remoteAssets,
+    groupBy: groupBy,
+  );
+
   TimelineQuery place(String place, GroupAssetsBy groupBy) => (
     bucketSource: () => _watchPlaceBucket(place, groupBy: groupBy),
     assetSource: (offset, count) => _getPlaceBucketAssets(place, offset: offset, count: count),
@@ -371,8 +386,23 @@ class DriftTimelineRepository extends DriftDatabaseRepository {
 
   Stream<List<Bucket>> _watchPlaceBucket(String place, {GroupAssetsBy groupBy = GroupAssetsBy.day}) {
     if (groupBy == GroupAssetsBy.none) {
-      // TODO: implement GroupAssetBy for place
-      throw UnsupportedError("GroupAssetsBy.none is not supported for watchPlaceBucket");
+      // Flat list: total count of assets in this place, no date grouping.
+      final countExp = _db.remoteAssetEntity.id.count();
+      final query = _db.remoteAssetEntity.selectOnly()
+        ..addColumns([countExp])
+        ..join([
+          innerJoin(
+            _db.remoteExifEntity,
+            _db.remoteExifEntity.assetId.equalsExp(_db.remoteAssetEntity.id),
+            useColumns: false,
+          ),
+        ])
+        ..where(
+          _db.remoteExifEntity.city.equals(place) &
+              _db.remoteAssetEntity.deletedAt.isNull() &
+              _db.remoteAssetEntity.visibility.equalsValue(AssetVisibility.timeline),
+        );
+      return query.map((row) => _generateBuckets(row.read(countExp)!)).watchSingle();
     }
 
     final assetCountExp = _db.remoteAssetEntity.id.count();
@@ -517,8 +547,34 @@ class DriftTimelineRepository extends DriftDatabaseRepository {
     GroupAssetsBy groupBy = GroupAssetsBy.day,
   }) {
     if (groupBy == GroupAssetsBy.none) {
-      // TODO: Support GroupAssetsBy.none
-      throw UnsupportedError("GroupAssetsBy.none is not supported for _watchMapBucket");
+      // Flat list: total count of map-bound assets, no date grouping.
+      final countExp = _db.remoteAssetEntity.id.count();
+      final query = _db.remoteAssetEntity.selectOnly()
+        ..addColumns([countExp])
+        ..join([
+          innerJoin(
+            _db.remoteExifEntity,
+            _db.remoteExifEntity.assetId.equalsExp(_db.remoteAssetEntity.id),
+            useColumns: false,
+          ),
+        ])
+        ..where(
+          _db.remoteAssetEntity.ownerId.isIn(userId) &
+              _db.remoteExifEntity.inBounds(options.bounds) &
+              _db.remoteAssetEntity.visibility.isIn([
+                AssetVisibility.timeline.index,
+                if (options.includeArchived) AssetVisibility.archive.index,
+              ]) &
+              _db.remoteAssetEntity.deletedAt.isNull(),
+        );
+      if (options.onlyFavorites) {
+        query.where(_db.remoteAssetEntity.isFavorite.equals(true));
+      }
+      if (options.relativeDays != 0) {
+        final cutoffDate = DateTime.now().toUtc().subtract(Duration(days: options.relativeDays));
+        query.where(_db.remoteAssetEntity.createdAt.isBiggerOrEqualValue(cutoffDate));
+      }
+      return query.map((row) => _generateBuckets(row.read(countExp)!)).watchSingle();
     }
 
     final assetCountExp = _db.remoteAssetEntity.id.count();

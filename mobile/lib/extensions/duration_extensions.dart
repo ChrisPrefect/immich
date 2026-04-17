@@ -7,11 +7,12 @@ extension TZOffsetExtension on Duration {
 extension DurationFormatExtension on Duration {
   String format() {
     final seconds = inSeconds.remainder(60).toString().padLeft(2, '0');
-    final minutes = inMinutes.remainder(60).toString().padLeft(2, '0');
     if (inHours == 0) {
+      final minutes = inMinutes.remainder(60).toString();
       return "$minutes:$seconds";
     }
-    final hours = inHours.toString().padLeft(2, '0');
+    final minutes = inMinutes.remainder(60).toString().padLeft(2, '0');
+    final hours = inHours.toString();
     return "$hours:$minutes:$seconds";
   }
 }

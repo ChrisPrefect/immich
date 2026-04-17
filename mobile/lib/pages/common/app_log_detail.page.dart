@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/log.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/utils/log_asset_context.dart';
 
 @RoutePage()
 class AppLogDetailPage extends HookConsumerWidget {
@@ -97,6 +98,8 @@ class AppLogDetailPage extends HookConsumerWidget {
       );
     }
 
+    final assetCtx = LogAssetContext.extract(logMessage);
+
     return Scaffold(
       appBar: AppBar(title: Text("log_detail_title".tr())),
       body: SafeArea(
@@ -104,6 +107,8 @@ class AppLogDetailPage extends HookConsumerWidget {
           children: [
             buildTextWithCopyButton("MESSAGE", logMessage.message),
             if (logMessage.error != null) buildTextWithCopyButton("DETAILS", logMessage.error.toString()),
+            if (assetCtx.assetId != null) buildTextWithCopyButton("ASSET ID", assetCtx.assetId!),
+            if (assetCtx.assetPath != null) buildTextWithCopyButton("ASSET PATH", assetCtx.assetPath!),
             if (logMessage.logger != null) buildLogContext(logMessage.logger.toString()),
             if (logMessage.stack != null) buildTextWithCopyButton("STACK TRACE", logMessage.stack.toString()),
           ],

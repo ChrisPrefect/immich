@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/constants/constants.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
 import 'package:immich_mobile/extensions/duration_extensions.dart';
@@ -72,7 +74,7 @@ class ThumbnailImage extends StatelessWidget {
                 canDeselect: canDeselect,
                 isSelected: isSelected,
               ),
-              if (showStorageIndicator) _StorageIcon(storage: asset.storage),
+              if (showStorageIndicator && !Store.get(StoreKey.hideAssetBadges, true)) _StorageIcon(storage: asset.storage),
               if (asset.isFavorite)
                 const Positioned(left: 8, bottom: 5, child: Icon(Icons.favorite, color: Colors.white, size: 16)),
               if (asset.isVideo) _VideoIcon(duration: asset.duration),

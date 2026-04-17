@@ -170,6 +170,11 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
       if (isAlbumLinkedSyncEnable) {
         await _safeRun(backgroundManager.syncLinkedAlbum(), "syncLinkedAlbum");
       }
+
+      // ImmichPlus: push iOS favorites to server after other syncs settle.
+      await _safeRun(backgroundManager.syncIosFavorites(), "syncIosFavorites");
+      // ImmichPlus: push iOS Hidden album into the locked folder.
+      await _safeRun(backgroundManager.syncIosHiddenToLockedFolder(), "syncIosHiddenToLockedFolder");
     } catch (e, stackTrace) {
       _log.severe("Error during background sync", e, stackTrace);
     }

@@ -6,10 +6,10 @@
 	<string>$(CUSTOM_GROUP_ID)</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>app.alextran.immich.background.refreshUpload</string>
-		<string>app.alextran.immich.background.processingUpload</string>
-		<string>app.alextran.immich.backgroundFetch</string>
-		<string>app.alextran.immich.backgroundProcessing</string>
+		<string>app.iteconomy.immich.background.refreshUpload</string>
+		<string>app.iteconomy.immich.background.processingUpload</string>
+		<string>app.iteconomy.immich.backgroundFetch</string>
+		<string>app.iteconomy.immich.backgroundProcessing</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
@@ -150,6 +150,8 @@
 	<string>We need to manage backup your photos album</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need to manage backup your photos album</string>
+	<key>NSPhotoLibraryIncludeHiddenUsageDescription</key>
+	<string>We need access to your hidden album to sync it to the Immich locked folder</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>

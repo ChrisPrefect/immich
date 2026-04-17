@@ -8,6 +8,7 @@ import 'package:immich_mobile/presentation/widgets/album/album_selector.widget.d
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
+import 'package:immich_mobile/widgets/memories/rueckblicke_folder.dart';
 
 @RoutePage()
 class DriftAlbumsPage extends ConsumerStatefulWidget {
@@ -50,6 +51,7 @@ class _DriftAlbumsPageState extends ConsumerState<DriftAlbumsPage> {
           ],
           showUploadButton: false,
         ),
+        const RueckblickeFolder(),
         AlbumSelector(
           onAlbumSelected: (album) {
             context.router.push(RemoteAlbumRoute(album: album));

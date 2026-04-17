@@ -7,6 +7,8 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
@@ -117,6 +119,13 @@ class _DriftMapState extends ConsumerState<DriftMap> {
   void onMapMoved() {
     if (mapController!.isCameraMoving || !mounted) {
       return;
+    }
+
+    // ImmichPlus: persist the last viewed center/zoom so the Places tile and
+    // next map open can restore this position.
+    final camera = mapController!.cameraPosition;
+    if (camera != null) {
+      Store.put(StoreKey.lastMapCamera, '${camera.target.latitude},${camera.target.longitude},${camera.zoom}');
     }
 
     _debouncer.run(setBounds);

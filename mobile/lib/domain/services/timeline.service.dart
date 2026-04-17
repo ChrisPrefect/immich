@@ -51,7 +51,42 @@ class TimelineFactory {
     return group == GroupAssetsBy.auto ? GroupAssetsBy.day : group;
   }
 
-  TimelineService main(List<String> timelineUsers) => TimelineService(_timelineRepository.main(timelineUsers, groupBy));
+  TimelineService main(List<String> timelineUsers) {
+    final base = _timelineRepository.main(timelineUsers, groupBy);
+    final reverse = _settingsService.get(Setting.reverseTimeline);
+    return TimelineService(reverse ? _wrapReversed(base) : base);
+  }
+
+  /// Wraps a [TimelineQuery] so that buckets and assets appear in reversed
+  /// (oldest-first) order, without touching SQL. The bucket stream is mapped to
+  /// reverse the list and cache the current total; the asset source translates
+  /// the requested offset to the DESC-ordered frame then reverses the result.
+  static TimelineQuery _wrapReversed(TimelineQuery base) {
+    int cachedTotal = 0;
+
+    Stream<List<Bucket>> wrappedBucketSource() =>
+        base.bucketSource().map((buckets) {
+          cachedTotal = buckets.fold<int>(0, (acc, b) => acc + b.assetCount);
+          return buckets.reversed.toList();
+        });
+
+    Future<List<BaseAsset>> wrappedAssetSource(int offset, int count) async {
+      final total = cachedTotal;
+      if (total <= 0) {
+        return base.assetSource(offset, count);
+      }
+      final translatedOffset = math.max(0, total - offset - count);
+      final translatedCount = math.min(count, total - translatedOffset);
+      final assets = await base.assetSource(translatedOffset, translatedCount);
+      return assets.reversed.toList();
+    }
+
+    return (
+      bucketSource: wrappedBucketSource,
+      assetSource: wrappedAssetSource,
+      origin: base.origin,
+    );
+  }
 
   TimelineService localAlbum({required String albumId}) =>
       TimelineService(_timelineRepository.localAlbum(albumId, groupBy));
@@ -70,6 +105,8 @@ class TimelineFactory {
   TimelineService lockedFolder(String userId) => TimelineService(_timelineRepository.locked(userId, groupBy));
 
   TimelineService video(String userId) => TimelineService(_timelineRepository.video(userId, groupBy));
+
+  TimelineService image(String userId) => TimelineService(_timelineRepository.image(userId, groupBy));
 
   TimelineService place(String place) => TimelineService(_timelineRepository.place(place, groupBy));
 

@@ -15,6 +15,14 @@ class ScrollToDateEvent extends Event {
   const ScrollToDateEvent(this.date);
 }
 
+/// Asks the active Timeline to scroll so that the asset at [index] is roughly
+/// centered in the viewport. Emitted when the asset viewer closes, so the
+/// gallery behind lines up with the last viewed asset (ImmichPlus feature).
+class RestoreAssetIndexEvent extends Event {
+  final int index;
+  const RestoreAssetIndexEvent(this.index);
+}
+
 // Asset Viewer Events
 class ViewerShowDetailsEvent extends Event {
   const ViewerShowDetailsEvent();

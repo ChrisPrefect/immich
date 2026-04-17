@@ -2,7 +2,9 @@ import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
@@ -214,8 +216,28 @@ class _PlacesCollectionCard extends StatelessWidget {
         final widthFactor = isTablet ? 0.25 : 0.5;
         final size = context.width * widthFactor - 20.0;
 
+        // ImmichPlus: Places tile jumps straight to the map (skipping the
+        // places list). Uses the last viewed coordinate if known; otherwise
+        // opens a world view (lat/lng 0, zoom 0).
+        final directToMap = Store.get(StoreKey.placesDirectToMap, true);
+        final cameraString = Store.tryGet(StoreKey.lastMapCamera);
+        final cameraParts = cameraString?.split(',');
+        final hasLast = cameraParts != null && cameraParts.length == 3;
+        final lastLat = hasLast ? double.tryParse(cameraParts[0]) : null;
+        final lastLng = hasLast ? double.tryParse(cameraParts[1]) : null;
+        final lastZoom = hasLast ? double.tryParse(cameraParts[2]) : null;
+        final hasValidLast = lastLat != null && lastLng != null;
+        final previewCentre = hasValidLast ? LatLng(lastLat, lastLng) : const LatLng(0, 0);
+        final previewZoom = hasValidLast ? (lastZoom ?? 4.0) : 0.5;
+
         return GestureDetector(
-          onTap: () => context.pushRoute(DriftPlaceRoute(currentLocation: null)),
+          onTap: () {
+            if (directToMap) {
+              context.pushRoute(DriftMapRoute(initialLocation: hasValidLast ? LatLng(lastLat, lastLng) : null));
+            } else {
+              context.pushRoute(DriftPlaceRoute(currentLocation: null));
+            }
+          },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -229,8 +251,8 @@ class _PlacesCollectionCard extends StatelessWidget {
                   ),
                   child: IgnorePointer(
                     child: MapThumbnail(
-                      zoom: 8,
-                      centre: const LatLng(21.44950, -157.91959),
+                      zoom: previewZoom,
+                      centre: previewCentre,
                       showAttribution: false,
                       themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
                     ),

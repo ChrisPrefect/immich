@@ -9,6 +9,7 @@ import 'package:immich_mobile/providers/network.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/utils/hooks/app_settings_update_hook.dart';
 import 'package:immich_mobile/utils/url_helper.dart';
+import 'package:immich_mobile/widgets/settings/networking_settings/change_server_url_dialog.dart';
 import 'package:immich_mobile/widgets/settings/networking_settings/external_network_preference.dart';
 import 'package:immich_mobile/widgets/settings/networking_settings/local_network_preference.dart';
 import 'package:immich_mobile/widgets/settings/setting_group_title.dart';
@@ -109,6 +110,14 @@ class NetworkingSettings extends HookConsumerWidget {
               title: Text(
                 currentEndpoint ?? "--",
                 style: TextStyle(fontSize: 14, fontFamily: 'GoogleSansCode', color: context.primaryColor),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'change_server_url_title'.tr(),
+                onPressed: () => showDialog(
+                  context: context,
+                  builder: (_) => const ChangeServerUrlDialog(),
+                ),
               ),
             ),
           ),

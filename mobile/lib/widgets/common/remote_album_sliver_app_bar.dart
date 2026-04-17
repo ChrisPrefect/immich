@@ -14,10 +14,12 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/datetime_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/images/image_provider.dart';
+import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/current_album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/remote_album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
+import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/widgets/album/remote_album_shared_user_icons.dart';
 
 class RemoteAlbumSliverAppBar extends ConsumerStatefulWidget {
@@ -57,10 +59,30 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
   @override
   Widget build(BuildContext context) {
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
+    final showHeaderImage = ref.watch(appSettingsServiceProvider).getSetting(AppSettingsEnum.showHeaderImage);
 
     final currentAlbum = ref.watch(currentRemoteAlbumProvider);
     if (currentAlbum == null) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    if (!showHeaderImage) {
+      return SliverAppBar(
+        pinned: true,
+        centerTitle: true,
+        title: Text(currentAlbum.name, style: context.textTheme.titleMedium),
+        leading: isMultiSelectEnabled
+            ? const SizedBox.shrink()
+            : IconButton(
+                icon: Icon(Platform.isIOS ? Icons.arrow_back_ios_new_rounded : Icons.arrow_back),
+                onPressed: () => context.maybePop(),
+              ),
+        actions: [
+          if (currentAlbum.isActivityEnabled && currentAlbum.isShared)
+            IconButton(icon: const Icon(Icons.chat_outlined), onPressed: widget.onActivity),
+          widget.kebabMenu,
+        ],
+      );
     }
 
     Color? actionIconColor = Color.lerp(Colors.white, context.primaryColor, _scrollProgress);

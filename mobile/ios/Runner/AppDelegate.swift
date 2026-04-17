@@ -61,6 +61,8 @@ import UIKit
     BackgroundWorkerFgHostApiSetup.setUp(binaryMessenger: engine.binaryMessenger, api: BackgroundWorkerApiImpl())
     ConnectivityApiSetup.setUp(binaryMessenger: engine.binaryMessenger, api: ConnectivityApiImpl())
     NetworkApiSetup.setUp(binaryMessenger: engine.binaryMessenger, api: NetworkApiImpl(viewController: controller))
+    // ImmichPlus-only plugin
+    HiddenAlbumPlugin.register(with: engine.registrar(forPlugin: "ImmichPlusHiddenAlbumPlugin")!)
   }
   
   public static func cancelPlugins(with engine: FlutterEngine) {

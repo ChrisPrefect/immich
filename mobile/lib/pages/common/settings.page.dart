@@ -13,6 +13,7 @@ import 'package:immich_mobile/widgets/settings/backup_settings/backup_settings.d
 import 'package:immich_mobile/widgets/settings/backup_settings/drift_backup_settings.dart';
 import 'package:immich_mobile/widgets/settings/beta_sync_settings/sync_status_and_actions.dart';
 import 'package:immich_mobile/widgets/settings/free_up_space_settings.dart';
+import 'package:immich_mobile/widgets/settings/immich_plus_settings/immich_plus_settings.dart';
 import 'package:immich_mobile/widgets/settings/language_settings.dart';
 import 'package:immich_mobile/widgets/settings/networking_settings/networking_settings.dart';
 import 'package:immich_mobile/widgets/settings/notification_setting.dart';
@@ -20,6 +21,7 @@ import 'package:immich_mobile/widgets/settings/preference_settings/preference_se
 import 'package:immich_mobile/widgets/settings/settings_card.dart';
 
 enum SettingSection {
+  immichPlus('immich_plus_settings_title', Icons.auto_awesome_outlined, "immich_plus_settings_subtitle"),
   advanced('advanced', Icons.build_outlined, "advanced_settings_tile_subtitle"),
   assetViewer('asset_viewer_settings_title', Icons.image_outlined, "asset_viewer_settings_subtitle"),
   backup('backup', Icons.cloud_upload_outlined, "backup_settings_subtitle"),
@@ -36,6 +38,7 @@ enum SettingSection {
   final IconData icon;
 
   Widget get widget => switch (this) {
+    SettingSection.immichPlus => const ImmichPlusSettings(),
     SettingSection.advanced => const AdvancedSettings(),
     SettingSection.assetViewer => const AssetViewerSettings(),
     SettingSection.backup =>

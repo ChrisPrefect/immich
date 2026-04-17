@@ -26,7 +26,7 @@ import 'package:immich_mobile/infrastructure/repositories/store.repository.dart'
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
-void configureFileDownloaderNotifications() {
+void configureFileDownloaderNotifications({bool showSyncNotifications = true}) {
   FileDownloader().configureNotificationForGroup(
     kDownloadGroupImage,
     running: TaskNotification('downloading_media'.t(), '${'file_name_text'.t()}: {filename}'),
@@ -40,6 +40,8 @@ void configureFileDownloaderNotifications() {
     complete: TaskNotification('download_finished'.t(), '${'file_name_text'.t()}: {filename}'),
     progressBar: true,
   );
+
+  if (!showSyncNotifications) return;
 
   FileDownloader().configureNotificationForGroup(
     kManualUploadGroup,

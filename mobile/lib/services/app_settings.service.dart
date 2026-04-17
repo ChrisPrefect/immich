@@ -60,7 +60,21 @@ enum AppSettingsEnum<T> {
   cleanupKeepMediaType<int>(StoreKey.cleanupKeepMediaType, null, 0),
   cleanupKeepAlbumIds<String>(StoreKey.cleanupKeepAlbumIds, null, ""),
   cleanupCutoffDaysAgo<int>(StoreKey.cleanupCutoffDaysAgo, null, -1),
-  cleanupDefaultsInitialized<bool>(StoreKey.cleanupDefaultsInitialized, null, false);
+  cleanupDefaultsInitialized<bool>(StoreKey.cleanupDefaultsInitialized, null, false),
+  showHeaderImage<bool>(StoreKey.showHeaderImage, null, true),
+  showSyncNotifications<bool>(StoreKey.showSyncNotifications, null, true),
+  // ImmichPlus customizations (default true)
+  reverseTimeline<bool>(StoreKey.reverseTimeline, null, true),
+  hideAssetBadges<bool>(StoreKey.hideAssetBadges, null, true),
+  hideMemoriesLane<bool>(StoreKey.hideMemoriesLane, null, true),
+  showMemoriesFolder<bool>(StoreKey.showMemoriesFolder, null, true),
+  scrollRestoreOnViewerClose<bool>(StoreKey.scrollRestoreOnViewerClose, null, true),
+  placesDirectToMap<bool>(StoreKey.placesDirectToMap, null, true),
+  logsShowAssetDetail<bool>(StoreKey.logsShowAssetDetail, null, true),
+  syncIosFavorites<bool>(StoreKey.syncIosFavorites, null, true),
+  syncIosHiddenToLockedFolder<bool>(StoreKey.syncIosHiddenToLockedFolder, null, true),
+  photosFilterAlbumIds<String>(StoreKey.photosFilterAlbumIds, null, ""),
+  photosFilterMode<int>(StoreKey.photosFilterMode, null, 0);
 
   const AppSettingsEnum(this.storeKey, this.hiveKey, this.defaultValue);
 

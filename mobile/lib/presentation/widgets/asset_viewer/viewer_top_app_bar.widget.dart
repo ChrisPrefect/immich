@@ -44,6 +44,13 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
     final originalTheme = context.themeData;
 
+    final isLivePhoto = asset is RemoteAsset && asset.livePhotoVideoId != null;
+    final storageIcon = switch (asset.storage) {
+      AssetState.local => Icons.cloud_off_outlined,
+      AssetState.remote => Icons.cloud_outlined,
+      AssetState.merged => Icons.cloud_done_outlined,
+    };
+
     final actions = <Widget>[
       if (asset.isMotionPhoto) const MotionPhotoActionButton(iconOnly: true),
       if (album != null && album.isActivityEnabled && album.isShared)
@@ -59,6 +66,10 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
             );
           },
         ),
+
+      // ImmichPlus: move cloud/local/live indicators from grid into the viewer header
+      _ViewerBadgeIcon(icon: storageIcon),
+      if (isLivePhoto) const _ViewerBadgeIcon(icon: Icons.motion_photos_on_rounded),
 
       if (asset.hasRemote && isOwner && !asset.isFavorite)
         const FavoriteActionButton(source: ActionSource.viewer, iconOnly: true),
@@ -105,6 +116,19 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => const Size.fromHeight(60.0);
+}
+
+class _ViewerBadgeIcon extends StatelessWidget {
+  const _ViewerBadgeIcon({required this.icon});
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Icon(icon, color: Colors.white, size: 22),
+    );
+  }
 }
 
 class _AppBarBackButton extends ConsumerWidget {

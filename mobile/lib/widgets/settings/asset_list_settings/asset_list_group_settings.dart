@@ -51,6 +51,10 @@ class GroupSettings extends HookConsumerWidget {
               title: 'asset_list_layout_settings_group_automatically'.t(context: context),
               value: GroupAssetsBy.auto,
             ),
+            SettingsRadioGroup(
+              title: 'asset_list_layout_settings_group_by_none'.t(context: context),
+              value: GroupAssetsBy.none,
+            ),
           ],
           groupBy: groupBy,
           onRadioChanged: changeGroupValue,

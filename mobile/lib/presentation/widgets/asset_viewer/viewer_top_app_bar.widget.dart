@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
+import 'package:immich_mobile/domain/models/setting.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/favorite_action_button.widget.dart';
@@ -13,6 +14,7 @@ import 'package:immich_mobile/presentation/widgets/asset_viewer/viewer_kebab_men
 import 'package:immich_mobile/providers/activity.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/current_album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/setting.provider.dart';
 import 'package:immich_mobile/providers/routes.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 
@@ -44,6 +46,10 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
     final originalTheme = context.themeData;
 
+    // ImmichPlus: show the badges in the viewer header only when the grid-side
+    // badges are being hidden (toggle on). When the user turns the feature off
+    // we keep the vanilla-Immich behavior (badges in grid, none in viewer).
+    final hideAssetBadges = ref.watch(settingsProvider.select((s) => s.get(Setting.hideAssetBadges)));
     final isLivePhoto = asset is RemoteAsset && asset.livePhotoVideoId != null;
     final storageIcon = switch (asset.storage) {
       AssetState.local => Icons.cloud_off_outlined,
@@ -68,8 +74,8 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
         ),
 
       // ImmichPlus: move cloud/local/live indicators from grid into the viewer header
-      _ViewerBadgeIcon(icon: storageIcon),
-      if (isLivePhoto) const _ViewerBadgeIcon(icon: Icons.motion_photos_on_rounded),
+      if (hideAssetBadges) _ViewerBadgeIcon(icon: storageIcon),
+      if (hideAssetBadges && isLivePhoto) const _ViewerBadgeIcon(icon: Icons.motion_photos_on_rounded),
 
       if (asset.hasRemote && isOwner && !asset.isFavorite)
         const FavoriteActionButton(source: ActionSource.viewer, iconOnly: true),

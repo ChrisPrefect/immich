@@ -14,12 +14,20 @@ import UIKit
 class HiddenAlbumPlugin {
   static let channelName = "app.immichplus/hidden_album"
 
+  private static let workQueue = DispatchQueue(label: "app.immichplus.hidden_album", qos: .utility)
+
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: channelName, binaryMessenger: registrar.messenger())
     channel.setMethodCallHandler { call, result in
       switch call.method {
       case "getHiddenAssetIds":
-        result(HiddenAlbumPlugin.hiddenAssetIds())
+        // PHAsset queries can be slow on devices with tens of thousands of
+        // photos. Dispatch off the platform main thread so iOS UI stays
+        // responsive during the hidden-album enumeration.
+        HiddenAlbumPlugin.workQueue.async {
+          let ids = HiddenAlbumPlugin.hiddenAssetIds()
+          DispatchQueue.main.async { result(ids) }
+        }
       default:
         result(FlutterMethodNotImplemented)
       }

@@ -48,9 +48,12 @@ class ChangeServerUrlDialog extends HookConsumerWidget {
           gravity: ToastGravity.BOTTOM,
         );
       } catch (e) {
+        if (!context.mounted) return;
         errorText.value = 'change_server_url_error'.t(context: context);
       } finally {
-        isLoading.value = false;
+        if (context.mounted) {
+          isLoading.value = false;
+        }
       }
     }
 

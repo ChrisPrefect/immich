@@ -8,6 +8,7 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart' as drift_album;
 import 'package:immich_mobile/providers/infrastructure/setting.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
 import 'package:immich_mobile/utils/hooks/app_settings_update_hook.dart';
 import 'package:immich_mobile/widgets/asset_grid/asset_grid_data_structure.dart';
@@ -43,9 +44,18 @@ class ImmichPlusSettings extends HookConsumerWidget {
       ref.invalidate(settingsProvider);
     }
 
+    /// Forces a full timeline rebuild so changes to reverse/grouping/etc.
+    /// land in the UI even when the reactive chain misses (e.g. services that
+    /// read the setting eagerly on construction and then cache).
+    void invalidateTimeline(bool value) {
+      invalidateSettings(value);
+      ref.invalidate(timelineFactoryProvider);
+      ref.invalidate(timelineServiceProvider);
+    }
+
     void onDisableGroupingChanged(bool value) {
       groupByIndex.value = (value ? GroupAssetsBy.none : GroupAssetsBy.day).index;
-      invalidateSettings(value);
+      invalidateTimeline(value);
     }
 
     final uiToggles = [
@@ -89,7 +99,7 @@ class ImmichPlusSettings extends HookConsumerWidget {
         valueNotifier: reverseTimeline,
         title: 'immich_plus_reverse_timeline_title'.tr(),
         subtitle: 'immich_plus_reverse_timeline_subtitle'.tr(),
-        onChanged: invalidateSettings,
+        onChanged: invalidateTimeline,
       ),
       SettingsSwitchListTile(
         valueNotifier: showSyncNotifications,

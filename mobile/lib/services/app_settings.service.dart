@@ -11,7 +11,8 @@ enum AppSettingsEnum<T> {
   colorfulInterface<bool>(StoreKey.colorfulInterface, "colorfulInterface", true),
   tilesPerRow<int>(StoreKey.tilesPerRow, "tilesPerRow", 4),
   dynamicLayout<bool>(StoreKey.dynamicLayout, "dynamicLayout", false),
-  groupAssetsBy<int>(StoreKey.groupAssetsBy, "groupBy", 0),
+  // ImmichPlus: default "disable grouping" on — 3 == GroupAssetsBy.none.index
+  groupAssetsBy<int>(StoreKey.groupAssetsBy, "groupBy", 3),
   uploadErrorNotificationGracePeriod<int>(
     StoreKey.uploadErrorNotificationGracePeriod,
     "uploadErrorNotificationGracePeriod",

@@ -2,7 +2,8 @@ import 'package:immich_mobile/domain/models/store.model.dart';
 
 enum Setting<T> {
   tilesPerRow<int>(StoreKey.tilesPerRow, 4),
-  groupAssetsBy<int>(StoreKey.groupAssetsBy, 0),
+  // ImmichPlus default: 3 == GroupAssetsBy.none.index (flat timeline)
+  groupAssetsBy<int>(StoreKey.groupAssetsBy, 3),
   showStorageIndicator<bool>(StoreKey.storageIndicator, true),
   loadOriginal<bool>(StoreKey.loadOriginal, false),
   loadOriginalVideo<bool>(StoreKey.loadOriginalVideo, false),

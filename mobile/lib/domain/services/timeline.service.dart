@@ -53,24 +53,34 @@ class TimelineFactory {
 
   TimelineService main(List<String> timelineUsers) {
     final base = _timelineRepository.main(timelineUsers, groupBy);
-    final reverse = _settingsService.get(Setting.reverseTimeline);
-    return TimelineService(reverse ? _wrapReversed(base) : base);
+    // Wrap unconditionally: the wrapper re-reads the reverseTimeline setting
+    // per-operation via [_settingsService], so toggling the switch is visible
+    // on the very next bucket/asset fetch (typically within ~1 frame because
+    // the bucket stream re-emits when the provider rebuilds).
+    return TimelineService(_wrapReversibleTimeline(base));
   }
 
-  /// Wraps a [TimelineQuery] so that buckets and assets appear in reversed
-  /// (oldest-first) order, without touching SQL. The bucket stream is mapped to
-  /// reverse the list and cache the current total; the asset source translates
-  /// the requested offset to the DESC-ordered frame then reverses the result.
-  static TimelineQuery _wrapReversed(TimelineQuery base) {
+  /// Wraps a [TimelineQuery] so that buckets and assets can be flipped to
+  /// oldest-first (reverse) order when [Setting.reverseTimeline] is on. The
+  /// reverse flag is *read per call*, not captured, so the wrapper is stable
+  /// across provider rebuilds and setting changes.
+  TimelineQuery _wrapReversibleTimeline(TimelineQuery base) {
+    // Shared between bucket stream and asset queries; updated every time the
+    // bucket stream emits so the asset-offset translation has an up-to-date
+    // denominator.
     int cachedTotal = 0;
 
     Stream<List<Bucket>> wrappedBucketSource() =>
         base.bucketSource().map((buckets) {
           cachedTotal = buckets.fold<int>(0, (acc, b) => acc + b.assetCount);
+          if (!_settingsService.get(Setting.reverseTimeline)) return buckets;
           return buckets.reversed.toList();
         });
 
     Future<List<BaseAsset>> wrappedAssetSource(int offset, int count) async {
+      if (!_settingsService.get(Setting.reverseTimeline)) {
+        return base.assetSource(offset, count);
+      }
       final total = cachedTotal;
       if (total <= 0) {
         return base.assetSource(offset, count);

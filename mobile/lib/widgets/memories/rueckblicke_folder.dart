@@ -114,9 +114,13 @@ class RueckblickeFolder extends ConsumerWidget {
                   args: {'count': memory.assets.length.toString()},
                 ),
               ),
+              // Close the sheet first, then push via the outer (stable)
+              // context so we don't use `ctx` after its route is popped.
               onTap: () {
                 Navigator.of(ctx).pop();
-                ctx.router.push(DriftMemoryRoute(memories: memories, memoryIndex: i));
+                if (context.mounted) {
+                  context.router.push(DriftMemoryRoute(memories: memories, memoryIndex: i));
+                }
               },
             );
           },

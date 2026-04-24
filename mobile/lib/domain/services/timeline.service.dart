@@ -6,9 +6,11 @@ import 'package:immich_mobile/constants/constants.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/domain/services/setting.service.dart';
 import 'package:immich_mobile/domain/utils/event_stream.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/infrastructure/repositories/timeline.repository.dart';
 import 'package:immich_mobile/utils/async_mutex.dart';
 
@@ -51,8 +53,9 @@ class TimelineFactory {
     return group == GroupAssetsBy.auto ? GroupAssetsBy.day : group;
   }
 
-  TimelineService main(List<String> timelineUsers) =>
-      TimelineService(_wrapReversibleTimeline(_timelineRepository.main(timelineUsers, groupBy)));
+  TimelineService main(List<String> timelineUsers) => TimelineService(
+    _wrapReversibleTimeline(_timelineRepository.main(timelineUsers, groupBy, excludedLocalAlbumId: _iosHiddenAlbumId)),
+  );
 
   /// Wraps a [TimelineQuery] so that buckets and assets can be flipped to
   /// oldest-first (reverse) order when [Setting.reverseTimeline] is on. The
@@ -69,12 +72,11 @@ class TimelineFactory {
     // denominator.
     int cachedTotal = 0;
 
-    Stream<List<Bucket>> wrappedBucketSource() =>
-        base.bucketSource().map((buckets) {
-          cachedTotal = buckets.fold<int>(0, (acc, b) => acc + b.assetCount);
-          if (!_settingsService.get(Setting.reverseTimeline)) return buckets;
-          return buckets.reversed.toList();
-        });
+    Stream<List<Bucket>> wrappedBucketSource() => base.bucketSource().map((buckets) {
+      cachedTotal = buckets.fold<int>(0, (acc, b) => acc + b.assetCount);
+      if (!_settingsService.get(Setting.reverseTimeline)) return buckets;
+      return buckets.reversed.toList();
+    });
 
     Future<List<BaseAsset>> wrappedAssetSource(int offset, int count) async {
       if (!_settingsService.get(Setting.reverseTimeline)) {
@@ -90,15 +92,12 @@ class TimelineFactory {
       return assets.reversed.toList();
     }
 
-    return (
-      bucketSource: wrappedBucketSource,
-      assetSource: wrappedAssetSource,
-      origin: base.origin,
-    );
+    return (bucketSource: wrappedBucketSource, assetSource: wrappedAssetSource, origin: base.origin);
   }
 
-  TimelineService localAlbum({required String albumId}) =>
-      TimelineService(_wrapReversibleTimeline(_timelineRepository.localAlbum(albumId, groupBy)));
+  TimelineService localAlbum({required String albumId}) => TimelineService(
+    _wrapReversibleTimeline(_timelineRepository.localAlbum(albumId, groupBy, excludedLocalAlbumId: _iosHiddenAlbumId)),
+  );
 
   TimelineService remoteAlbum({required String albumId}) =>
       TimelineService(_wrapReversibleTimeline(_timelineRepository.remoteAlbum(albumId, groupBy)));
@@ -141,6 +140,8 @@ class TimelineFactory {
 
   TimelineService map(List<String> userIds, TimelineMapOptions options) =>
       TimelineService(_wrapReversibleTimeline(_timelineRepository.map(userIds, options, groupBy)));
+
+  String get _iosHiddenAlbumId => Store.tryGet(StoreKey.iosHiddenAlbumId) ?? '';
 }
 
 class TimelineService {

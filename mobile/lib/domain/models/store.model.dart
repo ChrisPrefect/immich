@@ -119,7 +119,8 @@ enum StoreKey<T> {
   syncIosHiddenToLockedFolder<bool>._(1026),
   logsShowAssetDetail<bool>._(1027),
   photosFilterAlbumIds<String>._(1028),
-  photosFilterMode<int>._(1029);
+  photosFilterMode<int>._(1029),
+  iosHiddenAlbumId<String>._(1030);
 
   const StoreKey._(this.id);
   final int id;

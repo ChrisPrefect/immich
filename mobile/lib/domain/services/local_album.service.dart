@@ -11,8 +11,8 @@ class LocalAlbumService {
     return _repository.getAll(sortBy: sortBy);
   }
 
-  Future<LocalAsset?> getThumbnail(String albumId) {
-    return _repository.getThumbnail(albumId);
+  Future<LocalAsset?> getThumbnail(String albumId, {String excludedAlbumId = ''}) {
+    return _repository.getThumbnail(albumId, excludedAlbumId: excludedAlbumId);
   }
 
   Future<void> update(LocalAlbum album) {

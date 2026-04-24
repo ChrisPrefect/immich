@@ -49,6 +49,9 @@ class LocalSyncService {
       final includeHiddenAssets = CurrentPlatform.isIOS && Store.get(StoreKey.syncIosHiddenToLockedFolder, true);
       await _nativeSyncApi.setIncludeHiddenAssets(includeHiddenAssets);
       final hiddenAlbumId = includeHiddenAssets ? await _getHiddenAlbumId() : null;
+      if (hiddenAlbumId != null) {
+        await Store.put(StoreKey.iosHiddenAlbumId, hiddenAlbumId);
+      }
 
       if (CurrentPlatform.isAndroid && Store.get(StoreKey.manageLocalMediaAndroid, false)) {
         final hasPermission = await _localFilesManager.hasManageMediaPermission();
@@ -326,6 +329,7 @@ class LocalSyncService {
       if (id == null || id.isEmpty) {
         return null;
       }
+      await Store.put(StoreKey.iosHiddenAlbumId, id);
       return id;
     } catch (e, s) {
       _log.warning('Failed to read iOS Hidden album id', e, s);

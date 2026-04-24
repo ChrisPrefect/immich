@@ -39,6 +39,7 @@ class IosHiddenSyncService {
     try {
       final hiddenAlbumId = await getHiddenAlbumId();
       if (hiddenAlbumId != null) {
+        await Store.put(StoreKey.iosHiddenAlbumId, hiddenAlbumId);
         await _ensureHiddenAlbumSelected(hiddenAlbumId);
       }
 

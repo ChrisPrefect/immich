@@ -2,8 +2,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/album/album.model.dart';
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
+import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/services/local_album.service.dart';
 import 'package:immich_mobile/domain/services/remote_album.service.dart';
+import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_album.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/remote_album.repository.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
@@ -18,14 +20,17 @@ final localAlbumServiceProvider = Provider<LocalAlbumService>(
   (ref) => LocalAlbumService(ref.watch(localAlbumRepository)),
 );
 
-final localAlbumProvider = FutureProvider<List<LocalAlbum>>(
-  (ref) => LocalAlbumService(ref.watch(localAlbumRepository))
+final localAlbumProvider = FutureProvider<List<LocalAlbum>>((ref) {
+  final hiddenAlbumId = Store.tryGet(StoreKey.iosHiddenAlbumId) ?? '';
+  return LocalAlbumService(ref.watch(localAlbumRepository))
       .getAll(sortBy: {SortLocalAlbumsBy.newestAsset})
-      .then((albums) => albums.where((album) => album.assetCount > 0).toList()),
-);
+      .then((albums) => albums.where((album) => album.assetCount > 0 && album.id != hiddenAlbumId).toList());
+});
 
 final localAlbumThumbnailProvider = FutureProvider.family<LocalAsset?, String>(
-  (ref, albumId) => LocalAlbumService(ref.watch(localAlbumRepository)).getThumbnail(albumId),
+  (ref, albumId) => LocalAlbumService(
+    ref.watch(localAlbumRepository),
+  ).getThumbnail(albumId, excludedAlbumId: Store.tryGet(StoreKey.iosHiddenAlbumId) ?? ''),
 );
 
 final remoteAlbumRepository = Provider<DriftRemoteAlbumRepository>(

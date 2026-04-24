@@ -415,18 +415,29 @@ class DriftLocalAlbumRepository extends DriftDatabaseRepository {
     });
   }
 
-  Future<LocalAsset?> getThumbnail(String albumId) async {
+  Future<LocalAsset?> getThumbnail(String albumId, {String excludedAlbumId = ''}) async {
+    final hiddenAssets = _hiddenLocalAlbumAssets(excludedAlbumId);
     final query =
         _db.localAlbumAssetEntity.select().join([
             innerJoin(_db.localAssetEntity, _db.localAlbumAssetEntity.assetId.equalsExp(_db.localAssetEntity.id)),
           ])
-          ..where(_db.localAlbumAssetEntity.albumId.equals(albumId))
+          ..where(
+            _db.localAlbumAssetEntity.albumId.equals(albumId) &
+                _db.localAlbumAssetEntity.albumId.equals(excludedAlbumId).not() &
+                _db.localAssetEntity.id.isNotInQuery(hiddenAssets),
+          )
           ..orderBy([OrderingTerm.desc(_db.localAssetEntity.createdAt)])
           ..limit(1);
 
     final results = await query.map((row) => row.readTable(_db.localAssetEntity).toDto()).get();
 
     return results.isNotEmpty ? results.first : null;
+  }
+
+  _hiddenLocalAlbumAssets(String albumId) {
+    return _db.localAlbumAssetEntity.selectOnly()
+      ..addColumns([_db.localAlbumAssetEntity.assetId])
+      ..where(_db.localAlbumAssetEntity.albumId.equals(albumId));
   }
 
   Future<int> getCount() {

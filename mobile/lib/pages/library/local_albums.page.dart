@@ -9,6 +9,7 @@ import 'package:immich_mobile/pages/common/large_leading_tile.dart';
 import 'package:immich_mobile/providers/album/album.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/common/immich_thumbnail.dart';
+import 'package:immich_mobile/widgets/common/tap_to_top_overlay.dart';
 
 @RoutePage()
 class LocalAlbumsPage extends HookConsumerWidget {
@@ -19,30 +20,32 @@ class LocalAlbumsPage extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text('on_this_device'.tr())),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(18.0),
-        itemCount: albums.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: LargeLeadingTile(
-              leadingPadding: const EdgeInsets.only(right: 16),
-              leading: ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(15)),
-                child: ImmichThumbnail(asset: albums[index].thumbnail.value, width: 80, height: 80),
+      body: TapToTopOverlay(
+        child: ListView.builder(
+          padding: const EdgeInsets.all(18.0),
+          itemCount: albums.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: LargeLeadingTile(
+                leadingPadding: const EdgeInsets.only(right: 16),
+                leading: ClipRRect(
+                  borderRadius: const BorderRadius.all(Radius.circular(15)),
+                  child: ImmichThumbnail(asset: albums[index].thumbnail.value, width: 80, height: 80),
+                ),
+                title: Text(
+                  albums[index].name,
+                  style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  'items_count'.t(context: context, args: {'count': albums[index].assetCount}),
+                  style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.onSurfaceSecondary),
+                ),
+                onTap: () => context.pushRoute(AlbumViewerRoute(albumId: albums[index].id)),
               ),
-              title: Text(
-                albums[index].name,
-                style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                'items_count'.t(context: context, args: {'count': albums[index].assetCount}),
-                style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.onSurfaceSecondary),
-              ),
-              onTap: () => context.pushRoute(AlbumViewerRoute(albumId: albums[index].id)),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

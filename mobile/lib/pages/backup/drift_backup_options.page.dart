@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/background_sync.provider.dart';
@@ -61,7 +62,7 @@ class DriftBackupOptionsPage extends ConsumerWidget {
           final backgroundSync = ref.read(backgroundSyncProvider);
           backupNotifier.stopForegroundBackup();
           unawaited(
-            backgroundSync.syncRemote().then((success) {
+            backgroundSync.prepareBackup(fullLocalSync: CurrentPlatform.isAndroid).then((success) {
               if (success) {
                 return backupNotifier.startForegroundBackup(currentUser.id);
               } else {

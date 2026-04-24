@@ -324,23 +324,12 @@ class SplashScreenPageState extends ConsumerState<SplashScreenPage> {
               unawaited(infoProvider.getServerInfo());
 
               if (Store.isBetaTimelineEnabled) {
-                bool syncSuccess = false;
-                await Future.wait([
-                  backgroundManager.syncLocal(full: true),
-                  backgroundManager.syncRemote().then((success) => syncSuccess = success),
-                ]);
+                final syncSuccess = await backgroundManager.prepareBackup(fullLocalSync: true);
 
                 if (syncSuccess) {
-                  await Future.wait([
-                    backgroundManager.hashAssets().then((_) {
-                      _resumeBackup(backupProvider);
-                    }),
-                    _resumeBackup(backupProvider),
-                    // TODO: Bring back when the soft freeze issue is addressed
-                    // backgroundManager.syncCloudIds(),
-                  ]);
+                  unawaited(_resumeBackup(backupProvider));
                 } else {
-                  await backgroundManager.hashAssets();
+                  log.warning('Remote sync did not complete successfully, skipping backup');
                 }
 
                 if (Store.get(StoreKey.syncAlbums, false)) {

@@ -96,9 +96,13 @@ enum StoreKey<T> {
 
   syncMigrationStatus<String>._(1013),
 
-  showHeaderImage<bool>._(1014),
+  // ImmichPlus: semantics inverted so that "aktiv = abweichend vom Standard".
+  // StoreKey IDs kept at 1014/1015; on upgrade, previously-stored `true` (=
+  // "show" under the old semantics) is reinterpreted as `true` (= "hide"),
+  // matching the Immich+ default — the fork already hides these by default.
+  hideHeaderImage<bool>._(1014),
 
-  showSyncNotifications<bool>._(1015),
+  hideSyncNotifications<bool>._(1015),
 
   // ImmichPlus customizations
   reverseTimeline<bool>._(1016),
@@ -110,6 +114,8 @@ enum StoreKey<T> {
   // Stored as "lat,lng,zoom" string (Store only supports int/String/bool/DateTime)
   lastMapCamera<String>._(1022),
   syncIosFavorites<bool>._(1025),
+  // ImmichPlus: when enabled, iOS Hidden assets are uploaded via the regular
+  // backup pipeline and matching server assets are moved into Locked Folder.
   syncIosHiddenToLockedFolder<bool>._(1026),
   logsShowAssetDetail<bool>._(1027),
   photosFilterAlbumIds<String>._(1028),

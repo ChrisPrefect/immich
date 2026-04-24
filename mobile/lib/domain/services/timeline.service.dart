@@ -51,19 +51,18 @@ class TimelineFactory {
     return group == GroupAssetsBy.auto ? GroupAssetsBy.day : group;
   }
 
-  TimelineService main(List<String> timelineUsers) {
-    final base = _timelineRepository.main(timelineUsers, groupBy);
-    // Wrap unconditionally: the wrapper re-reads the reverseTimeline setting
-    // per-operation via [_settingsService], so toggling the switch is visible
-    // on the very next bucket/asset fetch (typically within ~1 frame because
-    // the bucket stream re-emits when the provider rebuilds).
-    return TimelineService(_wrapReversibleTimeline(base));
-  }
+  TimelineService main(List<String> timelineUsers) =>
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.main(timelineUsers, groupBy)));
 
   /// Wraps a [TimelineQuery] so that buckets and assets can be flipped to
   /// oldest-first (reverse) order when [Setting.reverseTimeline] is on. The
   /// reverse flag is *read per call*, not captured, so the wrapper is stable
   /// across provider rebuilds and setting changes.
+  ///
+  /// Applied to *every* factory method so the Immich+ "Sortierung umkehren"
+  /// toggle behaves like iOS Photos everywhere — main timeline, filters
+  /// (favorites/videos/images), remote/local albums, archive, locked folder,
+  /// place/person views, map and curated asset lists.
   TimelineQuery _wrapReversibleTimeline(TimelineQuery base) {
     // Shared between bucket stream and asset queries; updated every time the
     // bucket stream emits so the asset-offset translation has an up-to-date
@@ -99,41 +98,49 @@ class TimelineFactory {
   }
 
   TimelineService localAlbum({required String albumId}) =>
-      TimelineService(_timelineRepository.localAlbum(albumId, groupBy));
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.localAlbum(albumId, groupBy)));
 
   TimelineService remoteAlbum({required String albumId}) =>
-      TimelineService(_timelineRepository.remoteAlbum(albumId, groupBy));
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.remoteAlbum(albumId, groupBy)));
 
-  TimelineService remoteAssets(String userId) => TimelineService(_timelineRepository.remote(userId, groupBy));
+  TimelineService remoteAssets(String userId) =>
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.remote(userId, groupBy)));
 
-  TimelineService favorite(String userId) => TimelineService(_timelineRepository.favorite(userId, groupBy));
+  TimelineService favorite(String userId) =>
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.favorite(userId, groupBy)));
 
-  TimelineService trash(String userId) => TimelineService(_timelineRepository.trash(userId, groupBy));
+  TimelineService trash(String userId) =>
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.trash(userId, groupBy)));
 
-  TimelineService archive(String userId) => TimelineService(_timelineRepository.archived(userId, groupBy));
+  TimelineService archive(String userId) =>
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.archived(userId, groupBy)));
 
-  TimelineService lockedFolder(String userId) => TimelineService(_timelineRepository.locked(userId, groupBy));
+  TimelineService lockedFolder(String userId) =>
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.locked(userId, groupBy)));
 
-  TimelineService video(String userId) => TimelineService(_timelineRepository.video(userId, groupBy));
+  TimelineService video(String userId) =>
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.video(userId, groupBy)));
 
-  TimelineService image(String userId) => TimelineService(_timelineRepository.image(userId, groupBy));
+  TimelineService image(String userId) =>
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.image(userId, groupBy)));
 
-  TimelineService place(String place) => TimelineService(_timelineRepository.place(place, groupBy));
+  TimelineService place(String place) =>
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.place(place, groupBy)));
 
   TimelineService person(String userId, String personId) =>
-      TimelineService(_timelineRepository.person(userId, personId, groupBy));
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.person(userId, personId, groupBy)));
 
   TimelineService fromAssets(List<BaseAsset> assets, TimelineOrigin type) =>
-      TimelineService(_timelineRepository.fromAssets(assets, type));
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.fromAssets(assets, type)));
 
   TimelineService fromAssetStream(List<BaseAsset> Function() getAssets, Stream<int> assetCount, TimelineOrigin type) =>
-      TimelineService(_timelineRepository.fromAssetStream(getAssets, assetCount, type));
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.fromAssetStream(getAssets, assetCount, type)));
 
   TimelineService fromAssetsWithBuckets(List<BaseAsset> assets, TimelineOrigin type) =>
-      TimelineService(_timelineRepository.fromAssetsWithBuckets(assets, type));
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.fromAssetsWithBuckets(assets, type)));
 
   TimelineService map(List<String> userIds, TimelineMapOptions options) =>
-      TimelineService(_timelineRepository.map(userIds, options, groupBy));
+      TimelineService(_wrapReversibleTimeline(_timelineRepository.map(userIds, options, groupBy)));
 }
 
 class TimelineService {

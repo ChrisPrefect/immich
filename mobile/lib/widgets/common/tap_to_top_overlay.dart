@@ -4,10 +4,9 @@ import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/providers/asset_viewer/scroll_notifier.provider.dart';
 
 /// Transparent overlay pinned to the top safe-area (status bar region).
-/// Tapping it fires both `scrollToTopNotifierProvider` and [ScrollToTapEvent]
-/// so scrollables in the active tab scroll to their start. Mirrors iOS
-/// "tap status bar to scroll to top" behavior which Flutter does not implement
-/// natively because its scroll views are not backed by UIScrollView.
+/// Tapping it first scrolls the active [PrimaryScrollController] to the top,
+/// then emits the project-specific scroll-to-top signals used by custom
+/// timeline/grid implementations.
 class TapToTopOverlay extends StatelessWidget {
   final Widget child;
 
@@ -27,6 +26,10 @@ class TapToTopOverlay extends StatelessWidget {
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTap: () {
+              final controller = PrimaryScrollController.maybeOf(context);
+              if (controller != null && controller.hasClients) {
+                controller.animateTo(0, duration: const Duration(milliseconds: 250), curve: Curves.easeOutCubic);
+              }
               scrollToTopNotifierProvider.scrollToTop();
               EventStream.shared.emit(const ScrollToTopEvent());
             },

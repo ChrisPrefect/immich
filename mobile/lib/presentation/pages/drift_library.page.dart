@@ -18,6 +18,7 @@ import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
+import 'package:immich_mobile/widgets/common/tap_to_top_overlay.dart';
 import 'package:immich_mobile/widgets/map/map_thumbnail.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
@@ -28,13 +29,15 @@ class DriftLibraryPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return const Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          ImmichSliverAppBar(snap: false, floating: false, pinned: true, showUploadButton: false),
-          _ActionButtonGrid(),
-          _CollectionCards(),
-          _QuickAccessButtonList(),
-        ],
+      body: TapToTopOverlay(
+        child: CustomScrollView(
+          slivers: [
+            ImmichSliverAppBar(snap: false, floating: false, pinned: true, showUploadButton: false),
+            _ActionButtonGrid(),
+            _CollectionCards(),
+            _QuickAccessButtonList(),
+          ],
+        ),
       ),
     );
   }

@@ -43,9 +43,9 @@ class _MesmerizingSliverAppBarState extends ConsumerState<MesmerizingSliverAppBa
   @override
   Widget build(BuildContext context) {
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
-    final showHeaderImage = ref.watch(appSettingsServiceProvider).getSetting(AppSettingsEnum.showHeaderImage);
+    final hideHeaderImage = ref.watch(appSettingsServiceProvider).getSetting(AppSettingsEnum.hideHeaderImage);
 
-    if (!showHeaderImage) {
+    if (hideHeaderImage) {
       return isMultiSelectEnabled
           ? const SliverToBoxAdapter(child: SizedBox(height: 120))
           : SliverAppBar(

@@ -148,10 +148,10 @@
 	<string>We need to access the microphone to let you take beautiful video using this app</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>We need to manage backup your photos album</string>
+	<key>NSPhotoLibraryIncludeHiddenUsageDescription</key>
+	<string>We need access to the Hidden album when you enable syncing it to Immich's locked folder</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need to manage backup your photos album</string>
-	<key>NSPhotoLibraryIncludeHiddenUsageDescription</key>
-	<string>We need access to your hidden album to sync it to the Immich locked folder</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>

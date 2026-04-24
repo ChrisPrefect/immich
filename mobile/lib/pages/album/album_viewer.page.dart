@@ -5,6 +5,7 @@ import 'package:immich_mobile/pages/album/album_viewer.dart';
 import 'package:immich_mobile/providers/album/album.provider.dart';
 import 'package:immich_mobile/providers/album/current_album.provider.dart';
 import 'package:immich_mobile/providers/timeline.provider.dart';
+import 'package:immich_mobile/widgets/common/tap_to_top_overlay.dart';
 
 @RoutePage()
 class AlbumViewerPage extends HookConsumerWidget {
@@ -24,6 +25,6 @@ class AlbumViewerPage extends HookConsumerWidget {
       albumFuture.whenData((value) => ref.read(currentAlbumProvider.notifier).set(value));
     });
 
-    return const Scaffold(body: AlbumViewer());
+    return const Scaffold(body: TapToTopOverlay(child: AlbumViewer()));
   }
 }

@@ -16,7 +16,7 @@ class AssetListSettings extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final showStorageIndicator = useAppSettingsState(AppSettingsEnum.storageIndicator);
-    final showHeaderImage = useAppSettingsState(AppSettingsEnum.showHeaderImage);
+    final hideHeaderImage = useAppSettingsState(AppSettingsEnum.hideHeaderImage);
 
     final assetListSetting = [
       SettingsSwitchListTile(
@@ -28,8 +28,8 @@ class AssetListSettings extends HookConsumerWidget {
         },
       ),
       SettingsSwitchListTile(
-        valueNotifier: showHeaderImage,
-        title: 'asset_list_settings_show_header_image'.tr(),
+        valueNotifier: hideHeaderImage,
+        title: 'immich_plus_hide_header_image_title'.tr(),
         onChanged: (_) {
           ref.invalidate(appSettingsServiceProvider);
           ref.invalidate(settingsProvider);

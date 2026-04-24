@@ -112,6 +112,8 @@ class CloudIdResult {
 
 @HostApi()
 abstract class NativeSyncApi {
+  void setIncludeHiddenAssets(bool includeHiddenAssets);
+
   bool shouldFullSync();
 
   @TaskQueue(type: TaskQueueType.serialBackgroundThread)

@@ -56,13 +56,18 @@ import UIKit
   
   public static func registerPlugins(with engine: FlutterEngine, controller: FlutterViewController?) {
     NativeSyncApiImpl.register(with: engine.registrar(forPlugin: NativeSyncApiImpl.name)!)
+    HiddenAlbumPlugin.register(with: engine.registrar(forPlugin: HiddenAlbumPlugin.channelName)!)
+    if let controller {
+      StatusBarTapPlugin.register(
+        with: engine.registrar(forPlugin: StatusBarTapPlugin.name)!,
+        rootView: controller.view
+      )
+    }
     LocalImageApiSetup.setUp(binaryMessenger: engine.binaryMessenger, api: LocalImageApiImpl())
     RemoteImageApiSetup.setUp(binaryMessenger: engine.binaryMessenger, api: RemoteImageApiImpl())
     BackgroundWorkerFgHostApiSetup.setUp(binaryMessenger: engine.binaryMessenger, api: BackgroundWorkerApiImpl())
     ConnectivityApiSetup.setUp(binaryMessenger: engine.binaryMessenger, api: ConnectivityApiImpl())
     NetworkApiSetup.setUp(binaryMessenger: engine.binaryMessenger, api: NetworkApiImpl(viewController: controller))
-    // ImmichPlus-only plugin
-    HiddenAlbumPlugin.register(with: engine.registrar(forPlugin: "ImmichPlusHiddenAlbumPlugin")!)
   }
   
   public static func cancelPlugins(with engine: FlutterEngine) {

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
@@ -18,6 +19,7 @@ import 'package:immich_mobile/utils/diff.dart';
 import 'package:logging/logging.dart';
 
 class LocalSyncService {
+  static const _hiddenAlbumChannel = MethodChannel('app.immichplus/hidden_album');
   final DriftLocalAlbumRepository _localAlbumRepository;
   // ignore: unused_field
   final DriftLocalAssetRepository _localAssetRepository;
@@ -44,6 +46,10 @@ class LocalSyncService {
   Future<void> sync({bool full = false}) async {
     final Stopwatch stopwatch = Stopwatch()..start();
     try {
+      final includeHiddenAssets = CurrentPlatform.isIOS && Store.get(StoreKey.syncIosHiddenToLockedFolder, true);
+      await _nativeSyncApi.setIncludeHiddenAssets(includeHiddenAssets);
+      final hiddenAlbumId = includeHiddenAssets ? await _getHiddenAlbumId() : null;
+
       if (CurrentPlatform.isAndroid && Store.get(StoreKey.manageLocalMediaAndroid, false)) {
         final hasPermission = await _localFilesManager.hasManageMediaPermission();
         if (hasPermission) {
@@ -60,11 +66,15 @@ class LocalSyncService {
 
       if (full || await _nativeSyncApi.shouldFullSync()) {
         _log.fine("Full sync request from ${full ? "user" : "native"}");
-        return await fullSync();
+        return await fullSync(hiddenAlbumId: hiddenAlbumId);
       }
 
       final delta = await _nativeSyncApi.getMediaChanges();
       if (!delta.hasChanges) {
+        await _syncHiddenAlbum(hiddenAlbumId);
+        if (includeHiddenAssets) {
+          await _nativeSyncApi.checkpointSync();
+        }
         _log.fine("No media changes detected. Skipping sync");
         return;
       }
@@ -107,6 +117,7 @@ class LocalSyncService {
 
         await _mapIosCloudIds(newAssets);
       }
+      await _syncHiddenAlbum(hiddenAlbumId, deviceAlbums: deviceAlbums.toLocalAlbums());
       await _nativeSyncApi.checkpointSync();
     } catch (e, s) {
       _log.severe("Error performing device sync", e, s);
@@ -116,22 +127,24 @@ class LocalSyncService {
     }
   }
 
-  Future<void> fullSync() async {
+  Future<void> fullSync({String? hiddenAlbumId}) async {
     try {
       final Stopwatch stopwatch = Stopwatch()..start();
 
       final deviceAlbums = await _nativeSyncApi.getAlbums();
+      final localAlbums = deviceAlbums.toLocalAlbums();
       final dbAlbums = await _localAlbumRepository.getAll(sortBy: {SortLocalAlbumsBy.id});
 
       await diffSortedLists(
         dbAlbums,
-        deviceAlbums.toLocalAlbums(),
+        localAlbums,
         compare: (a, b) => a.id.compareTo(b.id),
         both: updateAlbum,
         onlyFirst: removeAlbum,
         onlySecond: addAlbum,
       );
 
+      await _syncHiddenAlbum(hiddenAlbumId, deviceAlbums: localAlbums);
       await _nativeSyncApi.checkpointSync();
       stopwatch.stop();
       _log.info("Full device sync took - ${stopwatch.elapsedMilliseconds}ms");
@@ -305,6 +318,49 @@ class LocalSyncService {
       _log.warning("Error on full syncing local album: ${dbAlbum.name}", e, s);
     }
     return true;
+  }
+
+  Future<String?> _getHiddenAlbumId() async {
+    try {
+      final id = await _hiddenAlbumChannel.invokeMethod<String>('getHiddenAlbumId');
+      if (id == null || id.isEmpty) {
+        return null;
+      }
+      return id;
+    } catch (e, s) {
+      _log.warning('Failed to read iOS Hidden album id', e, s);
+      return null;
+    }
+  }
+
+  Future<void> _syncHiddenAlbum(String? hiddenAlbumId, {List<LocalAlbum>? deviceAlbums}) async {
+    if (!CurrentPlatform.isIOS || hiddenAlbumId == null) {
+      return;
+    }
+
+    final List<LocalAlbum> albums =
+        deviceAlbums ?? await _nativeSyncApi.getAlbums().then((fetchedAlbums) => fetchedAlbums.toLocalAlbums());
+    final hiddenDeviceAlbum = albums.firstWhereOrNull((album) => album.id == hiddenAlbumId);
+    if (hiddenDeviceAlbum == null) {
+      return;
+    }
+
+    final syncedHiddenAlbum = hiddenDeviceAlbum.copyWith(backupSelection: BackupSelection.selected);
+    var dbAlbum = (await _localAlbumRepository.getAll(
+      sortBy: {SortLocalAlbumsBy.id},
+    )).firstWhereOrNull((album) => album.id == hiddenAlbumId);
+
+    if (dbAlbum == null) {
+      await addAlbum(syncedHiddenAlbum);
+      return;
+    }
+
+    if (dbAlbum.backupSelection != BackupSelection.selected) {
+      dbAlbum = dbAlbum.copyWith(backupSelection: BackupSelection.selected);
+      await _localAlbumRepository.upsert(dbAlbum);
+    }
+
+    await updateAlbum(dbAlbum, syncedHiddenAlbum);
   }
 
   // ignore: avoid-unused-parameters

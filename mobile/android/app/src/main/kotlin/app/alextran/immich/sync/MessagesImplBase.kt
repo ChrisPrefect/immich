@@ -44,6 +44,10 @@ open class NativeSyncApiImplBase(context: Context) : ImmichPlugin() {
 
   private var hashTask: Job? = null
 
+  open fun setIncludeHiddenAssets(includeHiddenAssets: Boolean) {
+    // iOS-only feature
+  }
+
   companion object {
     private const val MAX_CONCURRENT_HASH_OPERATIONS = 16
     private val hashSemaphore = Semaphore(MAX_CONCURRENT_HASH_OPERATIONS)

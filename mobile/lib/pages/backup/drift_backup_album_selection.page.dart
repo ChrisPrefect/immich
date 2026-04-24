@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/services/sync_linked_album.service.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/background_sync.provider.dart';
@@ -109,18 +110,19 @@ class _DriftBackupAlbumSelectionPageState extends ConsumerState<DriftBackupAlbum
           final backgroundSync = ref.read(backgroundSyncProvider);
           final nativeSync = ref.read(nativeSyncApiProvider);
           if (totalChanged) {
-            // Waits for hashing to be cancelled before starting a new one
-            unawaited(nativeSync.cancelHashing().whenComplete(() => backgroundSync.hashAssets()));
             if (isBackupEnabled) {
               backupNotifier.stopForegroundBackup();
               unawaited(
-                backgroundSync.syncRemote().then((success) {
+                (() async {
+                  await nativeSync.cancelHashing();
+                  await backgroundSync.cancelLocal();
+                  final success = await backgroundSync.prepareBackup(fullLocalSync: CurrentPlatform.isAndroid);
                   if (success) {
                     return backupNotifier.startForegroundBackup(user.id);
                   } else {
                     Logger('DriftBackupAlbumSelectionPage').warning('Background sync failed, not starting backup');
                   }
-                }),
+                })(),
               );
             }
           }

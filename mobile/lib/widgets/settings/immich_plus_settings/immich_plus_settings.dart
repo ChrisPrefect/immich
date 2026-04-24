@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
@@ -5,11 +7,15 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart' as drift_album;
 import 'package:immich_mobile/providers/infrastructure/setting.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/sync.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/services/app_settings.service.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
+import 'package:immich_mobile/utils/album_group.dart';
 import 'package:immich_mobile/utils/hooks/app_settings_update_hook.dart';
 import 'package:immich_mobile/widgets/asset_grid/asset_grid_data_structure.dart';
 import 'package:immich_mobile/widgets/settings/setting_group_title.dart';
@@ -24,8 +30,8 @@ class ImmichPlusSettings extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final showHeaderImage = useAppSettingsState(AppSettingsEnum.showHeaderImage);
-    final showSyncNotifications = useAppSettingsState(AppSettingsEnum.showSyncNotifications);
+    final hideHeaderImage = useAppSettingsState(AppSettingsEnum.hideHeaderImage);
+    final hideSyncNotifications = useAppSettingsState(AppSettingsEnum.hideSyncNotifications);
     final groupByIndex = useAppSettingsState(AppSettingsEnum.groupAssetsBy);
     final disableGrouping = useState(GroupAssetsBy.values[groupByIndex.value] == GroupAssetsBy.none);
 
@@ -38,6 +44,9 @@ class ImmichPlusSettings extends HookConsumerWidget {
     final logsShowAssetDetail = useAppSettingsState(AppSettingsEnum.logsShowAssetDetail);
     final syncIosFavorites = useAppSettingsState(AppSettingsEnum.syncIosFavorites);
     final syncIosHiddenToLockedFolder = useAppSettingsState(AppSettingsEnum.syncIosHiddenToLockedFolder);
+    final hiddenAssetIdsAsync = CurrentPlatform.isIOS && syncIosHiddenToLockedFolder.value
+        ? ref.watch(iosHiddenAssetIdsProvider)
+        : const AsyncData(<String>[]);
 
     void invalidateSettings(bool _) {
       ref.invalidate(appSettingsServiceProvider);
@@ -58,11 +67,23 @@ class ImmichPlusSettings extends HookConsumerWidget {
       invalidateTimeline(value);
     }
 
+    void onSyncIosHiddenChanged(bool value) {
+      invalidateSettings(value);
+      if (!CurrentPlatform.isIOS) {
+        return;
+      }
+
+      unawaited(() async {
+        await ref.read(nativeSyncApiProvider).clearSyncCheckpoint();
+        ref.invalidate(iosHiddenAssetIdsProvider);
+      }());
+    }
+
     final uiToggles = [
       SettingsSwitchListTile(
-        valueNotifier: showHeaderImage,
-        title: 'asset_list_settings_show_header_image'.tr(),
-        subtitle: 'immich_plus_show_header_image_subtitle'.tr(),
+        valueNotifier: hideHeaderImage,
+        title: 'immich_plus_hide_header_image_title'.tr(),
+        subtitle: 'immich_plus_hide_header_image_subtitle'.tr(),
         onChanged: invalidateSettings,
       ),
       SettingsSwitchListTile(
@@ -102,9 +123,9 @@ class ImmichPlusSettings extends HookConsumerWidget {
         onChanged: invalidateTimeline,
       ),
       SettingsSwitchListTile(
-        valueNotifier: showSyncNotifications,
-        title: 'asset_list_settings_show_sync_notifications'.tr(),
-        subtitle: 'asset_list_settings_show_sync_notifications_subtitle'.tr(),
+        valueNotifier: hideSyncNotifications,
+        title: 'immich_plus_hide_sync_notifications_title'.tr(),
+        subtitle: 'immich_plus_hide_sync_notifications_subtitle'.tr(),
         onChanged: invalidateSettings,
       ),
       SettingsSwitchListTile(
@@ -132,7 +153,7 @@ class ImmichPlusSettings extends HookConsumerWidget {
         valueNotifier: syncIosHiddenToLockedFolder,
         title: 'immich_plus_sync_ios_hidden_title'.tr(),
         subtitle: 'immich_plus_sync_ios_hidden_subtitle'.tr(),
-        onChanged: invalidateSettings,
+        onChanged: onSyncIosHiddenChanged,
       ),
     ];
 
@@ -143,9 +164,59 @@ class ImmichPlusSettings extends HookConsumerWidget {
         const SizedBox(height: 24),
         SettingGroupTitle(title: 'immich_plus_group_sync'.tr(), icon: Icons.sync_alt_rounded),
         ...dataToggles,
+        if (CurrentPlatform.isIOS && syncIosHiddenToLockedFolder.value)
+          hiddenAssetIdsAsync.when(
+            data: (hiddenIds) => hiddenIds.isEmpty ? const _IosHiddenSyncHelpCard() : const SizedBox.shrink(),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
         const SizedBox(height: 16),
         const _PhotosFilterAlbumsSection(),
       ],
+    );
+  }
+}
+
+class _IosHiddenSyncHelpCard extends ConsumerWidget {
+  const _IosHiddenSyncHelpCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.lock_open_rounded, color: context.primaryColor),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'immich_plus_sync_ios_hidden_empty_title'.tr(),
+                      style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'immich_plus_sync_ios_hidden_empty_subtitle'.tr(),
+                style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => ref.invalidate(iosHiddenAssetIdsProvider),
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text('refresh'.tr()),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -158,7 +229,15 @@ class _PhotosFilterAlbumsSection extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final albums = ref.watch(drift_album.remoteAlbumProvider).albums;
+    // ImmichPlus: collapse same-named albums into one checklist entry, drop
+    // empty ones, sort alphabetically. A single checkbox controls all
+    // underlying IDs so that ticking "Sommer" persists every "Sommer"
+    // duplicate at once — matches the Photos-tab filter behaviour.
+    final groups =
+        groupAlbumsByName(
+            ref.watch(drift_album.remoteAlbumProvider).albums,
+          ).where((g) => g.totalAssetCount > 0).toList()
+          ..sort((a, b) => a.primary.name.toLowerCase().compareTo(b.primary.name.toLowerCase()));
     final raw = useState(Store.tryGet(StoreKey.photosFilterAlbumIds) ?? '');
     final selected = raw.value.split(',').where((s) => s.isNotEmpty).toSet();
 
@@ -179,7 +258,7 @@ class _PhotosFilterAlbumsSection extends HookConsumerWidget {
             style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurfaceVariant),
           ),
         ),
-        if (albums.isEmpty)
+        if (groups.isEmpty)
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
@@ -188,17 +267,22 @@ class _PhotosFilterAlbumsSection extends HookConsumerWidget {
             ),
           )
         else
-          ...albums.map((album) {
-            final isOn = selected.contains(album.id);
+          ...groups.map((group) {
+            final isOn = group.ids.any(selected.contains);
+            final count = group.totalAssetCount;
+            final subtitle = group.duplicates.isEmpty
+                ? '${group.primary.ownerName} · $count'
+                : '${group.primary.ownerName} · $count · +${group.duplicates.length}';
             return CheckboxListTile(
-              title: Text(album.name),
+              title: Text(group.primary.name),
+              subtitle: Text(subtitle),
               value: isOn,
               onChanged: (v) async {
                 final next = {...selected};
                 if (v == true) {
-                  next.add(album.id);
+                  next.addAll(group.ids);
                 } else {
-                  next.remove(album.id);
+                  next.removeAll(group.ids);
                 }
                 await Store.put(StoreKey.photosFilterAlbumIds, next.join(','));
                 raw.value = next.join(',');

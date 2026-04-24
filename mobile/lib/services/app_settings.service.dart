@@ -28,7 +28,10 @@ enum AppSettingsEnum<T> {
   thumbnailCacheSize<int>(StoreKey.thumbnailCacheSize, "thumbnailCacheSize", 10000),
   imageCacheSize<int>(StoreKey.imageCacheSize, "imageCacheSize", 350),
   albumThumbnailCacheSize<int>(StoreKey.albumThumbnailCacheSize, "albumThumbnailCacheSize", 200),
-  selectedAlbumSortOrder<int>(StoreKey.selectedAlbumSortOrder, "selectedAlbumSortOrder", 2),
+  // ImmichPlus: default album sort = "lastModified" (storeIndex 3). Any time
+  // an asset is added to an album the server bumps `album.updatedAt`, so this
+  // matches Chris's "Album mit neuem Bild springt zuoberst" expectation.
+  selectedAlbumSortOrder<int>(StoreKey.selectedAlbumSortOrder, "selectedAlbumSortOrder", 3),
   advancedTroubleshooting<bool>(StoreKey.advancedTroubleshooting, null, false),
   manageLocalMediaAndroid<bool>(StoreKey.manageLocalMediaAndroid, null, false),
   logLevel<int>(StoreKey.logLevel, null, 5), // Level.INFO = 5
@@ -44,7 +47,9 @@ enum AppSettingsEnum<T> {
   mapRelativeDate<int>(StoreKey.mapRelativeDate, null, 0),
   allowSelfSignedSSLCert<bool>(StoreKey.selfSignedCert, null, false),
   ignoreIcloudAssets<bool>(StoreKey.ignoreIcloudAssets, null, false),
-  selectedAlbumSortReverse<bool>(StoreKey.selectedAlbumSortReverse, null, true),
+  // ImmichPlus: default OFF. With sort mode = lastModified (defaultOrder desc),
+  // `isReverse=false` keeps descending order → newest-modified album on top.
+  selectedAlbumSortReverse<bool>(StoreKey.selectedAlbumSortReverse, null, false),
   enableHapticFeedback<bool>(StoreKey.enableHapticFeedback, null, true),
   syncAlbums<bool>(StoreKey.syncAlbums, null, false),
   autoEndpointSwitching<bool>(StoreKey.autoEndpointSwitching, null, false),
@@ -62,8 +67,9 @@ enum AppSettingsEnum<T> {
   cleanupKeepAlbumIds<String>(StoreKey.cleanupKeepAlbumIds, null, ""),
   cleanupCutoffDaysAgo<int>(StoreKey.cleanupCutoffDaysAgo, null, -1),
   cleanupDefaultsInitialized<bool>(StoreKey.cleanupDefaultsInitialized, null, false),
-  showHeaderImage<bool>(StoreKey.showHeaderImage, null, true),
-  showSyncNotifications<bool>(StoreKey.showSyncNotifications, null, true),
+  // ImmichPlus: inverted semantics (see StoreKey comment). Default true = hide.
+  hideHeaderImage<bool>(StoreKey.hideHeaderImage, null, true),
+  hideSyncNotifications<bool>(StoreKey.hideSyncNotifications, null, true),
   // ImmichPlus customizations (default true)
   reverseTimeline<bool>(StoreKey.reverseTimeline, null, true),
   hideAssetBadges<bool>(StoreKey.hideAssetBadges, null, true),

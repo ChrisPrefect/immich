@@ -374,6 +374,7 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
 
 /** Generated interface from Pigeon that represents a handler of messages from Flutter. */
 interface NativeSyncApi {
+  fun setIncludeHiddenAssets(includeHiddenAssets: Boolean)
   fun shouldFullSync(): Boolean
   fun getMediaChanges(): SyncDelta
   fun checkpointSync()
@@ -397,6 +398,24 @@ interface NativeSyncApi {
     fun setUp(binaryMessenger: BinaryMessenger, api: NativeSyncApi?, messageChannelSuffix: String = "") {
       val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
       val taskQueue = binaryMessenger.makeBackgroundTaskQueue()
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApi.setIncludeHiddenAssets$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val includeHiddenAssetsArg = args[0] as Boolean
+            val wrapped: List<Any?> = try {
+              api.setIncludeHiddenAssets(includeHiddenAssetsArg)
+              listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
       run {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.immich_mobile.NativeSyncApi.shouldFullSync$separatedMessageChannelSuffix", codec)
         if (api != null) {

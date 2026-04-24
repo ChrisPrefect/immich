@@ -17,7 +17,6 @@ import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.da
 import 'package:immich_mobile/providers/search/search_input_focus.provider.dart';
 import 'package:immich_mobile/providers/tab.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
-import 'package:immich_mobile/widgets/common/tap_to_top_overlay.dart';
 
 @RoutePage()
 class TabShellPage extends ConsumerStatefulWidget {
@@ -89,17 +88,15 @@ class _TabShellPageState extends ConsumerState<TabShellPage> {
           onPopInvokedWithResult: (didPop, _) => !didPop ? tabsRouter.setActiveIndex(0) : null,
           child: Scaffold(
             resizeToAvoidBottomInset: false,
-            body: TapToTopOverlay(
-              child: isScreenLandscape
-                  ? Row(
-                      children: [
-                        navigationRail(tabsRouter),
-                        const VerticalDivider(),
-                        Expanded(child: child),
-                      ],
-                    )
-                  : child,
-            ),
+            body: isScreenLandscape
+                ? Row(
+                    children: [
+                      navigationRail(tabsRouter),
+                      const VerticalDivider(),
+                      Expanded(child: child),
+                    ],
+                  )
+                : child,
             bottomNavigationBar: _BottomNavigationBar(tabsRouter: tabsRouter, destinations: navigationDestinations),
           ),
         );

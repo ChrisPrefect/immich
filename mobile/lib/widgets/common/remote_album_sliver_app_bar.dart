@@ -59,14 +59,14 @@ class _MesmerizingSliverAppBarState extends ConsumerState<RemoteAlbumSliverAppBa
   @override
   Widget build(BuildContext context) {
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
-    final showHeaderImage = ref.watch(appSettingsServiceProvider).getSetting(AppSettingsEnum.showHeaderImage);
+    final hideHeaderImage = ref.watch(appSettingsServiceProvider).getSetting(AppSettingsEnum.hideHeaderImage);
 
     final currentAlbum = ref.watch(currentRemoteAlbumProvider);
     if (currentAlbum == null) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    if (!showHeaderImage) {
+    if (hideHeaderImage) {
       return SliverAppBar(
         pinned: true,
         centerTitle: true,

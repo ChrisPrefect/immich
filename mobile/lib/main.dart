@@ -37,6 +37,7 @@ import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/services/background.service.dart';
 import 'package:immich_mobile/services/deep_link.service.dart';
 import 'package:immich_mobile/services/local_notification.service.dart';
+import 'package:immich_mobile/services/status_bar_tap.service.dart';
 import 'package:immich_mobile/theme/dynamic_theme.dart';
 import 'package:immich_mobile/theme/theme_data.dart';
 import 'package:immich_mobile/utils/bootstrap.dart';
@@ -120,6 +121,7 @@ Future<void> initApp() async {
   await FileDownloader().trackTasksInGroup(kDownloadGroupLivePhoto, markDownloadedComplete: false);
 
   unawaited(FileDownloader().trackTasks());
+  await StatusBarTapService.init();
 
   LicenseRegistry.addLicense(() async* {
     for (final license in nonPubLicenses.entries) {
@@ -206,9 +208,11 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
   void didChangeDependencies() {
     super.didChangeDependencies();
     Intl.defaultLocale = context.locale.toLanguageTag();
-    final showSyncNotifications = ref.read(appSettingsServiceProvider).getSetting(AppSettingsEnum.showSyncNotifications);
+    final hideSyncNotifications = ref
+        .read(appSettingsServiceProvider)
+        .getSetting(AppSettingsEnum.hideSyncNotifications);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      configureFileDownloaderNotifications(showSyncNotifications: showSyncNotifications);
+      configureFileDownloaderNotifications(hideSyncNotifications: hideSyncNotifications);
     });
   }
 

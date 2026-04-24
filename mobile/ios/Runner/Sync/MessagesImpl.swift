@@ -34,6 +34,7 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
   private let changeTokenKey = "immich:changeToken"
   private let albumTypes: [PHAssetCollectionType] = [.album, .smartAlbum]
   private let recoveredAlbumSubType = 1000000219
+  private var includeHiddenAssets = false
   
   private var hashTask: Task<Void?, Error>?
   private static let hashCancelledCode = "HASH_CANCELLED"
@@ -62,6 +63,10 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
   
   func clearSyncCheckpoint() -> Void {
     defaults.removeObject(forKey: changeTokenKey)
+  }
+
+  func setIncludeHiddenAssets(includeHiddenAssets: Bool) {
+    self.includeHiddenAssets = includeHiddenAssets
   }
   
   func checkpointSync() {
@@ -102,7 +107,7 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
         
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "modificationDate", ascending: false)]
-        options.includeHiddenAssets = false
+        options.includeHiddenAssets = self.includeHiddenAssets
         
         let assets = getAssetsFromAlbum(in: album, options: options)
         
@@ -161,7 +166,7 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
         if (updated.isEmpty) { continue }
         
         let options = PHFetchOptions()
-        options.includeHiddenAssets = false
+        options.includeHiddenAssets = self.includeHiddenAssets
         let result = PHAsset.fetchAssets(withLocalIdentifiers: Array(updated), options: options)
         for i in 0..<result.count {
           let asset = result.object(at: i)
@@ -203,7 +208,7 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
       collections.enumerateObjects { (album, _, _) in
         let options = PHFetchOptions()
         options.predicate = NSPredicate(format: "localIdentifier IN %@", assets.map(\.id))
-        options.includeHiddenAssets = false
+        options.includeHiddenAssets = self.includeHiddenAssets
         let result = self.getAssetsFromAlbum(in: album, options: options)
         result.enumerateObjects { (asset, _, _) in
           albumAssets[asset.localIdentifier, default: []].append(album.localIdentifier)
@@ -221,7 +226,7 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
     
     var ids: [String] = []
     let options = PHFetchOptions()
-    options.includeHiddenAssets = false
+    options.includeHiddenAssets = includeHiddenAssets
     let assets = getAssetsFromAlbum(in: album, options: options)
     assets.enumerateObjects { (asset, _, _) in
       ids.append(asset.localIdentifier)
@@ -238,7 +243,7 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
     let date = NSDate(timeIntervalSince1970: TimeInterval(timestamp))
     let options = PHFetchOptions()
     options.predicate = NSPredicate(format: "creationDate > %@ OR modificationDate > %@", date, date)
-    options.includeHiddenAssets = false
+    options.includeHiddenAssets = includeHiddenAssets
     let assets = getAssetsFromAlbum(in: album, options: options)
     return Int64(assets.count)
   }
@@ -250,7 +255,7 @@ class NativeSyncApiImpl: ImmichPlugin, NativeSyncApi, FlutterPlugin {
     }
     
     let options = PHFetchOptions()
-    options.includeHiddenAssets = false
+    options.includeHiddenAssets = includeHiddenAssets
     if(updatedTimeCond != nil) {
       let date = NSDate(timeIntervalSince1970: TimeInterval(updatedTimeCond!))
       options.predicate = NSPredicate(format: "creationDate > %@ OR modificationDate > %@", date, date)

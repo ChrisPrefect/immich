@@ -8,6 +8,7 @@ import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
@@ -31,8 +32,6 @@ class DriftBackupPage extends ConsumerStatefulWidget {
 }
 
 class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
-  bool? syncSuccess;
-
   @override
   void initState() {
     super.initState();
@@ -51,8 +50,11 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
       await backupNotifier.getBackupStatus(currentUser.id);
 
       backupNotifier.updateSyncing(true);
-      syncSuccess = await syncManager.syncRemote();
-      backupNotifier.updateSyncing(false);
+      try {
+        await syncManager.syncRemote();
+      } finally {
+        backupNotifier.updateSyncing(false);
+      }
 
       if (mounted) {
         await backupNotifier.getBackupStatus(currentUser.id);
@@ -84,15 +86,17 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
         return;
       }
 
-      if (syncSuccess == null) {
-        backupNotifier.updateSyncing(true);
-        syncSuccess = await backupSyncManager.syncRemote();
+      var syncSuccess = false;
+      backupNotifier.updateSyncing(true);
+      try {
+        syncSuccess = await backupSyncManager.prepareBackup(fullLocalSync: CurrentPlatform.isAndroid);
+      } finally {
         backupNotifier.updateSyncing(false);
       }
 
       await backupNotifier.getBackupStatus(currentUser.id);
 
-      if (syncSuccess == false) {
+      if (!syncSuccess) {
         Logger("DriftBackupPage").warning("Remote sync did not complete successfully, skipping backup");
         return;
       }
@@ -136,7 +140,6 @@ class _DriftBackupPageState extends ConsumerState<DriftBackupPage> {
                   BackupToggleButton(
                     onStart: () async => await startBackup(),
                     onStop: () {
-                      syncSuccess = null;
                       backupNotifier.stopForegroundBackup();
                     },
                   ),

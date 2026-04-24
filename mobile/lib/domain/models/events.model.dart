@@ -23,6 +23,14 @@ class RestoreAssetIndexEvent extends Event {
   const RestoreAssetIndexEvent(this.index);
 }
 
+/// Asks the active Timeline to jump to the very bottom (newest asset) once the
+/// next bucket load completes. Used by the Immich+ "Sortierung umkehren"
+/// feature so every view — main timeline, filter switch, album, archive,
+/// place/person — opens on the freshest asset, like iOS Photos.
+class ScrollToBottomEvent extends Event {
+  const ScrollToBottomEvent();
+}
+
 // Asset Viewer Events
 class ViewerShowDetailsEvent extends Event {
   const ViewerShowDetailsEvent();

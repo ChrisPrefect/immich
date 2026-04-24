@@ -58,7 +58,7 @@ class _MesmerizingSliverAppBarState extends ConsumerState<PersonSliverAppBar> {
   @override
   Widget build(BuildContext context) {
     final isMultiSelectEnabled = ref.watch(multiSelectProvider.select((s) => s.isEnabled));
-    final showHeaderImage = ref.watch(appSettingsServiceProvider).getSetting(AppSettingsEnum.showHeaderImage);
+    final hideHeaderImage = ref.watch(appSettingsServiceProvider).getSetting(AppSettingsEnum.hideHeaderImage);
     Color? actionIconColor = Color.lerp(Colors.white, context.primaryColor, _scrollProgress);
     List<Shadow> actionIconShadows = [
       if (_scrollProgress < 0.95)
@@ -67,7 +67,7 @@ class _MesmerizingSliverAppBarState extends ConsumerState<PersonSliverAppBar> {
         const Shadow(offset: Offset(0, 2), blurRadius: 0, color: Colors.transparent),
     ];
 
-    if (!showHeaderImage) {
+    if (hideHeaderImage) {
       return isMultiSelectEnabled
           ? const SliverToBoxAdapter(child: SizedBox(height: 120))
           : SliverAppBar(

@@ -397,7 +397,8 @@ class BackgroundService {
     List<BackupAlbum> excludedAlbums,
   ) async {
     _errorGracePeriodExceeded = _isErrorGracePeriodExceeded(settingsService);
-    final bool showSyncNotifications = settingsService.getSetting<bool>(AppSettingsEnum.showSyncNotifications);
+    final bool showSyncNotifications =
+        !settingsService.getSetting<bool>(AppSettingsEnum.hideSyncNotifications);
     final bool notifyTotalProgress =
         showSyncNotifications && settingsService.getSetting<bool>(AppSettingsEnum.backgroundBackupTotalProgress);
     final bool notifySingleProgress =

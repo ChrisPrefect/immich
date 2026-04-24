@@ -149,32 +149,21 @@ class AppLifeCycleNotifier extends StateNotifier<AppLifeCycleEnum> {
     final isAlbumLinkedSyncEnable = _ref.read(appSettingsServiceProvider).getSetting(AppSettingsEnum.syncAlbums);
 
     try {
-      bool syncSuccess = false;
-      await Future.wait([
-        _safeRun(backgroundManager.syncLocal(full: CurrentPlatform.isAndroid ? true : false), "syncLocal"),
-        _safeRun(backgroundManager.syncRemote().then((success) => syncSuccess = success), "syncRemote"),
-      ]);
+      final syncSuccess = await backgroundManager.prepareBackup(fullLocalSync: CurrentPlatform.isAndroid);
       if (syncSuccess) {
-        await Future.wait([
-          _safeRun(backgroundManager.hashAssets(), "hashAssets").then((_) {
-            _resumeBackup();
-          }),
-          _resumeBackup(),
-          // TODO: Bring back when the soft freeze issue is addressed
-          // _safeRun(backgroundManager.syncCloudIds(), "syncCloudIds"),
-        ]);
+        await _resumeBackup();
       } else {
-        await _safeRun(backgroundManager.hashAssets(), "hashAssets");
+        _log.warning("Remote sync did not complete successfully, skipping backup");
       }
 
       if (isAlbumLinkedSyncEnable) {
         await _safeRun(backgroundManager.syncLinkedAlbum(), "syncLinkedAlbum");
       }
 
+      await _safeRun(backgroundManager.syncIosHiddenToLockedFolder(), "syncIosHiddenToLockedFolder");
+
       // ImmichPlus: push iOS favorites to server after other syncs settle.
       await _safeRun(backgroundManager.syncIosFavorites(), "syncIosFavorites");
-      // ImmichPlus: push iOS Hidden album into the locked folder.
-      await _safeRun(backgroundManager.syncIosHiddenToLockedFolder(), "syncIosHiddenToLockedFolder");
     } catch (e, stackTrace) {
       _log.severe("Error during background sync", e, stackTrace);
     }

@@ -150,8 +150,8 @@ class BackgroundSyncManager {
     }
   }
 
-  /// Moves matching server assets into the locked folder for every iOS Photos
-  /// asset that sits in iOS' Hidden smart album (ImmichPlus feature).
+  /// Ensures iOS Hidden assets are backed up via the normal pipeline and that
+  /// already-uploaded matches land in the server-side locked folder.
   Future<void> syncIosHiddenToLockedFolder() async {
     try {
       await runInIsolateGentle(
@@ -184,6 +184,15 @@ class BackgroundSyncManager {
           onHashingError?.call(error.toString());
           _hashTask = null;
         });
+  }
+
+  Future<bool> prepareBackup({bool fullLocalSync = false}) async {
+    var syncSuccess = false;
+
+    await Future.wait([syncLocal(full: fullLocalSync), syncRemote().then((success) => syncSuccess = success)]);
+    await hashAssets();
+
+    return syncSuccess;
   }
 
   Future<bool> syncRemote() {

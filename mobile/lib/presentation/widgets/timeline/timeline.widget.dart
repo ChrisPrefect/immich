@@ -29,6 +29,7 @@ import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
 import 'package:immich_mobile/widgets/common/mesmerizing_sliver_app_bar.dart';
 import 'package:immich_mobile/widgets/common/selection_sliver_app_bar.dart';
+import 'package:immich_mobile/widgets/common/tap_to_top_overlay.dart';
 
 class Timeline extends StatelessWidget {
   const Timeline({
@@ -67,32 +68,34 @@ class Timeline extends StatelessWidget {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       floatingActionButton: const DownloadStatusFloatingButton(),
-      body: LayoutBuilder(
-        builder: (_, constraints) => ProviderScope(
-          overrides: [
-            timelineArgsProvider.overrideWith(
-              (ref) => TimelineArgs(
-                maxWidth: constraints.maxWidth,
-                maxHeight: constraints.maxHeight,
-                columnCount: ref.watch(settingsProvider.select((s) => s.get(Setting.tilesPerRow))),
-                showStorageIndicator: showStorageIndicator,
-                withStack: withStack,
-                groupBy: groupBy,
+      body: TapToTopOverlay(
+        child: LayoutBuilder(
+          builder: (_, constraints) => ProviderScope(
+            overrides: [
+              timelineArgsProvider.overrideWith(
+                (ref) => TimelineArgs(
+                  maxWidth: constraints.maxWidth,
+                  maxHeight: constraints.maxHeight,
+                  columnCount: ref.watch(settingsProvider.select((s) => s.get(Setting.tilesPerRow))),
+                  showStorageIndicator: showStorageIndicator,
+                  withStack: withStack,
+                  groupBy: groupBy,
+                ),
               ),
+              if (readOnly) readonlyModeProvider.overrideWith(() => _AlwaysReadOnlyNotifier()),
+            ],
+            child: _SliverTimeline(
+              topSliverWidget: topSliverWidget,
+              topSliverWidgetHeight: topSliverWidgetHeight,
+              bottomSliverWidget: bottomSliverWidget,
+              appBar: appBar,
+              bottomSheet: bottomSheet,
+              withScrubber: withScrubber,
+              persistentBottomBar: persistentBottomBar,
+              snapToMonth: snapToMonth,
+              maxWidth: constraints.maxWidth,
+              loadingWidget: loadingWidget,
             ),
-            if (readOnly) readonlyModeProvider.overrideWith(() => _AlwaysReadOnlyNotifier()),
-          ],
-          child: _SliverTimeline(
-            topSliverWidget: topSliverWidget,
-            topSliverWidgetHeight: topSliverWidgetHeight,
-            bottomSliverWidget: bottomSliverWidget,
-            appBar: appBar,
-            bottomSheet: bottomSheet,
-            withScrubber: withScrubber,
-            persistentBottomBar: persistentBottomBar,
-            snapToMonth: snapToMonth,
-            maxWidth: constraints.maxWidth,
-            loadingWidget: loadingWidget,
           ),
         ),
       ),
@@ -155,6 +158,13 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
   double _baseScaleFactor = 3.0;
   int? _restoreAssetIndex;
 
+  /// When true, the next successful bucket load should jump the timeline to
+  /// [ScrollPosition.maxScrollExtent] (newest asset, bottom-right in the grid).
+  /// Set on [initState] when [Setting.reverseTimeline] is on, and set again by
+  /// [ScrollToBottomEvent] so filter/context switches that keep the widget
+  /// mounted can still land on the newest asset.
+  bool _pendingScrollToBottom = false;
+
   @override
   void initState() {
     super.initState();
@@ -165,6 +175,11 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
     _perRow = currentTilesPerRow;
     _scaleFactor = 7.0 - _perRow;
     _baseScaleFactor = _scaleFactor;
+
+    // ImmichPlus: if "reverse timeline" is active, every freshly-opened view
+    // (main timeline, album, archive, place, person, …) lands on the newest
+    // asset, matching iOS Photos behavior.
+    _pendingScrollToBottom = ref.read(settingsProvider).get(Setting.reverseTimeline);
 
     ref.listenManual(multiSelectProvider.select((s) => s.isEnabled), _onMultiSelectionToggled);
   }
@@ -196,11 +211,31 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
       case RestoreAssetIndexEvent restore:
         _restoreAssetIndex = restore.index;
         _restoreAssetPosition(_scrollController);
+      case ScrollToBottomEvent():
+        _pendingScrollToBottom = true;
+        _maybeScrollToBottom();
       case TimelineReloadEvent():
+        if (_pendingScrollToBottom) _maybeScrollToBottom();
         setState(() {});
       default:
         break;
     }
+  }
+
+  /// Jump to the newest asset when a scroll-to-bottom is pending. Runs after
+  /// the current frame so the segment layout (and therefore
+  /// [ScrollPosition.maxScrollExtent]) is up-to-date. If the extent isn't
+  /// known yet (layout pending, segments empty) the flag stays set and the
+  /// next [TimelineReloadEvent] retries.
+  void _maybeScrollToBottom() {
+    if (!_pendingScrollToBottom) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final max = _scrollController.position.maxScrollExtent;
+      if (max <= 0) return;
+      _scrollController.jumpTo(max);
+      _pendingScrollToBottom = false;
+    });
   }
 
   void _restoreAssetPosition(_) {

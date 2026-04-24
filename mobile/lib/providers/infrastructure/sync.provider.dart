@@ -49,17 +49,19 @@ final localSyncServiceProvider = Provider(
 );
 
 final iosFavoriteSyncServiceProvider = Provider(
-  (ref) => IosFavoriteSyncService(
-    db: ref.watch(driftProvider),
-    assetApi: ref.watch(assetApiRepositoryProvider),
-  ),
+  (ref) => IosFavoriteSyncService(db: ref.watch(driftProvider), assetApi: ref.watch(assetApiRepositoryProvider)),
 );
 
 final iosHiddenSyncServiceProvider = Provider(
   (ref) => IosHiddenSyncService(
     db: ref.watch(driftProvider),
     assetApi: ref.watch(assetApiRepositoryProvider),
+    localAlbumService: ref.watch(localAlbumServiceProvider),
   ),
+);
+
+final iosHiddenAssetIdsProvider = FutureProvider.autoDispose(
+  (ref) => ref.watch(iosHiddenSyncServiceProvider).getHiddenLocalIds(),
 );
 
 final hashServiceProvider = Provider(

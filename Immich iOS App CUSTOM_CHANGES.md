@@ -165,76 +165,71 @@ Ermöglicht es, Assets in Alben, auf der Karte und in der Haupttimeline OHNE Dat
 
 ---
 
-## 3. Neue App-Einstellung: "Header-Image ausblenden" (showHeaderImage)
+## 3. Neue App-Einstellung: "Titelbild ausblenden" (hideHeaderImage)
 
 Erlaubt es, das große animierte Header-Bild in Album-, Personen- und Orts-Ansichten zu deaktivieren. Stattdessen wird ein einfacher `SliverAppBar` mit Titel angezeigt.
 
+**Semantik invertiert** (ImmichPlus-Konvention: `aktiv = abweichend vom Standard`): Aktiv = Header versteckt. Default: **`true`** (= versteckt).
+
 ### Dateien:
 
 #### `mobile/lib/domain/models/store.model.dart`
-- Neuer StoreKey: `showHeaderImage<bool>._(1014)`
+- StoreKey: `hideHeaderImage<bool>._(1014)`  *(numerische ID 1014 behält den alten `showHeaderImage`-Slot; Upgrades lesen den alten `true`-Wert als "hide=true", was dem neuen Immich+-Default entspricht.)*
 
 #### `mobile/lib/services/app_settings.service.dart`
-- Neues Enum: `showHeaderImage<bool>(StoreKey.showHeaderImage, null, true)` (Default: `true`)
+- Enum: `hideHeaderImage<bool>(StoreKey.hideHeaderImage, null, true)` (Default: `true` = versteckt)
 
 #### `mobile/lib/widgets/settings/asset_list_settings/asset_list_settings.dart`
-- Neuer `useAppSettingsState(AppSettingsEnum.showHeaderImage)` Hook
-- Neues `SettingsSwitchListTile` mit Titel `'asset_list_settings_show_header_image'` zwischen Storage Indicator und Layout Settings eingefügt
+- Hook `useAppSettingsState(AppSettingsEnum.hideHeaderImage)`
+- `SettingsSwitchListTile` mit Titel `'immich_plus_hide_header_image_title'` zwischen Storage Indicator und Layout Settings
 
 #### `mobile/lib/widgets/common/mesmerizing_sliver_app_bar.dart`
-- Imports: `app_settings.provider.dart`, `app_settings.service.dart`
-- In `build()`: `showHeaderImage` aus AppSettings lesen
-- Wenn `!showHeaderImage`: Einfachen `SliverAppBar` rendern (pinned, centered title, back button) statt des animierten Headers. Bei MultiSelect: `SliverToBoxAdapter` mit `SizedBox(height: 120)`
+- `hideHeaderImage` aus AppSettings lesen
+- Wenn `hideHeaderImage`: Einfachen `SliverAppBar` rendern (pinned, centered title, back button) statt des animierten Headers. Bei MultiSelect: `SliverToBoxAdapter` mit `SizedBox(height: 120)`
 
 #### `mobile/lib/widgets/common/person_sliver_app_bar.dart`
-- Imports: `app_settings.provider.dart`, `app_settings.service.dart`
-- In `build()`: `showHeaderImage` aus AppSettings lesen
-- Wenn `!showHeaderImage`: Einfachen `SliverAppBar` mit Personenname (oder `'add_a_name'`), Back-Button und More-Button rendern. Bei MultiSelect: `SliverToBoxAdapter` mit `SizedBox(height: 120)`
+- `hideHeaderImage` aus AppSettings lesen
+- Wenn `hideHeaderImage`: Einfachen `SliverAppBar` mit Personenname (oder `'add_a_name'`), Back-Button und More-Button rendern. Bei MultiSelect: `SliverToBoxAdapter` mit `SizedBox(height: 120)`
 
 #### `mobile/lib/widgets/common/remote_album_sliver_app_bar.dart`
-- Imports: `app_settings.provider.dart`, `app_settings.service.dart`
-- In `build()`: `showHeaderImage` aus AppSettings lesen
-- Wenn `!showHeaderImage`: Einfachen `SliverAppBar` mit Albumname, Back-Button, Activity-Button (wenn shared+enabled) und Kebab-Menu rendern. Bei MultiSelect: Back-Button wird ausgeblendet
+- `hideHeaderImage` aus AppSettings lesen
+- Wenn `hideHeaderImage`: Einfachen `SliverAppBar` mit Albumname, Back-Button, Activity-Button (wenn shared+enabled) und Kebab-Menu. Bei MultiSelect: Back-Button ausgeblendet
 
 ---
 
-## 4. Neue App-Einstellung: "Sync-Benachrichtigungen ausblenden" (showSyncNotifications)
+## 4. Neue App-Einstellung: "Sync-Benachrichtigungen ausblenden" (hideSyncNotifications)
 
 Unterdrückt alle Notifications die durch den Backup/Sync-Prozess erzeugt werden.
+
+**Semantik invertiert** (ImmichPlus-Konvention: `aktiv = abweichend vom Standard`): Aktiv = Notifications versteckt. Default: **`true`** (= versteckt).
 
 ### Dateien:
 
 #### `mobile/lib/domain/models/store.model.dart`
-- Neuer StoreKey: `showSyncNotifications<bool>._(1015)`
+- StoreKey: `hideSyncNotifications<bool>._(1015)`  *(numerische ID 1015 behält den alten `showSyncNotifications`-Slot — alte `true`-Werte werden als "hide=true" reinterpretiert, was dem neuen Immich+-Default entspricht.)*
 
 #### `mobile/lib/services/app_settings.service.dart`
-- Neues Enum: `showSyncNotifications<bool>(StoreKey.showSyncNotifications, null, true)` (Default: `true`)
+- Enum: `hideSyncNotifications<bool>(StoreKey.hideSyncNotifications, null, true)` (Default: `true` = versteckt)
 
 #### `mobile/lib/widgets/settings/notification_setting.dart`
-- Neuer `useAppSettingsState(AppSettingsEnum.showSyncNotifications)` Hook
-- Neues `SettingsSwitchListTile` mit:
-  - Titel: `'asset_list_settings_show_sync_notifications'`
-  - Subtitle: `'asset_list_settings_show_sync_notifications_subtitle'`
-  - Eingefügt zwischen Permission-Check und Total Progress Toggle
+- Hook `useAppSettingsState(AppSettingsEnum.hideSyncNotifications)`
+- `SettingsSwitchListTile`:
+  - Titel: `'immich_plus_hide_sync_notifications_title'`
+  - Subtitle: `'immich_plus_hide_sync_notifications_subtitle'`
+  - Zwischen Permission-Check und Total Progress Toggle
 
 #### `mobile/lib/utils/bootstrap.dart`
-- `configureFileDownloaderNotifications()` erhält neuen Parameter `{bool showSyncNotifications = true}`
-- Wenn `!showSyncNotifications`: Die `FileDownloader().configureNotificationForGroup(...)` Aufrufe für `kManualUploadGroup` und `kBackupGroup` werden übersprungen (nur Download-Gruppe bleibt aktiv)
+- `configureFileDownloaderNotifications({bool hideSyncNotifications = false})`
+- Wenn `hideSyncNotifications`: `FileDownloader().configureNotificationForGroup(...)` Aufrufe für `kManualUploadGroup` und `kBackupGroup` werden übersprungen (nur Download-Gruppe bleibt aktiv)
 
 #### `mobile/lib/main.dart`
-- Neue Imports: `app_settings.provider.dart`, `app_settings.service.dart`
-- In `didChangeDependencies()`: `showSyncNotifications` Setting aus AppSettings lesen und an `configureFileDownloaderNotifications(showSyncNotifications: ...)` übergeben
+- In `didChangeDependencies()`: `hideSyncNotifications` aus AppSettings lesen und an `configureFileDownloaderNotifications(hideSyncNotifications: ...)` übergeben
 
 #### `mobile/lib/domain/services/background_worker.service.dart`
-- `showSyncNotifications` Setting aus AppSettings lesen
-- An `configureFileDownloaderNotifications(showSyncNotifications: ...)` übergeben
+- `hideSyncNotifications` aus AppSettings lesen, an `configureFileDownloaderNotifications(hideSyncNotifications: ...)` durchreichen.
 
 #### `mobile/lib/services/background.service.dart`
-- `showSyncNotifications` Setting lesen
-- `notifyTotalProgress` und `notifySingleProgress` nur aktiv wenn `showSyncNotifications` auch `true`
-- Error-Notification bei Connection-Failure nur anzeigen wenn `showSyncNotifications`
-- Upload-Progress-Notification nur anzeigen wenn `showSyncNotifications`
-- Upload-Error-Notification am Ende nur anzeigen wenn `showSyncNotifications`
+- Lokale Variable `showSyncNotifications = !settingsService.getSetting(...hideSyncNotifications)` — restliche Logik (notifyTotalProgress/notifySingleProgress, Error-/Progress-Notifications) bleibt unverändert.
 
 ---
 
@@ -245,12 +240,14 @@ Eine eigene Settings-Unterseite, die alle ImmichPlus-spezifischen Toggles bünde
 ### Dateien:
 
 #### `mobile/lib/widgets/settings/immich_plus_settings/immich_plus_settings.dart` *(NEU)*
-Eigener `HookConsumerWidget`, nutzt `SettingsSubPageScaffold` mit drei `SettingsSwitchListTile`s:
+Eigener `HookConsumerWidget` als zentrale ImmichPlus-Seite.
 
-1. **Titelbild anzeigen** — bindet `AppSettingsEnum.showHeaderImage` (siehe Abschnitt 3).
-2. **Sync-Benachrichtigungen anzeigen** — bindet `AppSettingsEnum.showSyncNotifications` (siehe Abschnitt 4).
-3. **Datumsgruppierung deaktivieren** — Toggle, der `AppSettingsEnum.groupAssetsBy` zwischen `GroupAssetsBy.none` (An) und `GroupAssetsBy.day` (Aus) umschaltet (siehe Abschnitt 2).
-   - Initialwert aus Store lesen (`useState(... == GroupAssetsBy.none)`), bei Änderung `groupByIndex.value` setzen + `appSettingsServiceProvider`/`settingsProvider` invalidieren.
+Grundregel für **alle** ImmichPlus-Toggles:
+- **Off** = Standardverhalten von upstream / vor den Fork-Änderungen
+- **On** = ImmichPlus-Anpassung aktiv
+- Default für neue Installationen: **On**
+
+Die Seite bündelt die fork-spezifischen UI-/Sync-Anpassungen (z. B. `hideHeaderImage`, `hideSyncNotifications`, `reverseTimeline`, `showMemoriesFolder`, `syncIosFavorites`) plus die Album-Filter-Auswahl.
 
 Nach jeder Änderung werden `appSettingsServiceProvider` und `settingsProvider` invalidiert, damit abhängige Views (Timeline, Notifications-Registrierung) neu aufgebaut werden.
 
@@ -268,31 +265,31 @@ Nach jeder Änderung werden `appSettingsServiceProvider` und `settingsProvider` 
 ## 6. Übersetzungen (i18n)
 
 ### `i18n/en.json`
-Neue Keys:
+Neue Keys (Basis-Batch):
 ```json
 "asset_list_layout_settings_group_by_none": "None",
-"asset_list_settings_show_header_image": "Show header image",
-"asset_list_settings_show_sync_notifications": "Show sync notifications",
-"asset_list_settings_show_sync_notifications_subtitle": "Show notifications when background sync starts or completes",
 "immich_plus_disable_grouping_subtitle": "Show all assets as a single flat list without date grouping",
 "immich_plus_disable_grouping_title": "Disable date grouping",
+"immich_plus_hide_header_image_subtitle": "Hide the large animated header image in album, person and place views.",
+"immich_plus_hide_header_image_title": "Hide header image",
+"immich_plus_hide_sync_notifications_subtitle": "Suppress the background-sync start / progress / complete notifications.",
+"immich_plus_hide_sync_notifications_title": "Hide sync notifications",
 "immich_plus_settings_subtitle": "Customizations specific to ImmichPlus",
-"immich_plus_settings_title": "ImmichPlus Customizations",
-"immich_plus_show_header_image_subtitle": "Show the large animated header image in album, person and place views"
+"immich_plus_settings_title": "ImmichPlus Customizations"
 ```
 
 ### `i18n/de.json`
-Neue Keys:
+Neue Keys (Basis-Batch):
 ```json
 "asset_list_layout_settings_group_by_none": "Keine",
-"asset_list_settings_show_header_image": "Titelbild anzeigen",
-"asset_list_settings_show_sync_notifications": "Sync-Benachrichtigungen anzeigen",
-"asset_list_settings_show_sync_notifications_subtitle": "Benachrichtigungen anzeigen, wenn die Hintergrundsynchronisierung startet oder abgeschlossen ist",
 "immich_plus_disable_grouping_subtitle": "Alle Assets als flache Liste ohne Datumsgruppierung anzeigen",
 "immich_plus_disable_grouping_title": "Datumsgruppierung deaktivieren",
+"immich_plus_hide_header_image_subtitle": "Blendet das grosse animierte Titelbild in Alben-, Personen- und Ortsansichten aus.",
+"immich_plus_hide_header_image_title": "Titelbild ausblenden",
+"immich_plus_hide_sync_notifications_subtitle": "Unterdrückt Benachrichtigungen, wenn der Hintergrund-Sync startet, läuft oder fertig ist.",
+"immich_plus_hide_sync_notifications_title": "Sync-Benachrichtigungen ausblenden",
 "immich_plus_settings_subtitle": "Anpassungen speziell für ImmichPlus",
-"immich_plus_settings_title": "ImmichPlus Anpassungen",
-"immich_plus_show_header_image_subtitle": "Grosses animiertes Titelbild in Alben-, Personen- und Ortsansichten anzeigen"
+"immich_plus_settings_title": "ImmichPlus Anpassungen"
 ```
 
 ---
@@ -309,7 +306,7 @@ Neue Keys:
 Alle weiteren Immich+ Features greifen auf diese neuen StoreKeys/Settings zurück. Beim Re-Fork **zuerst** diese Schlüssel anlegen, dann die folgenden Abschnitte umsetzen.
 
 #### `mobile/lib/domain/models/store.model.dart`
-Neue Enum-Einträge im `StoreKey`-Enum (nach `showSyncNotifications<bool>._(1015)`):
+Neue Enum-Einträge im `StoreKey`-Enum (nach `hideSyncNotifications<bool>._(1015)`):
 ```dart
 // ImmichPlus customizations
 reverseTimeline<bool>._(1016),
@@ -412,19 +409,43 @@ In den Netzwerk-Einstellungen: Stift-Icon hinter der aktuellen Server-URL öffne
 
 ---
 
-## 13. Reverse-Sort (neueste Fotos unten rechts)
+## 13. Reverse-Sort (neueste Fotos unten rechts) + Auto-Scroll-to-bottom
 
-Neue Einstellung `reverseTimeline`. Wenn aktiv, werden Buckets und Assets im Hauptzeitstrahl umgekehrt dargestellt (ältester oben links → neuester unten rechts). Ohne SQL-Änderung: Wrapper-Pattern in `TimelineFactory.main()`.
+Einstellung `reverseTimeline`. Wenn aktiv, werden Buckets und Assets **in allen Timeline-Ansichten** umgekehrt dargestellt (ältester oben links → neuester unten rechts) und die Ansicht öffnet immer direkt ganz unten beim neuesten Asset — wie in der iOS Photos App.
 
 #### `mobile/lib/domain/services/timeline.service.dart`
-- In `main()`: wenn `Setting.reverseTimeline` aktiv ist, `_wrapReversed(base)` aufrufen (statt `base` direkt).
-- Neue statische Methode `_wrapReversed(TimelineQuery base)`:
+- `_wrapReversibleTimeline(TimelineQuery base)` Helper:
   - cached `totalAssets` wird aus dem `bucketSource`-Stream gelesen.
-  - `bucketSource()` → Liste rückwärts.
+  - `bucketSource()` → Liste rückwärts (nur wenn Setting aktiv).
   - `assetSource(offset, count)` → `translatedOffset = max(0, total - offset - count)`, Ergebnis rückwärts.
+  - Liest die Setting **pro Aufruf**, nicht beim Konstruieren, damit ein Toggle der Einstellung sofort greift.
+- **Jede** Factory-Methode wickelt ihr `TimelineQuery` mit `_wrapReversibleTimeline(...)` ein:
+  `main`, `localAlbum`, `remoteAlbum`, `remoteAssets`, `favorite`, `trash`, `archive`, `lockedFolder`, `video`, `image`, `place`, `person`, `fromAssets`, `fromAssetStream`, `fromAssetsWithBuckets`, `map`.
 - Import `dart:math as math` bereits vorhanden.
 
-Wirkung: Flat-Bucket-Timeline funktioniert, Scrubber zeigt Daten aufsteigend statt absteigend; innerhalb eines Tages sind Assets ältester → neuester sortiert.
+#### `mobile/lib/domain/models/events.model.dart`
+Neues Event:
+```dart
+class ScrollToBottomEvent extends Event {
+  const ScrollToBottomEvent();
+}
+```
+
+#### `mobile/lib/presentation/widgets/timeline/timeline.widget.dart`
+- Neues Feld `_pendingScrollToBottom` in `_SliverTimelineState`.
+- In `initState()`: `_pendingScrollToBottom = ref.read(settingsProvider).get(Setting.reverseTimeline);`
+  → fresher Mount einer Timeline (App-Start, Album öffnen, Archiv, Locked Folder, Place, Person, …) landet beim neuesten Asset.
+- Neue Methode `_maybeScrollToBottom()` — via `addPostFrameCallback` auf `maxScrollExtent` springen, Flag erst löschen wenn `max > 0`. Falls Layout noch nicht bereit, retried der nächste `TimelineReloadEvent`.
+- In `_onEvent`:
+  - `ScrollToBottomEvent` → `_pendingScrollToBottom = true; _maybeScrollToBottom();`
+  - `TimelineReloadEvent` → vor `setState()` ein `if (_pendingScrollToBottom) _maybeScrollToBottom();`
+
+#### `mobile/lib/presentation/pages/dev/main_timeline.page.dart`
+- Imports: `events.model.dart`, `event_stream.dart`.
+- Im Body `ref.listen(photosFilterProvider, …)` vor dem Rest: bei Filter-Wechsel und aktivem `reverseTimeline` wird `ScrollToBottomEvent` emittiert.
+  → Grund: Der Timeline-Widget-Tree kann über Filter-Wechsel hinweg gemountet bleiben, daher ist `initState` alleine zu wenig.
+
+Wirkung: Flat-Bucket-Timeline funktioniert, Scrubber zeigt Daten aufsteigend statt absteigend; innerhalb eines Tages sind Assets ältester → neuester sortiert. Jede neu geöffnete Ansicht beginnt unten beim neuesten Asset; jeder Filterwechsel im Photos-Tab springt ebenfalls an den unteren Rand.
 
 ---
 
@@ -591,65 +612,20 @@ Neue Methode `syncIosFavorites()` auf `BackgroundSyncManager`. Ruft `runInIsolat
 
 ---
 
-## 20. iOS Hidden-Album → Server Locked Folder (vollständige Implementierung)
+## 20. iOS Hidden-Album → Server Locked Folder
 
-Überträgt bei jedem Sync-Zyklus jedes Asset aus iOS' „Ausgeblendet"-Smart-Album in Immichs Locked Folder (serverseitig `visibility=locked`). Richtung nur iOS → Server.
+Das Feature ist wieder aktiv. Zielverhalten:
+- Wenn `syncIosHiddenToLockedFolder` **an** ist (Immich+-Default), liest der iOS-Sync das echte Hidden-Smart-Album mit `includeHiddenAssets`, markiert dieses Album automatisch als Backup-Quelle und lädt dessen Fotos/Videos über die normale Upload-Pipeline hoch.
+- Danach werden bereits hochgeladene Server-Assets, deren Checksumme zu einem Hidden-Asset passt, serverseitig in den Immich-Locked-Folder verschoben.
+- Wenn iOS den Hidden-Ordner noch per Face ID / Touch ID / Code schützt, liefert Apple für Apps weiterhin ein leeres Hidden-Album zurück. In diesem Fall zeigt `ImmichPlusSettings` direkt unter dem Toggle einen Hinweistext mit dem exakten Pfad `Einstellungen > Apps > Fotos > …`, damit der Schutz kurzzeitig deaktiviert, der Upload abgeschlossen und der Schutz danach wieder aktiviert werden kann.
+- Einen **öffentlichen** iOS-Direktlink genau auf diese Photos-Systemseite gibt es nicht; deshalb wird bewusst **kein** privater URL-Hack verwendet, sondern nur die Anleitung plus Refresh.
 
-#### `mobile/ios/Runner/Sync/HiddenAlbumPlugin.swift` *(NEU)*
-Swift-Plugin, das einen eigenen `FlutterMethodChannel` auf `app.immichplus/hidden_album` registriert. Einzige Methode:
-- `getHiddenAssetIds` → `[String]` — durchläuft `PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .any, …)`, filtert auf `assetCollectionSubtype.rawValue == 205` (= `smartAlbumHidden`, iOS-stabiler Raw-Value), fetchen mit `PHFetchOptions.includeHiddenAssets = true` und sammelt `localIdentifier`. Fallback: scannt User-Library mit `asset.isHidden`, falls das Hidden-Smart-Album auf bestimmten iOS-Versionen nicht auftaucht.
-
-Liegt im `Sync/` Ordner, wird damit automatisch vom bestehenden `PBXFileSystemSynchronizedRootGroup` erfasst — **kein pbxproj-Patch nötig**.
-
-#### `mobile/ios/Runner/AppDelegate.swift`
-- In `registerPlugins(with:controller:)` nach den anderen Pigeon-Registrierungen:
-  ```swift
-  HiddenAlbumPlugin.register(with: engine.registrar(forPlugin: "ImmichPlusHiddenAlbumPlugin")!)
-  ```
-
-#### `mobile/ios/Runner/Info.plist`
-Neue Key/Value-Paarung direkt nach `NSPhotoLibraryUsageDescription`:
-```xml
-<key>NSPhotoLibraryIncludeHiddenUsageDescription</key>
-<string>We need access to your hidden album to sync it to the Immich locked folder</string>
-```
-
-#### `mobile/lib/domain/services/ios_hidden_sync.service.dart` *(NEU)*
-Klasse `IosHiddenSyncService({required Drift db, required AssetApiRepository assetApi})`.
-- Channel-Konstante: `MethodChannel('app.immichplus/hidden_album')`.
-- `syncHiddenToLockedFolder()`:
-  1. Early-return wenn `!isIOS` oder `!syncIosHiddenToLockedFolder`.
-  2. `_fetchHiddenLocalIds()` ruft `channel.invokeMethod('getHiddenAssetIds')`.
-  3. `_resolveRemoteIdsForHidden(ids)` joint `local_asset_entity ↔ remote_asset_entity` via `checksum` und filtert `visibility != AssetVisibilityEnum.locked.index`. Batches à 500 IDs für SQLite-Variable-Limit.
-  4. `_assetApi.updateVisibility(remoteIds, AssetVisibilityEnum.locked)`.
-
-#### `mobile/lib/providers/infrastructure/sync.provider.dart`
-- Import `ios_hidden_sync.service.dart`.
-- Neuer Provider:
-  ```dart
-  final iosHiddenSyncServiceProvider = Provider(
-    (ref) => IosHiddenSyncService(
-      db: ref.watch(driftProvider),
-      assetApi: ref.watch(assetApiRepositoryProvider),
-    ),
-  );
-  ```
-
-#### `mobile/lib/domain/utils/background_sync.dart`
-- Neue Methode `syncIosHiddenToLockedFolder()` auf `BackgroundSyncManager` — ruft den Service isoliert via `runInIsolateGentle`; Fehler werden geschluckt (best-effort, wie Favorites-Sync).
-
-#### `mobile/lib/providers/app_life_cycle.provider.dart`
-- Nach dem `syncIosFavorites`-`_safeRun`:
-  ```dart
-  await _safeRun(backgroundManager.syncIosHiddenToLockedFolder(), "syncIosHiddenToLockedFolder");
-  ```
-
-#### Re-Apply bei neuem Fork
-Zusätzlich zu Abschnitt 8 (StoreKeys):
-1. Swift-Datei in `mobile/ios/Runner/Sync/` ablegen.
-2. `AppDelegate.swift` → Plugin registrieren.
-3. `Info.plist` → NSPhotoLibraryIncludeHiddenUsageDescription.
-4. Dart-Service + Provider + BackgroundSyncManager-Methode + `app_life_cycle.provider.dart`-Hook.
+Technisch relevante Änderungen:
+- `mobile/pigeon/native_sync_api.dart` + `MessagesImpl.swift`: neues `setIncludeHiddenAssets(bool)`; alle Album-/Asset-Fetches respektieren die Einstellung.
+- `mobile/ios/Runner/Sync/HiddenAlbumPlugin.swift`: liefert Hidden-Album-ID und aktuelle Hidden-Asset-IDs per MethodChannel.
+- `mobile/lib/domain/services/local_sync.service.dart`: synchronisiert das Hidden-Album bei aktivem Toggle in **jedem** lokalen iOS-Sync gezielt mit, damit ein temporär entsperrter Hidden-Ordner noch im selben Lauf als Backup-Quelle wirksam wird.
+- `mobile/lib/domain/services/ios_hidden_sync.service.dart`: verschiebt passende Remote-Assets nach dem Upload in den Locked Folder.
+- `mobile/lib/widgets/settings/immich_plus_settings/immich_plus_settings.dart`: Toggle wieder sichtbar; Leerzustand zeigt den Hinweis-Card an.
 
 ---
 
@@ -671,6 +647,50 @@ Neue Logging-Aufrufe sollen Asset-Kontext via `log.severe('Upload failed' + LogA
 
 ---
 
+## 21c. Alben mit gleichem Namen zusammenfassen
+
+Duplikate (gleicher Name, case-insensitive, getrimmt) werden überall in der UI zu einem Eintrag reduziert. Innerhalb einer Gruppe gilt das Album mit dem neuesten `updatedAt` als **primary** — das ist was angezeigt wird und wohin neue Fotos gehen wenn der User das Album auswählt.
+
+#### `mobile/lib/utils/album_group.dart` *(NEU)*
+- `class RemoteAlbumGroup { RemoteAlbum primary; List<RemoteAlbum> duplicates; Set<String> ids; int totalAssetCount; }`
+- `groupAlbumsByName(Iterable<RemoteAlbum>)` → `List<RemoteAlbumGroup>`. Normalisiert Namen mit `.trim().toLowerCase()`, innerhalb einer Gruppe nach `updatedAt desc` sortiert → Erstes = primary.
+
+#### `mobile/lib/widgets/common/photos_filter_title.dart`
+- Import `album_group.dart`.
+- `_openSheet`: statt `filterAlbums.map(…)` jetzt `groupAlbumsByName(…)` → Eine Zeile pro Namens-Gruppe. Tap speichert die **primary-ID** als Filter; `selected` wird true wenn der aktive Filter **irgendeine** ID aus der Gruppe matcht.
+- Bottom-Sheet: `isScrollControlled: true` + `DraggableScrollableSheet(initialChildSize: 0.55, maxChildSize: 0.9)` + `ListView(controller: scrollController, …)`. Fix für Scrollen bei > 4 konfigurierten Alben.
+
+#### `mobile/lib/widgets/settings/immich_plus_settings/immich_plus_settings.dart`
+- Import `album_group.dart`.
+- `_PhotosFilterAlbumsSection`: gruppiert per `groupAlbumsByName`, filtert Gruppen mit `totalAssetCount == 0` weg, sortiert alphabetisch nach primary-Name.
+- Eine Checkbox pro Gruppe; `value = group.ids.any(selected.contains)`; onChanged speichert/entfernt **alle** IDs der Gruppe in einem Schritt. Subtitle: `"<Owner> · <totalCount>"` + ggf. `"+<n>"` wenn Duplikate.
+
+#### `mobile/lib/presentation/widgets/album/album_selector.widget.dart`
+- `sortAlbums()`: nach dem normalen Sort zusätzlich pro `name.trim().toLowerCase()` deduplizieren — das erste Album pro Gruppe bleibt, die übrigen fallen raus. Unter dem Default `lastModified desc` landet damit automatisch das zuletzt aktualisierte Duplikat als einziger sichtbarer Eintrag. Add-to-Album-Flows rufen dann `addAssets(primary.id, …)`, sodass neue Fotos immer ins selbe (primäre) Album gehen.
+
+---
+
+## 21b. Album-Default-Sortierung + leere Alben ausfiltern
+
+Default-Sortierung der Alben-Übersicht auf `lastModified desc` geändert — das Album, zu dem zuletzt ein Asset hinzugefügt wurde (Server bumped `album.updatedAt`), erscheint ganz oben. Leere Alben (`assetCount == 0`) werden ausgeblendet; außerdem zeigt die Filter-Auswahl pro Album Owner + Asset-Count, damit gleichnamige Alben unterscheidbar sind.
+
+#### `mobile/lib/services/app_settings.service.dart`
+- `selectedAlbumSortOrder`: default `2` (mostRecent) → `3` (**lastModified**, `AlbumSortMode.lastModified.storeIndex`).
+- `selectedAlbumSortReverse`: default `true` → **`false`**.
+  `AlbumSortMode.lastModified.defaultOrder = SortOrder.desc`; mit `isReverse=false` bleibt die effektive Order `desc` → neueste Albumänderung oben.
+
+#### `mobile/lib/presentation/widgets/album/album_selector.widget.dart`
+- Initial state `sort = AlbumSort(mode: AlbumSortMode.lastModified, isReverse: false)`.
+- `sortAlbums()`: Quelle wird auf `albums.where((a) => a.assetCount > 0).toList()` reduziert, bevor sie an `sortAlbums` (Service) übergeben wird. Leere Alben verschwinden aus der Liste (sie kommen aus Server-Sync, hätten unter `lastModified desc` alle dasselbe Timestamp wie das letzte Sync-Ereignis und würden die Ansicht zuschütten).
+
+#### `mobile/lib/widgets/settings/immich_plus_settings/immich_plus_settings.dart`
+- `_PhotosFilterAlbumsSection.build()`:
+  - Filtert `assetCount > 0` weg.
+  - Sortiert nach `name` (case-insensitive), bei Gleichstand nach `ownerName`, sodass gleichnamige Alben nebeneinander erscheinen.
+  - `CheckboxListTile.subtitle` zeigt `"<ownerName> · <assetCount>"`, damit Duplikate unterscheidbar sind (z.B. zwei Alben mit dem Namen "Sommer" — eins eigen, eins geteilt).
+
+---
+
 ## 22. Immich+ Settings-Seite (Überarbeitung)
 
 Alle Immich+ Toggles sind jetzt auf einer Seite gruppiert nach „Darstellung" und „Datensynchronisation", jeweils mit Untertitel-Erklärung. Zusätzlich Mehrfach-Auswahl aller Remote-Alben, die im Filter-Menü (Abschnitt 18) erscheinen sollen.
@@ -678,7 +698,7 @@ Alle Immich+ Toggles sind jetzt auf einer Seite gruppiert nach „Darstellung" u
 #### `mobile/lib/widgets/settings/immich_plus_settings/immich_plus_settings.dart`
 Komplett neu geschrieben. Struktur:
 - `SettingGroupTitle "Darstellung"` → 10 Switches (`showHeaderImage`, `hideAssetBadges`, `hideMemoriesLane`, `showMemoriesFolder`, `scrollRestoreOnViewerClose`, `placesDirectToMap`, `reverseTimeline`, `showSyncNotifications`, `disable grouping`, `logsShowAssetDetail`).
-- `SettingGroupTitle "Datensynchronisation"` → `syncIosFavorites`, `syncIosHiddenToLockedFolder`.
+- `SettingGroupTitle "Datensynchronisation"` → `syncIosFavorites`.
 - Abschließend die neue `_PhotosFilterAlbumsSection` — liest `remoteAlbumProvider` und rendert eine Checkbox-Liste; Selection wird als comma-separated String in `StoreKey.photosFilterAlbumIds` persistiert.
 
 Nach Änderungen werden `appSettingsServiceProvider` und `settingsProvider` invalidiert.
@@ -718,8 +738,6 @@ Siehe Abschnitt 23 für die komplette Liste. Deutsch + Englisch vollständig.
 "immich_plus_show_memories_folder_title": "Memories folder in Albums",
 "immich_plus_sync_ios_favorites_subtitle": "Copy the Favorite flag from the iOS Photos app to the Immich server. iOS → server only.",
 "immich_plus_sync_ios_favorites_title": "Sync iOS favorites to server",
-"immich_plus_sync_ios_hidden_subtitle": "Push the contents of iOS' Hidden album into the Immich Locked Folder (requires iOS native changes).",
-"immich_plus_sync_ios_hidden_title": "Sync iOS Hidden → Locked Folder",
 
 "memories_folder_asset_count": "{count, plural, one {# item} other {# items}}",
 "memories_folder_subtitle": "{count, plural, one {# memory} other {# memories}}",
@@ -762,8 +780,6 @@ Gleiche Keys mit deutschen Übersetzungen:
 "immich_plus_show_memories_folder_title": "Rückblicke-Ordner in Alben",
 "immich_plus_sync_ios_favorites_subtitle": "Überträgt Favoriten-Markierungen aus der iOS Fotos-App auf den Immich-Server. Nur iOS → Server.",
 "immich_plus_sync_ios_favorites_title": "iOS-Favoriten zum Server synchronisieren",
-"immich_plus_sync_ios_hidden_subtitle": "Überträgt die Inhalte des iOS-Albums „Ausgeblendet\" in den Immich-Locked-Folder (benötigt iOS-native Ergänzungen).",
-"immich_plus_sync_ios_hidden_title": "iOS-Ausgeblendet → Locked Folder",
 
 "memories_folder_asset_count": "{count, plural, one {# Element} other {# Elemente}}",
 "memories_folder_subtitle": "{count, plural, one {# Rückblick} other {# Rückblicke}}",
@@ -795,7 +811,6 @@ Gleiche Keys mit deutschen Übersetzungen:
 | Timeline umkehren | ImmichPlus Anpassungen → "Sortierung umkehren" | An |
 | Log-Detail mit Asset-Info | ImmichPlus Anpassungen → "Log-Detail mit Asset-Info" | An |
 | iOS-Favoriten → Server | ImmichPlus Anpassungen → "iOS-Favoriten zum Server synchronisieren" | An |
-| iOS-Hidden → Locked Folder | ImmichPlus Anpassungen → "iOS-Ausgeblendet → Locked Folder" (vollständig implementiert via HiddenAlbumPlugin) | An |
 | Eigene Alben im Filter-Menü | ImmichPlus Anpassungen → Checkbox-Liste unten | Leere Auswahl |
 | Delete ohne Bestätigung | Nicht in Settings (Always-on) | An |
 | Video-Zeit-Overlay ohne führende Nullen | Nicht in Settings (Always-on) | An |
@@ -818,15 +833,16 @@ Bei einem erneuten Fork von Upstream-Immich in dieser Reihenfolge vorgehen:
 7. **Abschnitt 10**: Video-Format — `DurationFormatExtension.format()` umschreiben.
 8. **Abschnitt 11**: `TapToTopOverlay` anlegen und in beide Tab-Scaffolds einfügen.
 9. **Abschnitt 12**: `ChangeServerUrlDialog` anlegen, in `networking_settings.dart` verdrahten.
-10. **Abschnitt 13**: `_wrapReversed()` in `TimelineFactory.main()`.
+10. **Abschnitt 13**: `_wrapReversibleTimeline()` auf *alle* `TimelineFactory`-Methoden anwenden; `ScrollToBottomEvent` definieren; `_pendingScrollToBottom` + `_maybeScrollToBottom()` in `_SliverTimelineState`; Filter-Listener in `MainTimelinePage`.
 11. **Abschnitt 14**: Badge-Sichtbarkeit in beiden Thumbnail-Widgets, Icons in Viewer-Top-Bar.
 12. **Abschnitt 15**: Memories ausblenden in Main-Timeline + Photos-Page; `RueckblickeFolder` in `drift_album.page.dart` einfügen.
 13. **Abschnitt 16**: `RestoreAssetIndexEvent` definieren, im Viewer-`dispose` emittieren, in Timeline-`_onEvent` konsumieren.
 14. **Abschnitt 17**: `_PlacesCollectionCard` anpassen + `onMapMoved` in `map.widget.dart`.
 15. **Abschnitt 18**: Filter-Provider, `PhotosFilterTitle`, `image()`-Factory + ProviderScope in `MainTimelinePage`.
 16. **Abschnitt 19**: `IosFavoriteSyncService` + Provider + BackgroundSyncManager-Methode + Hook in `app_life_cycle.provider.dart`.
-17. **Abschnitt 20**: `HiddenAlbumPlugin.swift` in `mobile/ios/Runner/Sync/`, AppDelegate-Registrierung, Info.plist-Eintrag, `IosHiddenSyncService` + Provider + BackgroundSyncManager-Methode + Hook in `app_life_cycle.provider.dart`.
+17. **Abschnitt 20**: HiddenAlbumPlugin registrieren, `syncIosHiddenToLockedFolder` wieder verdrahten, `setIncludeHiddenAssets(bool)` in Pigeon/Swift ergänzen, Hidden-Album im lokalen Sync immer gezielt mitziehen und den Leerzustand in `ImmichPlusSettings` anzeigen.
 18. **Abschnitt 21**: `LogAssetContext` anlegen, Log-Detailseite erweitern.
+18b. **Abschnitt 21b**: `selectedAlbumSortOrder`=3 und `selectedAlbumSortReverse`=false in `app_settings.service.dart`; Initialer `AlbumSort` in `album_selector.widget.dart` auf `isReverse: false`.
 19. **Abschnitt 22**: `ImmichPlusSettings`-Widget komplett neu schreiben.
 20. **Abschnitt 6 + 23**: i18n-Keys in `en.json` + `de.json` alphabetisch einsortieren.
 21. **iOS build**: `cd mobile/ios && pod install` um `Podfile.lock` zu regenerieren.

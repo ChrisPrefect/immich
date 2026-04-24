@@ -21,7 +21,7 @@ class NotificationSetting extends HookConsumerWidget {
     final sliderValue = useAppSettingsState(AppSettingsEnum.uploadErrorNotificationGracePeriod);
     final totalProgressValue = useAppSettingsState(AppSettingsEnum.backgroundBackupTotalProgress);
     final singleProgressValue = useAppSettingsState(AppSettingsEnum.backgroundBackupSingleProgress);
-    final showSyncNotifications = useAppSettingsState(AppSettingsEnum.showSyncNotifications);
+    final hideSyncNotifications = useAppSettingsState(AppSettingsEnum.hideSyncNotifications);
 
     final hasPermission = permissionService == PermissionStatus.granted;
 
@@ -63,9 +63,9 @@ class NotificationSetting extends HookConsumerWidget {
         ),
       SettingsSwitchListTile(
         enabled: hasPermission,
-        valueNotifier: showSyncNotifications,
-        title: 'asset_list_settings_show_sync_notifications'.tr(),
-        subtitle: 'asset_list_settings_show_sync_notifications_subtitle'.tr(),
+        valueNotifier: hideSyncNotifications,
+        title: 'immich_plus_hide_sync_notifications_title'.tr(),
+        subtitle: 'immich_plus_hide_sync_notifications_subtitle'.tr(),
       ),
       SettingsSwitchListTile(
         enabled: hasPermission,

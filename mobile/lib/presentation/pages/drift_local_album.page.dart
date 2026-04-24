@@ -10,6 +10,7 @@ import 'package:immich_mobile/presentation/widgets/images/local_album_thumbnail.
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/common/local_album_sliver_app_bar.dart';
+import 'package:immich_mobile/widgets/common/tap_to_top_overlay.dart';
 
 @RoutePage()
 class DriftLocalAlbumsPage extends StatelessWidget {
@@ -17,7 +18,9 @@ class DriftLocalAlbumsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: CustomScrollView(slivers: [LocalAlbumsSliverAppBar(), _AlbumList()]));
+    return const Scaffold(
+      body: TapToTopOverlay(child: CustomScrollView(slivers: [LocalAlbumsSliverAppBar(), _AlbumList()])),
+    );
   }
 }
 

@@ -426,6 +426,7 @@ class MessagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable {
 
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol NativeSyncApi {
+  func setIncludeHiddenAssets(includeHiddenAssets: Bool) throws
   func shouldFullSync() throws -> Bool
   func getMediaChanges() throws -> SyncDelta
   func checkpointSync() throws
@@ -451,6 +452,21 @@ class NativeSyncApiSetup {
     #else
       let taskQueue: FlutterTaskQueue? = nil
     #endif
+    let setIncludeHiddenAssetsChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.immich_mobile.NativeSyncApi.setIncludeHiddenAssets\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      setIncludeHiddenAssetsChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let includeHiddenAssetsArg = args[0] as! Bool
+        do {
+          try api.setIncludeHiddenAssets(includeHiddenAssets: includeHiddenAssetsArg)
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      setIncludeHiddenAssetsChannel.setMessageHandler(nil)
+    }
     let shouldFullSyncChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.immich_mobile.NativeSyncApi.shouldFullSync\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       shouldFullSyncChannel.setMessageHandler { _, reply in

@@ -8,6 +8,7 @@ import 'package:immich_mobile/presentation/widgets/album/album_selector.widget.d
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/common/immich_sliver_app_bar.dart';
+import 'package:immich_mobile/widgets/common/tap_to_top_overlay.dart';
 import 'package:immich_mobile/widgets/memories/rueckblicke_folder.dart';
 
 @RoutePage()
@@ -60,23 +61,28 @@ class _DriftAlbumsPageState extends ConsumerState<DriftAlbumsPage> {
       ],
     );
 
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      edgeOffset: 100,
-      child: showScrollbar
-          ? RawScrollbar(
-              controller: _scrollController,
-              interactive: true,
-              thickness: 8,
-              radius: const Radius.circular(4),
-              thumbVisibility: false,
-              thumbColor: context.colorScheme.primary,
-              crossAxisMargin: 4,
-              mainAxisMargin: 60,
-              minThumbLength: 40,
-              child: scrollView,
-            )
-          : scrollView,
+    return PrimaryScrollController(
+      controller: _scrollController,
+      child: TapToTopOverlay(
+        child: RefreshIndicator(
+          onRefresh: onRefresh,
+          edgeOffset: 100,
+          child: showScrollbar
+              ? RawScrollbar(
+                  controller: _scrollController,
+                  interactive: true,
+                  thickness: 8,
+                  radius: const Radius.circular(4),
+                  thumbVisibility: false,
+                  thumbColor: context.colorScheme.primary,
+                  crossAxisMargin: 4,
+                  mainAxisMargin: 60,
+                  minThumbLength: 40,
+                  child: scrollView,
+                )
+              : scrollView,
+        ),
+      ),
     );
   }
 }

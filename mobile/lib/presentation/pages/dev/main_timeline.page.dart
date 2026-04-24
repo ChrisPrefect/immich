@@ -1,7 +1,9 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/domain/models/events.model.dart';
 import 'package:immich_mobile/domain/models/setting.model.dart';
+import 'package:immich_mobile/domain/utils/event_stream.dart';
 import 'package:immich_mobile/presentation/widgets/memory/memory_lane.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/timeline.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
@@ -21,6 +23,17 @@ class MainTimelinePage extends ConsumerWidget {
     final hideMemoriesLane = ref.watch(settingsProvider.select((s) => s.get(Setting.hideMemoriesLane)));
     final hasMemories = ref.watch(driftMemoryFutureProvider.select((state) => state.value?.isNotEmpty ?? false));
     final filter = ref.watch(photosFilterProvider);
+
+    // ImmichPlus: every filter switch re-opens the view, so when reverse-order
+    // is on, jump back down to the newest asset (like iOS Photos). The
+    // Timeline widget may stay mounted across filter changes (the
+    // `ProviderScope` override only replaces the inner service), so we
+    // explicitly poke it via an event instead of relying on initState.
+    ref.listen(photosFilterProvider, (prev, next) {
+      if (prev == next) return;
+      if (!ref.read(settingsProvider).get(Setting.reverseTimeline)) return;
+      EventStream.shared.emit(const ScrollToBottomEvent());
+    });
 
     final appBar = const ImmichSliverAppBar(
       floating: true,

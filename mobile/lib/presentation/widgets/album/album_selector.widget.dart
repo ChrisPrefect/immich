@@ -51,7 +51,8 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
   List<RemoteAlbum> shownAlbums = [];
 
   AlbumFilter filter = AlbumFilter(query: "", mode: QuickFilterMode.all);
-  AlbumSort sort = AlbumSort(mode: AlbumSortMode.lastModified, isReverse: true);
+  // ImmichPlus default: lastModified + desc (isReverse=false → effectiveOrder=desc).
+  AlbumSort sort = AlbumSort(mode: AlbumSortMode.lastModified, isReverse: false);
 
   @override
   void initState() {
@@ -135,16 +136,28 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
   }
 
   Future<void> sortAlbums() async {
+    // ImmichPlus: skip empty albums — they carry no "last added photo" signal
+    // and just clutter the list under `lastModified desc`.
+    final nonEmpty = ref.read(remoteAlbumProvider).albums.where((a) => a.assetCount > 0).toList();
     final sorted = await ref
         .read(remoteAlbumProvider.notifier)
-        .sortAlbums(ref.read(remoteAlbumProvider).albums, sort.mode, isReverse: sort.isReverse);
+        .sortAlbums(nonEmpty, sort.mode, isReverse: sort.isReverse);
+
+    // ImmichPlus: collapse same-named albums — under `lastModified desc` the
+    // newest per group wins (is listed first in `sorted`), which becomes the
+    // "primary" album that new photos get added to.
+    final seen = <String>{};
+    final unique = <RemoteAlbum>[];
+    for (final album in sorted) {
+      if (seen.add(album.name.trim().toLowerCase())) unique.add(album);
+    }
 
     if (!mounted) {
       return;
     }
 
     setState(() {
-      sortedAlbums = sorted;
+      sortedAlbums = unique;
     });
 
     // we need to re-filter the albums after sorting

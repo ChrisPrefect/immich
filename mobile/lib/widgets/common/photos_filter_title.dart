@@ -7,6 +7,7 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/providers/timeline/photos_filter.provider.dart';
+import 'package:immich_mobile/utils/album_group.dart';
 
 /// Clickable label in the Photos tab header showing the active filter
 /// (e.g. "Alle", "Favoriten", an album name). Tapping opens a bottom sheet
@@ -60,65 +61,79 @@ class PhotosFilterTitle extends ConsumerWidget {
   void _openSheet(BuildContext context, WidgetRef ref) {
     final albums = ref.read(remoteAlbumProvider).albums;
     final configuredIds = (Store.tryGet(StoreKey.photosFilterAlbumIds) ?? '').split(',').where((s) => s.isNotEmpty).toSet();
-    final filterAlbums = albums.where((a) => configuredIds.contains(a.id)).toList();
+    // ImmichPlus: collapse duplicates that share a (case-insensitive) name
+    // into one entry — tapping uses the "primary" id (the album with the
+    // newest updatedAt within the group).
+    final filterAlbums = groupAlbumsByName(albums.where((a) => configuredIds.contains(a.id)));
     final current = ref.read(photosFilterProvider);
 
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _FilterRow(
-              icon: Icons.photo_library_outlined,
-              label: 'photos_filter_all'.tr(),
-              selected: current.mode == PhotosFilterMode.all,
-              onTap: () {
-                ref.read(photosFilterProvider.notifier).setMode(PhotosFilterMode.all);
-                Navigator.of(ctx).pop();
-              },
-            ),
-            _FilterRow(
-              icon: Icons.favorite_outline_rounded,
-              label: 'photos_filter_favorites'.tr(),
-              selected: current.mode == PhotosFilterMode.favorites,
-              onTap: () {
-                ref.read(photosFilterProvider.notifier).setMode(PhotosFilterMode.favorites);
-                Navigator.of(ctx).pop();
-              },
-            ),
-            _FilterRow(
-              icon: Icons.play_circle_outline_rounded,
-              label: 'photos_filter_videos'.tr(),
-              selected: current.mode == PhotosFilterMode.videos,
-              onTap: () {
-                ref.read(photosFilterProvider.notifier).setMode(PhotosFilterMode.videos);
-                Navigator.of(ctx).pop();
-              },
-            ),
-            _FilterRow(
-              icon: Icons.image_outlined,
-              label: 'photos_filter_images'.tr(),
-              selected: current.mode == PhotosFilterMode.images,
-              onTap: () {
-                ref.read(photosFilterProvider.notifier).setMode(PhotosFilterMode.images);
-                Navigator.of(ctx).pop();
-              },
-            ),
-            if (filterAlbums.isNotEmpty) const Divider(),
-            ...filterAlbums.map(
-              (album) => _FilterRow(
-                icon: Icons.photo_album_outlined,
-                label: album.name,
-                selected: current.mode == PhotosFilterMode.album && current.albumId == album.id,
+      // Allow the sheet to grow past the default half-screen cap; the
+      // DraggableScrollableSheet handles overflow + scroll gesture so long
+      // lists of filter albums don't get cut off.
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.55,
+        minChildSize: 0.25,
+        maxChildSize: 0.9,
+        builder: (_, scrollController) => SafeArea(
+          child: ListView(
+            controller: scrollController,
+            children: [
+              _FilterRow(
+                icon: Icons.photo_library_outlined,
+                label: 'photos_filter_all'.tr(),
+                selected: current.mode == PhotosFilterMode.all,
                 onTap: () {
-                  ref.read(photosFilterProvider.notifier).setAlbum(album.id);
+                  ref.read(photosFilterProvider.notifier).setMode(PhotosFilterMode.all);
                   Navigator.of(ctx).pop();
                 },
               ),
-            ),
-          ],
+              _FilterRow(
+                icon: Icons.favorite_outline_rounded,
+                label: 'photos_filter_favorites'.tr(),
+                selected: current.mode == PhotosFilterMode.favorites,
+                onTap: () {
+                  ref.read(photosFilterProvider.notifier).setMode(PhotosFilterMode.favorites);
+                  Navigator.of(ctx).pop();
+                },
+              ),
+              _FilterRow(
+                icon: Icons.play_circle_outline_rounded,
+                label: 'photos_filter_videos'.tr(),
+                selected: current.mode == PhotosFilterMode.videos,
+                onTap: () {
+                  ref.read(photosFilterProvider.notifier).setMode(PhotosFilterMode.videos);
+                  Navigator.of(ctx).pop();
+                },
+              ),
+              _FilterRow(
+                icon: Icons.image_outlined,
+                label: 'photos_filter_images'.tr(),
+                selected: current.mode == PhotosFilterMode.images,
+                onTap: () {
+                  ref.read(photosFilterProvider.notifier).setMode(PhotosFilterMode.images);
+                  Navigator.of(ctx).pop();
+                },
+              ),
+              if (filterAlbums.isNotEmpty) const Divider(),
+              ...filterAlbums.map(
+                (group) => _FilterRow(
+                  icon: Icons.photo_album_outlined,
+                  label: group.primary.name,
+                  selected:
+                      current.mode == PhotosFilterMode.album && group.ids.contains(current.albumId),
+                  onTap: () {
+                    ref.read(photosFilterProvider.notifier).setAlbum(group.primary.id);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

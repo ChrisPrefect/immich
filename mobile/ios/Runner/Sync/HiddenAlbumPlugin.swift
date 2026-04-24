@@ -1,16 +1,13 @@
 import Flutter
 import Photos
-import UIKit
 
-/// ImmichPlus: exposes iOS' hidden smart album to Dart via a MethodChannel so
-/// the Hidden → Locked Folder sync can list assets that Apple otherwise hides
-/// from the regular PHFetchOptions pipeline. The matching
-/// `NSPhotoLibraryIncludeHiddenUsageDescription` entitlement is in Info.plist.
+/// Exposes iOS' Hidden smart album to Dart so ImmichPlus can:
+/// 1. auto-select the real Hidden album for backup, and
+/// 2. move matching uploaded assets into Immich's Locked Folder.
 ///
-/// Channel: `app.immichplus/hidden_album`
-/// Method:  `getHiddenAssetIds` → [String]  (PHAsset.localIdentifier of every
-///           asset in `.smartAlbumUserLibrary ∪ .smartAlbumHidden` that is
-///           marked hidden)
+/// Apple only returns assets here while the system Hidden-album protection is
+/// disabled. If protection stays on, the album remains readable as metadata but
+/// asset fetches come back empty.
 class HiddenAlbumPlugin {
   static let channelName = "app.immichplus/hidden_album"
 
@@ -19,76 +16,63 @@ class HiddenAlbumPlugin {
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: channelName, binaryMessenger: registrar.messenger())
     channel.setMethodCallHandler { call, result in
-      switch call.method {
-      case "getHiddenAssetIds":
-        // PHAsset queries can be slow on devices with tens of thousands of
-        // photos. Dispatch off the platform main thread so iOS UI stays
-        // responsive during the hidden-album enumeration.
-        HiddenAlbumPlugin.workQueue.async {
-          let ids = HiddenAlbumPlugin.hiddenAssetIds()
-          DispatchQueue.main.async { result(ids) }
+      HiddenAlbumPlugin.workQueue.async {
+        let value: Any?
+        switch call.method {
+        case "getHiddenAlbumId":
+          value = HiddenAlbumPlugin.hiddenAlbum()?.localIdentifier
+        case "getHiddenAssetIds":
+          value = HiddenAlbumPlugin.hiddenAssetIds()
+        default:
+          DispatchQueue.main.async { result(FlutterMethodNotImplemented) }
+          return
         }
-      default:
-        result(FlutterMethodNotImplemented)
+
+        DispatchQueue.main.async {
+          result(value)
+        }
       }
     }
   }
 
-  /// Returns the localIdentifier of every PHAsset in the user's hidden smart
-  /// album. Requires photo-library authorization + the hidden-usage
-  /// description in Info.plist. On older iOS versions or if permission is
-  /// missing, returns an empty list.
-  static func hiddenAssetIds() -> [String] {
+  private static func hiddenAlbum() -> PHAssetCollection? {
+    guard photoLibraryAuthorized() else {
+      return nil
+    }
+
+    let collections = PHAssetCollection.fetchAssetCollections(
+      with: .smartAlbum,
+      subtype: .smartAlbumAllHidden,
+      options: nil
+    )
+
+    return collections.firstObject
+  }
+
+  private static func hiddenAssetIds() -> [String] {
+    guard let album = hiddenAlbum() else {
+      return []
+    }
+
+    let options = PHFetchOptions()
+    options.includeHiddenAssets = true
+
+    let assets = PHAsset.fetchAssets(in: album, options: options)
+    var ids: [String] = []
+    ids.reserveCapacity(assets.count)
+    assets.enumerateObjects { asset, _, _ in
+      ids.append(asset.localIdentifier)
+    }
+    return ids
+  }
+
+  private static func photoLibraryAuthorized() -> Bool {
     let status: PHAuthorizationStatus
     if #available(iOS 14, *) {
       status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
     } else {
       status = PHPhotoLibrary.authorizationStatus()
     }
-    guard status == .authorized else { return [] }
-
-    let albums = PHAssetCollection.fetchAssetCollections(
-      with: .smartAlbum,
-      subtype: .smartAlbumUserLibrary,
-      options: nil
-    )
-    // Combine all hidden smart albums (user library + system hidden) to be
-    // robust against iOS version differences.
-    let hiddenAlbums = PHAssetCollection.fetchAssetCollections(
-      with: .smartAlbum,
-      subtype: .any,
-      options: nil
-    )
-
-    var ids: [String] = []
-    let options = PHFetchOptions()
-    options.includeHiddenAssets = true
-
-    // Apple documents `PHAssetCollectionSubtype.smartAlbumHidden` with rawValue
-    // 205 on all supported iOS versions. Use the raw value for forward-
-    // compatibility with SDK versions where the symbolic case is missing.
-    let hiddenSubtypeRaw = 205
-    hiddenAlbums.enumerateObjects { collection, _, _ in
-      guard collection.assetCollectionSubtype.rawValue == hiddenSubtypeRaw else { return }
-      let assets = PHAsset.fetchAssets(in: collection, options: options)
-      assets.enumerateObjects { asset, _, _ in
-        ids.append(asset.localIdentifier)
-      }
-    }
-
-    // Fallback: scan user library for assets with isHidden = true (some iOS
-    // versions don't expose the smart album).
-    if ids.isEmpty {
-      albums.enumerateObjects { collection, _, _ in
-        let all = PHAsset.fetchAssets(in: collection, options: options)
-        all.enumerateObjects { asset, _, _ in
-          if asset.isHidden {
-            ids.append(asset.localIdentifier)
-          }
-        }
-      }
-    }
-
-    return ids
+    return status == .authorized
   }
 }

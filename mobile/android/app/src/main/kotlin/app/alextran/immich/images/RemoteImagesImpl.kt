@@ -76,6 +76,16 @@ class RemoteImagesImpl(context: Context) : RemoteImageApi {
     requestMap.remove(requestId)?.cancellationSignal?.cancel()
   }
 
+  override fun getCacheSize(callback: (Result<Long>) -> Unit) {
+    CoroutineScope(Dispatchers.IO).launch {
+      try {
+        ImageFetcherManager.getCacheSize(callback)
+      } catch (e: Exception) {
+        callback(Result.failure(e))
+      }
+    }
+  }
+
   override fun clearCache(callback: (Result<Long>) -> Unit) {
     CoroutineScope(Dispatchers.IO).launch {
       try {
@@ -116,6 +126,10 @@ private object ImageFetcherManager {
     fetcher.clearCache(onCleared)
   }
 
+  fun getCacheSize(onSize: (Result<Long>) -> Unit) {
+    fetcher.getCacheSize(onSize)
+  }
+
   private fun invalidate() {
     synchronized(this) {
       val oldFetcher = fetcher
@@ -142,6 +156,8 @@ private sealed interface ImageFetcher {
   )
 
   fun drain()
+
+  fun getCacheSize(onSize: (Result<Long>) -> Unit)
 
   fun clearCache(onCleared: (Result<Long>) -> Unit)
 }
@@ -220,6 +236,10 @@ private class CronetImageFetcher : ImageFetcher {
       onCacheCleared = onCleared
     }
     drain()
+  }
+
+  override fun getCacheSize(onSize: (Result<Long>) -> Unit) {
+    onSize(Result.success(directorySize(HttpClientManager.cronetStoragePath)))
   }
 
   private class FetchCallback(
@@ -418,4 +438,20 @@ private class OkHttpImageFetcher private constructor(
       onCleared(Result.failure(e))
     }
   }
+
+  override fun getCacheSize(onSize: (Result<Long>) -> Unit) {
+    try {
+      onSize(Result.success(client.cache!!.size()))
+    } catch (e: Exception) {
+      onSize(Result.failure(e))
+    }
+  }
+}
+
+private fun directorySize(directory: File): Long {
+  if (!directory.exists()) return 0
+
+  return directory.walkTopDown()
+    .filter { it.isFile }
+    .sumOf { it.length() }
 }

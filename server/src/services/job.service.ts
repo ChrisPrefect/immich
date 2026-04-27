@@ -105,6 +105,7 @@ export class JobService extends BaseService {
             asset: {
               id: asset.id,
               ownerId: asset.ownerId,
+              deviceId: asset.deviceId,
               originalFileName: asset.originalFileName,
               thumbhash: asset.thumbhash ? hexOrBufferToBase64(asset.thumbhash) : null,
               checksum: hexOrBufferToBase64(asset.checksum),
@@ -161,6 +162,7 @@ export class JobService extends BaseService {
               asset: {
                 id: asset.id,
                 ownerId: asset.ownerId,
+                deviceId: asset.deviceId,
                 originalFileName: asset.originalFileName,
                 thumbhash: asset.thumbhash ? hexOrBufferToBase64(asset.thumbhash) : null,
                 checksum: hexOrBufferToBase64(asset.checksum),
@@ -181,6 +183,7 @@ export class JobService extends BaseService {
               },
               exif: {
                 assetId: exif.assetId,
+                tags: exif.tags,
                 description: exif.description,
                 exifImageWidth: exif.exifImageWidth,
                 exifImageHeight: exif.exifImageHeight,

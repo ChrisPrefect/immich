@@ -23,7 +23,21 @@ class ShareService {
     return await shareAssets([asset], context);
   }
 
+  Future<void> _cleanupTempFiles(List<File> tempFiles) async {
+    await Future.wait(
+      tempFiles.map((file) async {
+        try {
+          await file.delete();
+        } catch (error) {
+          _log.warning("Failed to delete temporary share file: ${file.path}", error);
+        }
+      }),
+    );
+  }
+
   Future<bool> shareAssets(List<Asset> assets, BuildContext context) async {
+    final tempFiles = <File>[];
+
     try {
       final downloadedXFiles = <XFile>[];
 
@@ -32,11 +46,15 @@ class ShareService {
           // Prefer local assets to share
           File? f = await asset.local!.originFile;
           downloadedXFiles.add(XFile(f!.path));
+          if (Platform.isIOS) {
+            tempFiles.add(f);
+          }
         } else if (asset.isRemote) {
           // Download remote asset otherwise
           final tempDir = await getTemporaryDirectory();
           final fileName = asset.fileName;
           final tempFile = await File('${tempDir.path}/$fileName').create();
+          tempFiles.add(tempFile);
           final res = await _apiService.assetsApi.downloadAssetWithHttpInfo(asset.remoteId!);
 
           if (res.statusCode != 200) {
@@ -51,6 +69,7 @@ class ShareService {
 
       if (downloadedXFiles.isEmpty) {
         _log.warning("No asset can be retrieved for share");
+        unawaited(_cleanupTempFiles(tempFiles));
         return false;
       }
 
@@ -63,10 +82,11 @@ class ShareService {
         Share.shareXFiles(
           downloadedXFiles,
           sharePositionOrigin: Rect.fromPoints(Offset.zero, Offset(size.width / 3, size.height)),
-        ),
+        ).whenComplete(() => _cleanupTempFiles(tempFiles)),
       );
       return true;
     } catch (error) {
+      unawaited(_cleanupTempFiles(tempFiles));
       _log.severe("Share failed", error);
     }
     return false;

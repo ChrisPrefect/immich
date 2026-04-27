@@ -128,5 +128,14 @@
     "library_remove_exclusion_pattern_prompt": "Bilst du sicher, dass du dieses Ausschlussmuster entfernen möchtest?",
     "library_remove_folder_prompt": "Bist du sicher, dass du diesen Import-Ordner entfernen möchtest?",
     "library_scanning": "Regelmässiges Scannen"
-  }
+  },
+  "app_cache_settings_calculating": "Cache-Grösse wird berechnet...",
+  "app_cache_settings_clear_button": "App-Cache leeren",
+  "app_cache_settings_clear_error": "App-Cache konnte nicht geleert werden",
+  "app_cache_settings_clear_success": "{size} aus dem App-Cache freigegeben",
+  "app_cache_settings_clearing": "Cache wird geleert...",
+  "app_cache_settings_current_size": "Aktuelle Cache-Grösse: {size}",
+  "app_cache_settings_size_error": "Cache-Grösse konnte nicht berechnet werden",
+  "app_cache_settings_subtitle": "Leert zwischengespeicherte Bilder und temporäre Mediendateien, die beim Ansehen, Teilen oder Lesen von iCloud-Originalen entstehen. Fotos und Serverdaten bleiben unberührt.",
+  "app_cache_settings_title": "App-Cache"
 }

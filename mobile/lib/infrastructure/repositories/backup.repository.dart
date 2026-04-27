@@ -114,4 +114,17 @@ class DriftBackupRepository extends DriftDatabaseRepository {
 
     return query.map((localAsset) => localAsset.toDto()).get();
   }
+
+  Future<bool> isAssetInAlbum(String assetId, String albumId) async {
+    if (assetId.isEmpty || albumId.isEmpty) {
+      return false;
+    }
+
+    final query = _db.localAlbumAssetEntity.selectOnly()
+      ..addColumns([_db.localAlbumAssetEntity.assetId])
+      ..where(_db.localAlbumAssetEntity.assetId.equals(assetId) & _db.localAlbumAssetEntity.albumId.equals(albumId))
+      ..limit(1);
+
+    return await query.getSingleOrNull() != null;
+  }
 }

@@ -72,6 +72,7 @@ class RemoteImagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable 
 protocol RemoteImageApi {
   func requestImage(url: String, requestId: Int64, preferEncoded: Bool, completion: @escaping (Result<[String: Int64]?, Error>) -> Void)
   func cancelRequest(requestId: Int64) throws
+  func getCacheSize(completion: @escaping (Result<Int64, Error>) -> Void)
   func clearCache(completion: @escaping (Result<Int64, Error>) -> Void)
 }
 
@@ -114,6 +115,21 @@ class RemoteImageApiSetup {
       }
     } else {
       cancelRequestChannel.setMessageHandler(nil)
+    }
+    let getCacheSizeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.immich_mobile.RemoteImageApi.getCacheSize\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      getCacheSizeChannel.setMessageHandler { _, reply in
+        api.getCacheSize { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      getCacheSizeChannel.setMessageHandler(nil)
     }
     let clearCacheChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.immich_mobile.RemoteImageApi.clearCache\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {

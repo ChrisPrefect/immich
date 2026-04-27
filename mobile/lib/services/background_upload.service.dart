@@ -6,6 +6,7 @@ import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/constants.dart';
+import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/asset/asset_metadata.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
@@ -298,6 +299,7 @@ class BackgroundUploadService {
     }
 
     final originalFileName = entity.isLivePhoto ? p.setExtension(fileName, p.extension(file.path)) : fileName;
+    final uploadLocked = await _shouldUploadLocked(asset);
 
     String metadata = UploadTaskMetadata(
       localAssetId: asset.id,
@@ -306,6 +308,7 @@ class BackgroundUploadService {
     ).toJson();
 
     final requiresWiFi = _shouldRequireWiFi(asset);
+    final String? visibility = uploadLocked ? AssetVisibilityEnum.locked.name : null;
 
     return buildUploadTask(
       file,
@@ -318,6 +321,7 @@ class BackgroundUploadService {
       priority: priority,
       isFavorite: asset.isFavorite,
       requiresWiFi: requiresWiFi,
+      visibility: visibility,
       cloudId: entity.isLivePhoto ? null : asset.cloudId,
       adjustmentTime: entity.isLivePhoto ? null : asset.adjustmentTime?.toIso8601String(),
       latitude: entity.isLivePhoto ? null : asset.latitude?.toString(),
@@ -341,6 +345,7 @@ class BackgroundUploadService {
 
     final requiresWiFi = _shouldRequireWiFi(asset);
     final originalFileName = await _assetMediaRepository.getOriginalFilename(asset.id) ?? asset.name;
+    final uploadLocked = await _shouldUploadLocked(asset);
 
     return buildUploadTask(
       file,
@@ -353,6 +358,7 @@ class BackgroundUploadService {
       priority: 0, // Highest priority to get upload immediately
       isFavorite: asset.isFavorite,
       requiresWiFi: requiresWiFi,
+      visibility: uploadLocked ? AssetVisibilityEnum.locked.name : null,
       cloudId: asset.cloudId,
       adjustmentTime: asset.adjustmentTime?.toIso8601String(),
       latitude: asset.latitude?.toString(),
@@ -372,6 +378,19 @@ class BackgroundUploadService {
     return requiresWiFi;
   }
 
+  Future<bool> _shouldUploadLocked(LocalAsset asset) async {
+    if (!CurrentPlatform.isIOS || !Store.get(StoreKey.syncIosHiddenToLockedFolder, true)) {
+      return false;
+    }
+
+    final hiddenAlbumId = Store.tryGet(StoreKey.iosHiddenAlbumId);
+    if (hiddenAlbumId == null || hiddenAlbumId.isEmpty) {
+      return false;
+    }
+
+    return _backupRepository.isAssetInAlbum(asset.id, hiddenAlbumId);
+  }
+
   Future<UploadTask> buildUploadTask(
     File file, {
     required String group,
@@ -384,6 +403,7 @@ class BackgroundUploadService {
     int? priority,
     bool? isFavorite,
     bool requiresWiFi = true,
+    String? visibility,
     String? cloudId,
     String? adjustmentTime,
     String? latitude,
@@ -402,6 +422,7 @@ class BackgroundUploadService {
       'fileModifiedAt': modifiedAt.toUtc().toIso8601String(),
       'isFavorite': isFavorite?.toString() ?? 'false',
       'duration': '0',
+      if (visibility != null) 'visibility': visibility,
       if (fields != null) ...fields,
       if (CurrentPlatform.isIOS && cloudId != null)
         'metadata': jsonEncode([

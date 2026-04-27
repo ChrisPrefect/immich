@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/platform_extensions.dart';
@@ -129,8 +130,29 @@ class StorageRepository {
     }
   }
 
-  Future<void> clearCache() async {
+  Future<int> getCacheSize() async {
     final log = Logger('StorageRepository');
+
+    if (!CurrentPlatform.isIOS) {
+      return 0;
+    }
+
+    try {
+      final tempDirectory = Directory.systemTemp;
+      if (!await tempDirectory.exists()) {
+        return 0;
+      }
+
+      return _directorySize(tempDirectory);
+    } catch (error, stackTrace) {
+      log.warning("Error calculating cache size", error, stackTrace);
+      return 0;
+    }
+  }
+
+  Future<int> clearCache() async {
+    final log = Logger('StorageRepository');
+    final tempCacheSize = await getCacheSize();
 
     try {
       await PhotoManager.clearFileCache();
@@ -139,7 +161,7 @@ class StorageRepository {
     }
 
     if (!CurrentPlatform.isIOS) {
-      return;
+      return 0;
     }
 
     try {
@@ -149,5 +171,35 @@ class StorageRepository {
     } catch (error, stackTrace) {
       log.warning("Error deleting temporary directory", error, stackTrace);
     }
+
+    try {
+      final tempDirectory = Directory.systemTemp;
+      if (!await tempDirectory.exists()) {
+        return tempCacheSize;
+      }
+
+      return max(0, tempCacheSize - await _directorySize(tempDirectory));
+    } catch (error, stackTrace) {
+      log.warning("Error calculating cleared temporary directory size", error, stackTrace);
+      return tempCacheSize;
+    }
+  }
+
+  Future<int> _directorySize(Directory directory) async {
+    int size = 0;
+
+    await for (final entity in directory.list(recursive: true, followLinks: false)) {
+      if (entity is! File) {
+        continue;
+      }
+
+      try {
+        size += await entity.length();
+      } catch (error, stackTrace) {
+        log.warning("Error calculating file size for ${entity.path}", error, stackTrace);
+      }
+    }
+
+    return size;
   }
 }

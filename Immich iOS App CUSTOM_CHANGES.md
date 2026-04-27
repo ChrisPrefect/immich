@@ -795,6 +795,59 @@ Gleiche Keys mit deutschen Übersetzungen:
 
 ---
 
+## 24. Albumbasierte Galerie-Filter (Person, Nur Fotos, Medientyp)
+
+Aktuelle Implementierung fuer die iOS-Hauptgalerie nach der Server-Umstellung auf Spezialalben. Wichtig: Es gibt **keine** Sync-Protokoll-Erweiterung, keine `deviceId`-Spalte in `remote_asset_entity` und keine lokalen EXIF-`tags`. Die Filter laufen lokal ueber die bereits synchronisierten Tabellen `remote_album_entity` und `remote_album_asset_entity`.
+
+Kanonische Kurz-Spec fuer diesen Block: `MOBILE_FILTERS_SPEC.md`.
+
+#### Server-Vertrag
+- `_filter:rachel` / `076697f9-02b8-4d3c-82b4-f3dd091c455e`
+- `_filter:documents` / `ee826b7c-c248-4242-aaf0-5fd1c63e4ccc`
+- `_filter:screenshots` / `b4efee8d-7a7d-4baf-9904-6f3241830f0c`
+- `_filter:documentation` / `5d15c12a-0e6e-42c6-8a75-d4ab7788f7dc`
+
+#### Neue Dateien
+- `mobile/lib/config/filter_albums.dart`: zentrale IDs plus `isFilterAlbumName()`.
+- `mobile/lib/domain/models/filter/filter_types.dart`: `PersonFilterType { all, chris, rachel }`, `MediaTypeFilterType { all, images, videos }`.
+- `mobile/lib/providers/filter.provider.dart`: persistente Notifier fuer Person, Medientyp und `showOnlyPhotos`.
+- `mobile/lib/presentation/pages/filter_album.page.dart`: schlanke Timeline-Seite fuer die drei Bibliotheks-Shortcuts.
+
+#### Persistenz
+- `mobile/lib/domain/models/store.model.dart`: neue StoreKeys `personFilter` (1033), `mediaTypeFilter` (1034), `showOnlyPhotos` (1035).
+- `mobile/lib/services/app_settings.service.dart`: Defaults `Person=Alle`, `Medientyp=Alle`, `Nur Fotos=true`.
+
+#### Drift/Timeline
+- `mobile/lib/infrastructure/entities/merged_asset.drift`: `mergedAsset` und `mergedBucket` nehmen optionale Filterparameter an. Remote-Assets werden ueber `EXISTS`/`NOT EXISTS` auf `remote_album_asset_entity` gefiltert; Bucket-Counts und Assetliste verwenden dieselbe Semantik.
+- Bei aktivem Personfilter werden lokale, noch nicht synchronisierte Assets im lokalen UNION-Zweig ausgeblendet, weil sie keiner Person/Server-Albumzuordnung zugeordnet werden koennen.
+- `mobile/lib/infrastructure/repositories/timeline.repository.dart`: `DriftTimelineFilters` und Durchreichen der Parameter an beide Drift-Queries.
+- `mobile/lib/domain/services/timeline.service.dart`: `TimelineFactory.main(...)` nimmt Asset-Typ, Rachel-Album und Auto-Tag-Alben entgegen.
+- `mobile/lib/domain/services/timeline.service.dart`: `TimelineService.replaceQuery(...)` haelt die Hauptgalerie beim Filterwechsel als stabiles Service-Objekt und ersetzt nur die lokale Query. Buckets werden ueber einen Controller erst nach geladenem Puffer ausgespielt, damit die Galerie nicht auf den Vollbild-Spinner zurueckfaellt.
+- Nach Drift-Aenderungen `dart run build_runner build --delete-conflicting-outputs` im `mobile/` Verzeichnis ausfuehren.
+
+#### UI
+- `mobile/lib/presentation/pages/dev/main_timeline.page.dart`: Filterleiste direkt unter der Photos-AppBar, nur in `PhotosFilterMode.all`. Alte Header-Modi `Favoriten`, `Videos`, `Bilder` und `Album` verwenden ihre bestehenden Timeline-Services und bekommen keine unsichtbar weiterwirkenden Person/Nur-Fotos-Filter.
+- `mobile/lib/providers/infrastructure/timeline.provider.dart`: Default-`timelineServiceProvider` baut die Hauptgalerie-Query aus `photosFilterProvider`, Personfilter, Medientyp und `showOnlyPhotos`, gibt aber fuer die Hauptgalerie dasselbe `TimelineService`-Objekt weiter.
+- Person-Auswahl: `Alle / Chris / Rachel`; `Chris` bedeutet "nicht im Rachel-Album", `Rachel` bedeutet "im Rachel-Album".
+- Medientyp-Auswahl: `Alle / Bilder / Videos`.
+- `Nur Fotos` blendet Dokumente, Screenshots und Dokumentationen standardmaessig aus.
+- `mobile/lib/presentation/widgets/timeline/timeline.widget.dart`: `monthSegmentSnappingOffset` klammert `topSliverWidgetHeight` korrekt, damit die neue Top-Sliver-Filterleiste den Scrubber nicht verschiebt.
+- `mobile/lib/presentation/pages/drift_library.page.dart`: Shortcuts `Screenshots`, `Dokumente`, `Dokumentationen` oeffnen `FilterAlbumPage` mit der jeweiligen Spezialalbum-ID.
+
+#### Spezialalben aus normalen Listen ausblenden
+- `mobile/lib/pages/albums/albums.page.dart`
+- `mobile/lib/presentation/widgets/album/album_selector.widget.dart`
+- `mobile/lib/widgets/common/photos_filter_title.dart`
+- `mobile/lib/widgets/settings/immich_plus_settings/immich_plus_settings.dart`
+
+#### Tests/Checks vom Bugfix-Run 2026-04-26
+- `git diff --check`
+- `mise exec -- flutter analyze ...` fuer die betroffenen Filter-/Timeline-Dateien
+- `mise exec -- flutter test test/infrastructure/repositories/merged_asset_drift_test.dart`
+- `mise exec -- flutter test test/domain/repositories/sync_stream_repository_test.dart test/infrastructure/repositories/sync_api_repository_test.dart test/domain/services/sync_stream_service_test.dart`
+
+---
+
 ## Zusammenfassung der Funktionsänderungen
 
 | Feature | Wo in den Settings | Default |
@@ -812,6 +865,7 @@ Gleiche Keys mit deutschen Übersetzungen:
 | Log-Detail mit Asset-Info | ImmichPlus Anpassungen → "Log-Detail mit Asset-Info" | An |
 | iOS-Favoriten → Server | ImmichPlus Anpassungen → "iOS-Favoriten zum Server synchronisieren" | An |
 | Eigene Alben im Filter-Menü | ImmichPlus Anpassungen → Checkbox-Liste unten | Leere Auswahl |
+| Albumbasierte Galerie-Filter | Fotos-Tab, direkt unter dem Header | Nur Fotos an, Person/Medientyp Alle |
 | Delete ohne Bestätigung | Nicht in Settings (Always-on) | An |
 | Video-Zeit-Overlay ohne führende Nullen | Nicht in Settings (Always-on) | An |
 | Tap-to-top (iOS Statusbar) | Nicht in Settings (Always-on) | An |
@@ -839,6 +893,7 @@ Bei einem erneuten Fork von Upstream-Immich in dieser Reihenfolge vorgehen:
 13. **Abschnitt 16**: `RestoreAssetIndexEvent` definieren, im Viewer-`dispose` emittieren, in Timeline-`_onEvent` konsumieren.
 14. **Abschnitt 17**: `_PlacesCollectionCard` anpassen + `onMapMoved` in `map.widget.dart`.
 15. **Abschnitt 18**: Filter-Provider, `PhotosFilterTitle`, `image()`-Factory + ProviderScope in `MainTimelinePage`.
+15b. **Abschnitt 24**: `FilterAlbums`, persistente Hauptgalerie-Filter, `mergedAsset`/`mergedBucket` Albumfilter, Bibliotheks-Shortcuts und Ausblenden der `_filter:*`-Alben nachziehen; danach Drift-Codegen und die Abschnitt-24-Tests ausfuehren.
 16. **Abschnitt 19**: `IosFavoriteSyncService` + Provider + BackgroundSyncManager-Methode + Hook in `app_life_cycle.provider.dart`.
 17. **Abschnitt 20**: HiddenAlbumPlugin registrieren, `syncIosHiddenToLockedFolder` wieder verdrahten, `setIncludeHiddenAssets(bool)` in Pigeon/Swift ergänzen, Hidden-Album im lokalen Sync immer gezielt mitziehen und den Leerzustand in `ImmichPlusSettings` anzeigen.
 18. **Abschnitt 21**: `LogAssetContext` anlegen, Log-Detailseite erweitern.

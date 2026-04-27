@@ -464,7 +464,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> {
               timelineHeight: maxHeight,
               topPadding: topPadding,
               bottomPadding: scrubberBottomPadding,
-              monthSegmentSnappingOffset: widget.topSliverWidgetHeight ?? 0 + appBarExpandedHeight,
+              monthSegmentSnappingOffset: (widget.topSliverWidgetHeight ?? 0) + appBarExpandedHeight,
               hasAppBar: widget.appBar != null,
               child: grid,
             );

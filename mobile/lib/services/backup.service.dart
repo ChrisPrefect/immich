@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart';
+import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/album.entity.dart';
 import 'package:immich_mobile/entities/asset.entity.dart';
@@ -148,15 +149,17 @@ class BackupService {
       // Add album's name to the asset info
       for (final asset in assets) {
         List<String> albumNames = [localAlbum.name];
+        List<String> albumIds = [backupAlbum.id];
 
         final existingAsset = candidates.firstWhereOrNull((candidate) => candidate.asset.localId == asset.localId);
 
         if (existingAsset != null) {
           albumNames.addAll(existingAsset.albumNames);
+          albumIds.addAll(existingAsset.albumIds);
           candidates.remove(existingAsset);
         }
 
-        candidates.add(BackupCandidate(asset: asset, albumNames: albumNames));
+        candidates.add(BackupCandidate(asset: asset, albumNames: albumNames, albumIds: albumIds));
       }
 
       backupAlbum.lastBackup = now;
@@ -246,6 +249,9 @@ class BackupService {
     final shouldSyncAlbums = _appSetting.getSetting(AppSettingsEnum.syncAlbums);
     final String deviceId = Store.get(StoreKey.deviceId);
     final String savedEndpoint = Store.get(StoreKey.serverEndpoint);
+    final String? iosHiddenAlbumId = Platform.isIOS && Store.get(StoreKey.syncIosHiddenToLockedFolder, true)
+        ? Store.tryGet(StoreKey.iosHiddenAlbumId)
+        : null;
     final List<String> duplicatedAssetIds = [];
     bool anyErrors = false;
 
@@ -263,6 +269,8 @@ class BackupService {
       final Asset asset = candidate.asset;
       File? file;
       File? livePhotoFile;
+      final uploadLocked =
+          iosHiddenAlbumId != null && iosHiddenAlbumId.isNotEmpty && candidate.albumIds.contains(iosHiddenAlbumId);
 
       try {
         final isAvailableLocally = await asset.local!.isLocallyAvailable(isOrigin: true);
@@ -342,11 +350,21 @@ class BackupService {
 
           String? livePhotoVideoId;
           if (asset.local!.isLivePhoto && livePhotoFile != null) {
-            livePhotoVideoId = await uploadLivePhotoVideo(originalFileName, livePhotoFile, baseRequest, cancelToken);
+            livePhotoVideoId = await uploadLivePhotoVideo(
+              originalFileName,
+              livePhotoFile,
+              baseRequest,
+              cancelToken,
+              visibility: uploadLocked ? AssetVisibilityEnum.locked.name : null,
+            );
           }
 
           if (livePhotoVideoId != null) {
             baseRequest.fields['livePhotoVideoId'] = livePhotoVideoId;
+          }
+
+          if (uploadLocked) {
+            baseRequest.fields['visibility'] = AssetVisibilityEnum.locked.name;
           }
 
           final response = await NetworkRepository.client.send(baseRequest);
@@ -430,8 +448,9 @@ class BackupService {
     String originalFileName,
     File? livePhotoVideoFile,
     MultipartRequest baseRequest,
-    Completer cancelToken,
-  ) async {
+    Completer cancelToken, {
+    String? visibility,
+  }) async {
     if (livePhotoVideoFile == null) {
       return null;
     }
@@ -446,6 +465,9 @@ class BackupService {
     final livePhotoReq = ProgressMultipartRequest(baseRequest.method, baseRequest.url, abortTrigger: cancelToken.future)
       ..headers.addAll(baseRequest.headers)
       ..fields.addAll(baseRequest.fields);
+    if (visibility != null) {
+      livePhotoReq.fields['visibility'] = visibility;
+    }
 
     livePhotoReq.files.add(livePhotoRawUploadData);
 

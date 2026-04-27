@@ -47,13 +47,16 @@ void main() {
     await Store.put(StoreKey.deviceId, 'test-device-id');
   });
 
-  setUp(() {
+  setUp(() async {
     mockUploadRepository = MockUploadRepository();
     mockStorageRepository = MockStorageRepository();
     mockLocalAssetRepository = MockDriftLocalAssetRepository();
     mockBackupRepository = MockDriftBackupRepository();
     mockAppSettingsService = MockAppSettingsService();
     mockAssetMediaRepository = MockAssetMediaRepository();
+
+    await Store.delete(StoreKey.iosHiddenAlbumId);
+    await Store.put(StoreKey.syncIosHiddenToLockedFolder, true);
 
     when(() => mockAppSettingsService.getSetting(AppSettingsEnum.useCellularForUploadVideos)).thenReturn(false);
     when(() => mockAppSettingsService.getSetting(AppSettingsEnum.useCellularForUploadPhotos)).thenReturn(false);
@@ -127,6 +130,58 @@ void main() {
       // For live photos, extension should be changed to match the video file
       expect(task!.fields['filename'], equals('OriginalLivePhoto.mov'));
       verify(() => mockAssetMediaRepository.getOriginalFilename(asset.id)).called(1);
+    });
+
+    test('should upload iOS Hidden album assets as locked', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      const hiddenAlbumId = 'ios-hidden-album-id';
+      await Store.put(StoreKey.iosHiddenAlbumId, hiddenAlbumId);
+
+      final asset = LocalAssetStub.image1;
+      final mockEntity = MockAssetEntity();
+      final mockFile = File('/path/to/file.jpg');
+
+      when(() => mockEntity.isLivePhoto).thenReturn(false);
+      when(() => mockStorageRepository.getAssetEntityForAsset(asset)).thenAnswer((_) async => mockEntity);
+      when(() => mockStorageRepository.getFileForAsset(asset.id)).thenAnswer((_) async => mockFile);
+      when(() => mockAssetMediaRepository.getOriginalFilename(asset.id)).thenAnswer((_) async => 'HiddenPhoto.jpg');
+      when(() => mockBackupRepository.isAssetInAlbum(asset.id, hiddenAlbumId)).thenAnswer((_) async => true);
+
+      final task = await sut.getUploadTask(asset);
+
+      expect(task, isNotNull);
+      expect(task!.fields['visibility'], equals('locked'));
+    });
+
+    test('should lock both iOS Hidden live photo motion and still uploads', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      const hiddenAlbumId = 'ios-hidden-album-id';
+      await Store.put(StoreKey.iosHiddenAlbumId, hiddenAlbumId);
+
+      final asset = LocalAssetStub.image1;
+      final mockEntity = MockAssetEntity();
+      final motionFile = File('/path/to/livephoto.mov');
+      final stillFile = File('/path/to/livephoto.heic');
+
+      when(() => mockEntity.isLivePhoto).thenReturn(true);
+      when(() => mockStorageRepository.getAssetEntityForAsset(asset)).thenAnswer((_) async => mockEntity);
+      when(() => mockStorageRepository.getMotionFileForAsset(asset)).thenAnswer((_) async => motionFile);
+      when(() => mockStorageRepository.getFileForAsset(asset.id)).thenAnswer((_) async => stillFile);
+      when(() => mockAssetMediaRepository.getOriginalFilename(asset.id)).thenAnswer((_) async => 'HiddenLive.HEIC');
+      when(() => mockBackupRepository.isAssetInAlbum(asset.id, hiddenAlbumId)).thenAnswer((_) async => true);
+
+      final motionTask = await sut.getUploadTask(asset);
+      final stillTask = await sut.getLivePhotoUploadTask(asset, 'video-id-123');
+
+      expect(motionTask, isNotNull);
+      expect(motionTask!.fields['visibility'], equals('locked'));
+      expect(stillTask, isNotNull);
+      expect(stillTask!.fields['visibility'], equals('locked'));
+      expect(stillTask.fields['livePhotoVideoId'], equals('video-id-123'));
     });
   });
 

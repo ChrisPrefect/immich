@@ -81,7 +81,10 @@ enum AppSettingsEnum<T> {
   syncIosFavorites<bool>(StoreKey.syncIosFavorites, null, true),
   syncIosHiddenToLockedFolder<bool>(StoreKey.syncIosHiddenToLockedFolder, null, true),
   photosFilterAlbumIds<String>(StoreKey.photosFilterAlbumIds, null, ""),
-  photosFilterMode<int>(StoreKey.photosFilterMode, null, 0);
+  photosFilterMode<int>(StoreKey.photosFilterMode, null, 0),
+  personFilter<int>(StoreKey.personFilter, null, 0),
+  mediaTypeFilter<int>(StoreKey.mediaTypeFilter, null, 0),
+  showOnlyPhotos<bool>(StoreKey.showOnlyPhotos, null, true);
 
   const AppSettingsEnum(this.storeKey, this.hiveKey, this.defaultValue);
 

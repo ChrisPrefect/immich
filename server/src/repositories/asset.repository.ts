@@ -719,6 +719,15 @@ export class AssetRepository {
           })
           .$if(options.visibility === undefined, withDefaultVisibility)
           .$if(!!options.visibility, (qb) => qb.where('asset.visibility', '=', options.visibility!))
+          .$if(options.visibility === AssetVisibility.Locked, (qb) =>
+            qb.where((eb) =>
+              eb.not(
+                eb.exists(
+                  eb.selectFrom('asset as livePhotoStill').whereRef('livePhotoStill.livePhotoVideoId', '=', 'asset.id'),
+                ),
+              ),
+            ),
+          )
           .$if(!!options.albumId, (qb) =>
             qb
               .innerJoin('album_asset', 'asset.id', 'album_asset.assetId')
@@ -792,6 +801,15 @@ export class AssetRepository {
           .where('asset.deletedAt', options.isTrashed ? 'is not' : 'is', null)
           .$if(options.visibility == undefined, withDefaultVisibility)
           .$if(!!options.visibility, (qb) => qb.where('asset.visibility', '=', options.visibility!))
+          .$if(options.visibility === AssetVisibility.Locked, (qb) =>
+            qb.where((eb) =>
+              eb.not(
+                eb.exists(
+                  eb.selectFrom('asset as livePhotoStill').whereRef('livePhotoStill.livePhotoVideoId', '=', 'asset.id'),
+                ),
+              ),
+            ),
+          )
           .$if(!!options.bbox, (qb) => {
             const bbox = options.bbox!;
             const circle = getBoundingCircle(bbox);

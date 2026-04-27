@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/asset/asset_metadata.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
@@ -322,6 +323,7 @@ class ForegroundUploadService {
 
       final originalFileName = entity.isLivePhoto ? p.setExtension(fileName, p.extension(file.path)) : fileName;
       final deviceId = Store.get(StoreKey.deviceId);
+      final uploadLocked = await _shouldUploadLocked(asset);
 
       final fields = {
         'deviceAssetId': asset.localId!,
@@ -336,12 +338,13 @@ class ForegroundUploadService {
       String? livePhotoVideoId;
       if (entity.isLivePhoto && livePhotoFile != null) {
         final livePhotoTitle = p.setExtension(originalFileName, p.extension(livePhotoFile.path));
+        final livePhotoFields = uploadLocked ? {...fields, 'visibility': AssetVisibilityEnum.locked.name} : fields;
 
         final onProgress = callbacks.onProgress;
         final livePhotoResult = await _uploadRepository.uploadFile(
           file: livePhotoFile,
           originalFileName: livePhotoTitle,
-          fields: fields,
+          fields: livePhotoFields,
           cancelToken: cancelToken,
           onProgress: onProgress != null
               ? (bytes, totalBytes) => onProgress(asset.localId!, livePhotoTitle, bytes, totalBytes)
@@ -356,6 +359,10 @@ class ForegroundUploadService {
 
       if (livePhotoVideoId != null) {
         fields['livePhotoVideoId'] = livePhotoVideoId;
+      }
+
+      if (uploadLocked) {
+        fields['visibility'] = AssetVisibilityEnum.locked.name;
       }
 
       // Add cloudId metadata only to the still image, not the motion video, becasue when the sync id happens, the motion video can get associated with the wrong still image.
@@ -450,6 +457,19 @@ class ForegroundUploadService {
     } catch (e) {
       return UploadResult.error(errorMessage: e.toString());
     }
+  }
+
+  Future<bool> _shouldUploadLocked(LocalAsset asset) async {
+    if (!CurrentPlatform.isIOS || !Store.get(StoreKey.syncIosHiddenToLockedFolder, true)) {
+      return false;
+    }
+
+    final hiddenAlbumId = Store.tryGet(StoreKey.iosHiddenAlbumId);
+    if (hiddenAlbumId == null || hiddenAlbumId.isEmpty) {
+      return false;
+    }
+
+    return _backupRepository.isAssetInAlbum(asset.id, hiddenAlbumId);
   }
 
   bool _shouldRequireWiFi(LocalAsset asset) {

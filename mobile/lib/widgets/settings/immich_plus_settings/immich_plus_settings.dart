@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/config/filter_albums.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
@@ -229,13 +230,21 @@ class _PhotosFilterAlbumsSection extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    useEffect(() {
+      unawaited(ref.read(drift_album.remoteAlbumProvider.notifier).refresh());
+      return null;
+    }, const []);
+
     // ImmichPlus: collapse same-named albums into one checklist entry, drop
     // empty ones, sort alphabetically. A single checkbox controls all
     // underlying IDs so that ticking "Sommer" persists every "Sommer"
     // duplicate at once — matches the Photos-tab filter behaviour.
     final groups =
         groupAlbumsByName(
-            ref.watch(drift_album.remoteAlbumProvider).albums,
+            ref
+                .watch(drift_album.remoteAlbumProvider)
+                .albums
+                .where((album) => !FilterAlbums.isFilterAlbumName(album.name)),
           ).where((g) => g.totalAssetCount > 0).toList()
           ..sort((a, b) => a.primary.name.toLowerCase().compareTo(b.primary.name.toLowerCase()));
     final raw = useState(Store.tryGet(StoreKey.photosFilterAlbumIds) ?? '');

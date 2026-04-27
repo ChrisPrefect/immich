@@ -378,6 +378,33 @@ describe(AssetMediaService.name, () => {
       expect(mocks.user.updateUsage).not.toHaveBeenCalled();
     });
 
+    it('should apply requested visibility to a duplicate upload', async () => {
+      const file = {
+        uuid: 'random-uuid',
+        originalPath: 'fake_path/asset_1.jpeg',
+        mimeType: 'image/jpeg',
+        checksum: Buffer.from('file hash', 'utf8'),
+        originalName: 'asset_1.jpeg',
+        size: 0,
+      };
+      const error = new Error('unique key violation');
+      (error as any).constraint_name = ASSET_CHECKSUM_CONSTRAINT;
+
+      mocks.asset.create.mockRejectedValue(error);
+      mocks.asset.getUploadAssetIdByChecksum.mockResolvedValue(assetEntity.id);
+
+      await expect(
+        sut.uploadAsset(authStub.user1, { ...createDto, visibility: AssetVisibility.Locked }, file),
+      ).resolves.toEqual({
+        id: 'id_1',
+        status: AssetMediaStatus.DUPLICATE,
+      });
+
+      expect(mocks.asset.update).toHaveBeenCalledWith({ id: assetEntity.id, visibility: AssetVisibility.Locked });
+      expect(mocks.album.removeAssetsFromAll).toHaveBeenCalledWith([assetEntity.id]);
+      expect(mocks.user.updateUsage).not.toHaveBeenCalled();
+    });
+
     it('should throw an error if the duplicate could not be found by checksum', async () => {
       const file = {
         uuid: 'random-uuid',

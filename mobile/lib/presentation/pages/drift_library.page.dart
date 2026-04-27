@@ -2,12 +2,14 @@ import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/config/filter_albums.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/translate_extensions.dart';
+import 'package:immich_mobile/presentation/pages/filter_album.page.dart';
 import 'package:immich_mobile/presentation/widgets/images/local_album_thumbnail.widget.dart';
 import 'package:immich_mobile/presentation/widgets/people/partner_user_avatar.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
@@ -398,6 +400,21 @@ class _QuickAccessButtonList extends ConsumerWidget {
                 ),
                 onTap: () => context.pushRoute(FolderRoute()),
               ),
+              const _FilterAlbumShortcut(
+                albumId: FilterAlbums.screenshots,
+                icon: Icons.smartphone_outlined,
+                title: 'Screenshots',
+              ),
+              const _FilterAlbumShortcut(
+                albumId: FilterAlbums.documents,
+                icon: Icons.description_outlined,
+                title: 'Dokumente',
+              ),
+              const _FilterAlbumShortcut(
+                albumId: FilterAlbums.documentation,
+                icon: Icons.article_outlined,
+                title: 'Dokumentationen',
+              ),
               ListTile(
                 leading: const Icon(Icons.lock_outline_rounded, size: 26),
                 title: Text(
@@ -419,6 +436,29 @@ class _QuickAccessButtonList extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _FilterAlbumShortcut extends StatelessWidget {
+  const _FilterAlbumShortcut({required this.albumId, required this.icon, required this.title});
+
+  final String albumId;
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, size: 26),
+      title: Text(title, style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => FilterAlbumPage(albumId: albumId, title: title, icon: icon),
+          ),
+        );
+      },
     );
   }
 }

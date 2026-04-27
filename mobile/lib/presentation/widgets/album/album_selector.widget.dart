@@ -5,6 +5,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/config/filter_albums.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/album/album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -138,7 +139,11 @@ class _AlbumSelectorState extends ConsumerState<AlbumSelector> {
   Future<void> sortAlbums() async {
     // ImmichPlus: skip empty albums — they carry no "last added photo" signal
     // and just clutter the list under `lastModified desc`.
-    final nonEmpty = ref.read(remoteAlbumProvider).albums.where((a) => a.assetCount > 0).toList();
+    final nonEmpty = ref
+        .read(remoteAlbumProvider)
+        .albums
+        .where((a) => a.assetCount > 0 && !FilterAlbums.isFilterAlbumName(a.name))
+        .toList();
     final sorted = await ref
         .read(remoteAlbumProvider.notifier)
         .sortAlbums(nonEmpty, sort.mode, isReverse: sort.isReverse);

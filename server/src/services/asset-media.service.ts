@@ -160,7 +160,7 @@ export class AssetMediaService extends BaseService {
 
       return { id: asset.id, status: AssetMediaStatus.CREATED };
     } catch (error: any) {
-      return this.handleUploadError(error, auth, file, sidecarFile);
+      return this.handleUploadError(error, auth, dto, file, sidecarFile);
     }
   }
 
@@ -194,7 +194,7 @@ export class AssetMediaService extends BaseService {
 
       return { status: AssetMediaStatus.REPLACED, id: copiedPhoto.id };
     } catch (error: any) {
-      return this.handleUploadError(error, auth, file, sidecarFile);
+      return this.handleUploadError(error, auth, undefined, file, sidecarFile);
     }
   }
 
@@ -338,6 +338,7 @@ export class AssetMediaService extends BaseService {
   private async handleUploadError(
     error: any,
     auth: AuthDto,
+    dto: Pick<AssetMediaCreateDto, 'visibility'> | undefined,
     file: UploadFile,
     sidecarFile?: UploadFile,
   ): Promise<AssetMediaResponseDto> {
@@ -357,6 +358,13 @@ export class AssetMediaService extends BaseService {
 
       if (auth.sharedLink) {
         await this.addToSharedLink(auth.sharedLink, duplicateId);
+      }
+
+      if (dto?.visibility && dto.visibility !== AssetVisibility.Timeline) {
+        await this.assetRepository.update({ id: duplicateId, visibility: dto.visibility });
+        if (dto.visibility === AssetVisibility.Locked) {
+          await this.albumRepository.removeAssetsFromAll([duplicateId]);
+        }
       }
 
       this.logger.debug(`Duplicate asset upload rejected: existing asset ${duplicateId}`);

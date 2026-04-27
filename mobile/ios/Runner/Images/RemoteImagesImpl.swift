@@ -124,6 +124,13 @@ class RemoteImageApiImpl: NSObject, RemoteImageApi {
     Self.registry.remove(requestId: requestId)?.cancel()
   }
 
+  func getCacheSize(completion: @escaping (Result<Int64, any Error>) -> Void) {
+    Task {
+      let cache = URLSessionManager.shared.session.configuration.urlCache!
+      completion(.success(Int64(cache.currentDiskUsage)))
+    }
+  }
+
   func clearCache(completion: @escaping (Result<Int64, any Error>) -> Void) {
     Task {
       let cache = URLSessionManager.shared.session.configuration.urlCache!

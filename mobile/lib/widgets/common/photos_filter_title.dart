@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/config/filter_albums.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
@@ -14,11 +18,16 @@ import 'package:immich_mobile/utils/album_group.dart';
 /// with the built-in filter categories plus any remote albums the user picked
 /// in Immich+ settings (stored as a comma-separated list of album IDs in
 /// [StoreKey.photosFilterAlbumIds]).
-class PhotosFilterTitle extends ConsumerWidget {
+class PhotosFilterTitle extends HookConsumerWidget {
   const PhotosFilterTitle({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    useEffect(() {
+      unawaited(ref.read(remoteAlbumProvider.notifier).refresh());
+      return null;
+    }, const []);
+
     final filter = ref.watch(photosFilterProvider);
     final albums = ref.watch(remoteAlbumProvider).albums;
     String? selectedAlbumName;
@@ -49,6 +58,8 @@ class PhotosFilterTitle extends ConsumerWidget {
           children: [
             Text(
               label,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
               style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
             ),
             const Icon(Icons.keyboard_arrow_down_rounded),
@@ -60,11 +71,16 @@ class PhotosFilterTitle extends ConsumerWidget {
 
   void _openSheet(BuildContext context, WidgetRef ref) {
     final albums = ref.read(remoteAlbumProvider).albums;
-    final configuredIds = (Store.tryGet(StoreKey.photosFilterAlbumIds) ?? '').split(',').where((s) => s.isNotEmpty).toSet();
+    final configuredIds = (Store.tryGet(StoreKey.photosFilterAlbumIds) ?? '')
+        .split(',')
+        .where((s) => s.isNotEmpty)
+        .toSet();
     // ImmichPlus: collapse duplicates that share a (case-insensitive) name
     // into one entry — tapping uses the "primary" id (the album with the
     // newest updatedAt within the group).
-    final filterAlbums = groupAlbumsByName(albums.where((a) => configuredIds.contains(a.id)));
+    final filterAlbums = groupAlbumsByName(
+      albums.where((a) => configuredIds.contains(a.id) && !FilterAlbums.isFilterAlbumName(a.name)),
+    );
     final current = ref.read(photosFilterProvider);
 
     showModalBottomSheet(
@@ -124,8 +140,7 @@ class PhotosFilterTitle extends ConsumerWidget {
                 (group) => _FilterRow(
                   icon: Icons.photo_album_outlined,
                   label: group.primary.name,
-                  selected:
-                      current.mode == PhotosFilterMode.album && group.ids.contains(current.albumId),
+                  selected: current.mode == PhotosFilterMode.album && group.ids.contains(current.albumId),
                   onTap: () {
                     ref.read(photosFilterProvider.notifier).setAlbum(group.primary.id);
                     Navigator.of(ctx).pop();
@@ -158,4 +173,3 @@ class _FilterRow extends StatelessWidget {
     );
   }
 }
-

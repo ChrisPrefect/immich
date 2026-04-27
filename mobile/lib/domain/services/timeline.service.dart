@@ -53,8 +53,56 @@ class TimelineFactory {
     return group == GroupAssetsBy.auto ? GroupAssetsBy.day : group;
   }
 
-  TimelineService main(List<String> timelineUsers) => TimelineService(
-    _wrapReversibleTimeline(_timelineRepository.main(timelineUsers, groupBy, excludedLocalAlbumId: _iosHiddenAlbumId)),
+  TimelineService main(
+    List<String> timelineUsers, {
+    AssetType? assetType,
+    bool favoriteOnly = false,
+    String rachelAlbumId = '',
+    bool? showRachel,
+    bool excludeAutoTagged = false,
+    String documentsAlbumId = '',
+    String screenshotsAlbumId = '',
+    String documentationAlbumId = '',
+  }) => TimelineService(
+    mainQuery(
+      timelineUsers,
+      assetType: assetType,
+      favoriteOnly: favoriteOnly,
+      rachelAlbumId: rachelAlbumId,
+      showRachel: showRachel,
+      excludeAutoTagged: excludeAutoTagged,
+      documentsAlbumId: documentsAlbumId,
+      screenshotsAlbumId: screenshotsAlbumId,
+      documentationAlbumId: documentationAlbumId,
+    ),
+  );
+
+  TimelineQuery mainQuery(
+    List<String> timelineUsers, {
+    AssetType? assetType,
+    bool favoriteOnly = false,
+    String rachelAlbumId = '',
+    bool? showRachel,
+    bool excludeAutoTagged = false,
+    String documentsAlbumId = '',
+    String screenshotsAlbumId = '',
+    String documentationAlbumId = '',
+  }) => _wrapReversibleTimeline(
+    _timelineRepository.main(
+      timelineUsers,
+      groupBy,
+      excludedLocalAlbumId: _iosHiddenAlbumId,
+      filters: DriftTimelineFilters(
+        assetType: assetType,
+        favoriteOnly: favoriteOnly,
+        rachelAlbumId: rachelAlbumId,
+        showRachel: showRachel,
+        excludeAutoTagged: excludeAutoTagged,
+        documentsAlbumId: documentsAlbumId,
+        screenshotsAlbumId: screenshotsAlbumId,
+        documentationAlbumId: documentationAlbumId,
+      ),
+    ),
   );
 
   /// Wraps a [TimelineQuery] so that buckets and assets can be flipped to
@@ -99,14 +147,17 @@ class TimelineFactory {
     _wrapReversibleTimeline(_timelineRepository.localAlbum(albumId, groupBy, excludedLocalAlbumId: _iosHiddenAlbumId)),
   );
 
-  TimelineService remoteAlbum({required String albumId}) =>
-      TimelineService(_wrapReversibleTimeline(_timelineRepository.remoteAlbum(albumId, groupBy)));
+  TimelineQuery remoteAlbumQuery({required String albumId}) =>
+      _wrapReversibleTimeline(_timelineRepository.remoteAlbum(albumId, groupBy));
+
+  TimelineService remoteAlbum({required String albumId}) => TimelineService(remoteAlbumQuery(albumId: albumId));
 
   TimelineService remoteAssets(String userId) =>
       TimelineService(_wrapReversibleTimeline(_timelineRepository.remote(userId, groupBy)));
 
-  TimelineService favorite(String userId) =>
-      TimelineService(_wrapReversibleTimeline(_timelineRepository.favorite(userId, groupBy)));
+  TimelineQuery favoriteQuery(String userId) => _wrapReversibleTimeline(_timelineRepository.favorite(userId, groupBy));
+
+  TimelineService favorite(String userId) => TimelineService(favoriteQuery(userId));
 
   TimelineService trash(String userId) =>
       TimelineService(_wrapReversibleTimeline(_timelineRepository.trash(userId, groupBy)));
@@ -117,11 +168,13 @@ class TimelineFactory {
   TimelineService lockedFolder(String userId) =>
       TimelineService(_wrapReversibleTimeline(_timelineRepository.locked(userId, groupBy)));
 
-  TimelineService video(String userId) =>
-      TimelineService(_wrapReversibleTimeline(_timelineRepository.video(userId, groupBy)));
+  TimelineQuery videoQuery(String userId) => _wrapReversibleTimeline(_timelineRepository.video(userId, groupBy));
 
-  TimelineService image(String userId) =>
-      TimelineService(_wrapReversibleTimeline(_timelineRepository.image(userId, groupBy)));
+  TimelineService video(String userId) => TimelineService(videoQuery(userId));
+
+  TimelineQuery imageQuery(String userId) => _wrapReversibleTimeline(_timelineRepository.image(userId, groupBy));
+
+  TimelineService image(String userId) => TimelineService(imageQuery(userId));
 
   TimelineService place(String place) =>
       TimelineService(_wrapReversibleTimeline(_timelineRepository.place(place, groupBy)));
@@ -145,13 +198,17 @@ class TimelineFactory {
 }
 
 class TimelineService {
-  final TimelineAssetSource _assetSource;
-  final TimelineBucketSource _bucketSource;
-  final TimelineOrigin origin;
+  TimelineAssetSource _assetSource;
+  TimelineBucketSource _bucketSource;
+  TimelineOrigin origin;
   final AsyncMutex _mutex = AsyncMutex();
   int _bufferOffset = 0;
   List<BaseAsset> _buffer = [];
   StreamSubscription? _bucketSubscription;
+  final _bucketController = StreamController<List<Bucket>>.broadcast();
+  List<Bucket>? _lastBuckets;
+  int _bucketGeneration = 0;
+  Object? _queryKey;
 
   int _totalAssets = 0;
   int get totalAssets => _totalAssets;
@@ -165,37 +222,72 @@ class TimelineService {
     required this.origin,
   }) : _assetSource = assetSource,
        _bucketSource = bucketSource {
-    _bucketSubscription = _bucketSource().listen((buckets) {
-      _mutex.run(() async {
-        final totalAssets = buckets.fold<int>(0, (acc, bucket) => acc + bucket.assetCount);
-
-        if (totalAssets == 0) {
-          _bufferOffset = 0;
-          _buffer = [];
-        } else {
-          final int offset;
-          final int count;
-          // When the buffer is empty or the old bufferOffset is greater than the new total assets,
-          // we need to reset the buffer and load the first batch of assets.
-          if (_bufferOffset >= totalAssets || _buffer.isEmpty) {
-            offset = 0;
-            count = kTimelineAssetLoadBatchSize;
-          } else {
-            offset = _bufferOffset;
-            count = math.min(_buffer.length, totalAssets - _bufferOffset);
-          }
-          _buffer = await _assetSource(offset, count);
-          _bufferOffset = offset;
-        }
-
-        // change the state's total assets count only after the buffer is reloaded
-        _totalAssets = totalAssets;
-        EventStream.shared.emit(const TimelineReloadEvent());
-      });
-    });
+    _subscribeToBuckets();
   }
 
-  Stream<List<Bucket>> Function() get watchBuckets => _bucketSource;
+  void replaceQuery(TimelineQuery query, Object queryKey) {
+    if (_queryKey == queryKey) return;
+
+    _queryKey = queryKey;
+    _bucketGeneration++;
+    unawaited(_bucketSubscription?.cancel());
+    _assetSource = query.assetSource;
+    _bucketSource = query.bucketSource;
+    origin = query.origin;
+    _subscribeToBuckets();
+  }
+
+  void _subscribeToBuckets() {
+    final generation = _bucketGeneration;
+    _bucketSubscription = _bucketSource().listen(
+      (buckets) {
+        _mutex.run(() async {
+          if (generation != _bucketGeneration) return;
+          final totalAssets = buckets.fold<int>(0, (acc, bucket) => acc + bucket.assetCount);
+
+          if (totalAssets == 0) {
+            _bufferOffset = 0;
+            _buffer = [];
+          } else {
+            final int offset;
+            final int count;
+            // When the buffer is empty or the old bufferOffset is greater than the new total assets,
+            // we need to reset the buffer and load the first batch of assets.
+            if (_bufferOffset >= totalAssets || _buffer.isEmpty) {
+              offset = 0;
+              count = kTimelineAssetLoadBatchSize;
+            } else {
+              offset = _bufferOffset;
+              count = math.min(_buffer.length, totalAssets - _bufferOffset);
+            }
+            _buffer = await _assetSource(offset, count);
+            _bufferOffset = offset;
+          }
+
+          // change the state's total assets count only after the buffer is reloaded
+          if (generation != _bucketGeneration) return;
+          _totalAssets = totalAssets;
+          _lastBuckets = buckets;
+          if (!_bucketController.isClosed) {
+            _bucketController.add(buckets);
+          }
+          EventStream.shared.emit(const TimelineReloadEvent());
+        });
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (generation != _bucketGeneration || _bucketController.isClosed) return;
+        _bucketController.addError(error, stackTrace);
+      },
+    );
+  }
+
+  Stream<List<Bucket>> Function() get watchBuckets => () async* {
+    final buckets = _lastBuckets;
+    if (buckets != null) {
+      yield buckets;
+    }
+    yield* _bucketController.stream;
+  };
 
   Future<List<BaseAsset>> loadAssets(int index, int count) => _mutex.run(() => _loadAssets(index, count));
 
@@ -296,6 +388,7 @@ class TimelineService {
   Future<void> dispose() async {
     await _bucketSubscription?.cancel();
     _bucketSubscription = null;
+    await _bucketController.close();
     _buffer = [];
     _bufferOffset = 0;
   }

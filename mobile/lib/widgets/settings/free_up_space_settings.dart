@@ -11,6 +11,8 @@ import 'package:immich_mobile/extensions/translate_extensions.dart';
 import 'package:immich_mobile/providers/cleanup.provider.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/storage.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/utils/bytes_units.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -26,6 +28,9 @@ class _FreeUpSpaceSettingsState extends ConsumerState<FreeUpSpaceSettings> {
   CleanupStep _currentStep = CleanupStep.selectDate;
   bool _hasScanned = false;
   bool _isKeepSettingsExpanded = false;
+  bool _isClearingAppCache = false;
+  bool _isLoadingAppCacheSize = true;
+  int? _appCacheSize;
 
   @override
   void initState() {
@@ -33,6 +38,7 @@ class _FreeUpSpaceSettingsState extends ConsumerState<FreeUpSpaceSettings> {
     WakelockPlus.enable();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeAlbumDefaults();
+      _refreshAppCacheSize();
     });
   }
 
@@ -165,6 +171,98 @@ class _FreeUpSpaceSettingsState extends ConsumerState<FreeUpSpaceSettings> {
     setState(() => _currentStep = CleanupStep.selectDate);
   }
 
+  Future<int> _getAppCacheSize() async {
+    final sizes = await Future.wait([
+      remoteImageApi.getCacheSize(),
+      ref.read(storageRepositoryProvider).getCacheSize(),
+    ]);
+    return sizes.fold<int>(0, (total, size) => total + size);
+  }
+
+  Future<void> _refreshAppCacheSize() async {
+    if (mounted) {
+      setState(() => _isLoadingAppCacheSize = true);
+    }
+
+    try {
+      final cacheSize = await _getAppCacheSize();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _appCacheSize = cacheSize;
+        _isLoadingAppCacheSize = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _appCacheSize = null;
+        _isLoadingAppCacheSize = false;
+      });
+    }
+  }
+
+  Future<void> _clearAppCache() async {
+    if (_isClearingAppCache) {
+      return;
+    }
+
+    ref.read(hapticFeedbackProvider.notifier).mediumImpact();
+    setState(() => _isClearingAppCache = true);
+    await WidgetsBinding.instance.endOfFrame;
+
+    try {
+      final imageCacheBytes = await remoteImageApi.clearCache();
+      final tempCacheBytes = await ref.read(storageRepositoryProvider).clearCache();
+      final clearedBytes = (imageCacheBytes > 0 ? imageCacheBytes : 0) + tempCacheBytes;
+      final remainingCacheSize = await _getAppCacheSize();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _appCacheSize = remainingCacheSize;
+        _isLoadingAppCacheSize = false;
+      });
+
+      context.scaffoldMessenger.showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 2),
+          content: Text(
+            'app_cache_settings_clear_success'.t(context: context, args: {'size': formatBytes(clearedBytes)}),
+            style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      context.scaffoldMessenger.showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 2),
+          content: Text(
+            'app_cache_settings_clear_error'.t(context: context),
+            style: context.textTheme.bodyLarge?.copyWith(color: context.colorScheme.error),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isClearingAppCache = false;
+          _isLoadingAppCacheSize = false;
+        });
+      }
+    }
+  }
+
   void _showAssetsPreview(List<LocalAsset> assets) {
     ref.read(hapticFeedbackProvider.notifier).mediumImpact();
     context.pushRoute(CleanupPreviewRoute(assets: assets));
@@ -269,6 +367,13 @@ class _FreeUpSpaceSettingsState extends ConsumerState<FreeUpSpaceSettings> {
                 child: Text('free_up_space_description'.t(context: context), style: context.textTheme.bodyMedium),
               ),
             ),
+            _AppCacheCleanupCard(
+              cacheSize: _appCacheSize,
+              isLoadingSize: _isLoadingAppCacheSize,
+              isClearing: _isClearingAppCache,
+              onClear: _clearAppCache,
+            ),
+            const SizedBox(height: 12),
 
             // Keep on device settings card
             Padding(
@@ -678,6 +783,91 @@ class _FreeUpSpaceSettingsState extends ConsumerState<FreeUpSpaceSettings> {
             ),
             const SizedBox(height: 60),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AppCacheCleanupCard extends StatelessWidget {
+  final int? cacheSize;
+  final bool isLoadingSize;
+  final bool isClearing;
+  final VoidCallback onClear;
+
+  const _AppCacheCleanupCard({
+    required this.cacheSize,
+    required this.isLoadingSize,
+    required this.isClearing,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sizeText = switch ((isLoadingSize, cacheSize)) {
+      (true, _) => 'app_cache_settings_calculating'.t(context: context),
+      (false, final int size) => 'app_cache_settings_current_size'.t(
+        context: context,
+        args: {'size': formatBytes(size)},
+      ),
+      _ => 'app_cache_settings_size_error'.t(context: context),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
+          side: BorderSide(color: context.colorScheme.outlineVariant),
+        ),
+        color: context.colorScheme.surfaceContainerLow,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.storage_outlined, color: context.colorScheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'app_cache_settings_title'.t(context: context),
+                      style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'app_cache_settings_subtitle'.t(context: context),
+                style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                sizeText,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: context.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (isLoadingSize || isClearing) ...[const SizedBox(height: 12), const LinearProgressIndicator()],
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: isClearing || isLoadingSize ? null : onClear,
+                icon: isClearing
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.cleaning_services_outlined),
+                label: Text(
+                  isClearing
+                      ? 'app_cache_settings_clearing'.t(context: context)
+                      : 'app_cache_settings_clear_button'.t(context: context),
+                ),
+                style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
+              ),
+            ],
+          ),
         ),
       ),
     );

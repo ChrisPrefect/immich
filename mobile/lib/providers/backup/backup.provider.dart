@@ -313,15 +313,17 @@ class BackupNotifier extends StateNotifier<BackUpState> {
       // Add album's name to the asset info
       for (final asset in assets) {
         List<String> albumNames = [album.name];
+        List<String> albumIds = [album.album.localId!];
 
         final existingAsset = assetsFromSelectedAlbums.firstWhereOrNull((a) => a.asset.localId == asset.localId);
 
         if (existingAsset != null) {
           albumNames.addAll(existingAsset.albumNames);
+          albumIds.addAll(existingAsset.albumIds);
           assetsFromSelectedAlbums.remove(existingAsset);
         }
 
-        assetsFromSelectedAlbums.add(BackupCandidate(asset: asset, albumNames: albumNames));
+        assetsFromSelectedAlbums.add(BackupCandidate(asset: asset, albumNames: albumNames, albumIds: albumIds));
       }
     }
 
@@ -335,7 +337,9 @@ class BackupNotifier extends StateNotifier<BackUpState> {
       final assets = await ref.read(albumMediaRepositoryProvider).getAssets(album.album.localId!);
 
       for (final asset in assets) {
-        assetsFromExcludedAlbums.add(BackupCandidate(asset: asset, albumNames: [album.name]));
+        assetsFromExcludedAlbums.add(
+          BackupCandidate(asset: asset, albumNames: [album.name], albumIds: [album.album.localId!]),
+        );
       }
     }
 

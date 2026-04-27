@@ -3,8 +3,19 @@ import 'stack.entity.dart';
 import 'local_asset.entity.dart';
 import 'local_album.entity.dart';
 import 'local_album_asset.entity.dart';
+import 'remote_album_asset.entity.dart';
 
-mergedAsset: 
+mergedAsset(
+	:asset_type AS INTEGER,
+	:favorite_only AS BOOLEAN,
+	:filter_by_rachel_album AS BOOLEAN,
+	:show_rachel AS BOOLEAN,
+	:exclude_auto_tagged AS BOOLEAN,
+	:rachel_album_id AS TEXT,
+	:documents_album_id AS TEXT,
+	:screenshots_album_id AS TEXT,
+	:documentation_album_id AS TEXT
+):
 SELECT
 	rae.id as remote_id,
 	(SELECT lae.id FROM local_asset_entity lae WHERE lae.checksum = rae.checksum LIMIT 1) as local_id,
@@ -36,6 +47,61 @@ WHERE
 	rae.deleted_at IS NULL
 	AND rae.visibility = 0 -- timeline visibility
 	AND rae.owner_id IN :user_ids
+	AND (:asset_type < 0 OR rae."type" = :asset_type)
+	AND (:favorite_only = FALSE OR rae.is_favorite = TRUE)
+	AND (
+		:filter_by_rachel_album = FALSE
+		OR (
+			:show_rachel = TRUE
+			AND EXISTS (
+				SELECT 1
+				FROM remote_album_asset_entity raa
+				WHERE raa.asset_id = rae.id
+					AND raa.album_id = :rachel_album_id
+			)
+		)
+		OR (
+			:show_rachel = FALSE
+			AND NOT EXISTS (
+				SELECT 1
+				FROM remote_album_asset_entity raa
+				WHERE raa.asset_id = rae.id
+					AND raa.album_id = :rachel_album_id
+			)
+		)
+	)
+	AND (
+		:exclude_auto_tagged = FALSE
+		OR (
+			(
+				:documents_album_id = ''
+				OR NOT EXISTS (
+					SELECT 1
+					FROM remote_album_asset_entity raa
+					WHERE raa.asset_id = rae.id
+						AND raa.album_id = :documents_album_id
+				)
+			)
+			AND (
+				:screenshots_album_id = ''
+				OR NOT EXISTS (
+					SELECT 1
+					FROM remote_album_asset_entity raa
+					WHERE raa.asset_id = rae.id
+						AND raa.album_id = :screenshots_album_id
+				)
+			)
+			AND (
+				:documentation_album_id = ''
+				OR NOT EXISTS (
+					SELECT 1
+					FROM remote_album_asset_entity raa
+					WHERE raa.asset_id = rae.id
+						AND raa.album_id = :documentation_album_id
+				)
+			)
+		)
+	)
 	AND (
 		rae.stack_id IS NULL
 		OR rae.id = se.primary_asset_id
@@ -68,7 +134,11 @@ SELECT
 	lae.playback_style
 FROM
 	local_asset_entity lae
-WHERE NOT EXISTS (
+WHERE
+	:filter_by_rachel_album = FALSE
+AND (:asset_type < 0 OR lae."type" = :asset_type)
+AND (:favorite_only = FALSE OR lae.is_favorite = TRUE)
+AND NOT EXISTS (
 	SELECT 1 FROM remote_asset_entity rae WHERE rae.checksum = lae.checksum AND rae.owner_id IN :user_ids
 )
 AND (
@@ -92,7 +162,18 @@ AND NOT EXISTS (
 ORDER BY created_at DESC
 LIMIT $limit;
 
-mergedBucket(:group_by AS INTEGER):
+mergedBucket(
+	:group_by AS INTEGER,
+	:asset_type AS INTEGER,
+	:favorite_only AS BOOLEAN,
+	:filter_by_rachel_album AS BOOLEAN,
+	:show_rachel AS BOOLEAN,
+	:exclude_auto_tagged AS BOOLEAN,
+	:rachel_album_id AS TEXT,
+	:documents_album_id AS TEXT,
+	:screenshots_album_id AS TEXT,
+	:documentation_album_id AS TEXT
+):
 SELECT
 	COUNT(*) as asset_count,
 	bucket_date
@@ -117,6 +198,61 @@ FROM
 		rae.deleted_at IS NULL
 		AND rae.visibility = 0 -- timeline visibility
 		AND rae.owner_id in :user_ids
+		AND (:asset_type < 0 OR rae."type" = :asset_type)
+		AND (:favorite_only = FALSE OR rae.is_favorite = TRUE)
+		AND (
+			:filter_by_rachel_album = FALSE
+			OR (
+				:show_rachel = TRUE
+				AND EXISTS (
+					SELECT 1
+					FROM remote_album_asset_entity raa
+					WHERE raa.asset_id = rae.id
+						AND raa.album_id = :rachel_album_id
+				)
+			)
+			OR (
+				:show_rachel = FALSE
+				AND NOT EXISTS (
+					SELECT 1
+					FROM remote_album_asset_entity raa
+					WHERE raa.asset_id = rae.id
+						AND raa.album_id = :rachel_album_id
+				)
+			)
+		)
+		AND (
+			:exclude_auto_tagged = FALSE
+			OR (
+				(
+					:documents_album_id = ''
+					OR NOT EXISTS (
+						SELECT 1
+						FROM remote_album_asset_entity raa
+						WHERE raa.asset_id = rae.id
+							AND raa.album_id = :documents_album_id
+					)
+				)
+				AND (
+					:screenshots_album_id = ''
+					OR NOT EXISTS (
+						SELECT 1
+						FROM remote_album_asset_entity raa
+						WHERE raa.asset_id = rae.id
+							AND raa.album_id = :screenshots_album_id
+					)
+				)
+				AND (
+					:documentation_album_id = ''
+					OR NOT EXISTS (
+						SELECT 1
+						FROM remote_album_asset_entity raa
+						WHERE raa.asset_id = rae.id
+							AND raa.album_id = :documentation_album_id
+					)
+				)
+			)
+		)
 		AND (
 			rae.stack_id IS NULL
 			OR rae.id = se.primary_asset_id
@@ -129,7 +265,11 @@ FROM
 		END as bucket_date
 	FROM
 		local_asset_entity lae
-	WHERE NOT EXISTS (
+	WHERE
+		:filter_by_rachel_album = FALSE
+	AND (:asset_type < 0 OR lae."type" = :asset_type)
+	AND (:favorite_only = FALSE OR lae.is_favorite = TRUE)
+	AND NOT EXISTS (
 		SELECT 1 FROM remote_asset_entity rae WHERE rae.checksum = lae.checksum AND rae.owner_id IN :user_ids
 	)
 	AND (

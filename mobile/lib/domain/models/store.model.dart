@@ -120,7 +120,10 @@ enum StoreKey<T> {
   logsShowAssetDetail<bool>._(1027),
   photosFilterAlbumIds<String>._(1028),
   photosFilterMode<int>._(1029),
-  iosHiddenAlbumId<String>._(1030);
+  iosHiddenAlbumId<String>._(1030),
+  personFilter<int>._(1033),
+  mediaTypeFilter<int>._(1034),
+  showOnlyPhotos<bool>._(1035);
 
   const StoreKey._(this.id);
   final int id;

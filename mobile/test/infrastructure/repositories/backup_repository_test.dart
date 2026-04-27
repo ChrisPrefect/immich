@@ -241,4 +241,16 @@ void main() {
       expect(result.first.id, asset.id);
     });
   });
+
+  group('isAssetInAlbum', () {
+    test('returns true only for the matching local album membership', () async {
+      final album = await ctx.newLocalAlbum(backupSelection: BackupSelection.selected);
+      final otherAlbum = await ctx.newLocalAlbum(backupSelection: BackupSelection.selected);
+      final asset = await ctx.newLocalAsset();
+      await ctx.newLocalAlbumAsset(albumId: album.id, assetId: asset.id);
+
+      expect(await sut.isAssetInAlbum(asset.id, album.id), isTrue);
+      expect(await sut.isAssetInAlbum(asset.id, otherAlbum.id), isFalse);
+    });
+  });
 }
